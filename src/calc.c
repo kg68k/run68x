@@ -21,16 +21,16 @@
 #include <stdio.h>
 #include "run68.h"
 
-// long add_long(long src, long dest, int size);
-// long sub_long(long src, long dest, int size);
+// Long add_Long(Long src, Long dest, int size);
+// Long sub_Long(Long src, Long dest, int size);
 
 /*
  　機能：destにsrcをsizeサイズで加算する
  戻り値：答え
 */
-long add_long(long src, long dest, int size) {
+Long add_long(Long src, Long dest, int size) {
 
-	long result;
+	Long result;
 
 	switch(size) {
 		case S_BYTE:
@@ -51,9 +51,9 @@ long add_long(long src, long dest, int size) {
  　機能：destからsrcをsizeサイズで減算する
  戻り値：答え
 */
-long sub_long(long src, long dest, int size) {
+Long sub_long(Long src, Long dest, int size) {
 
-	long result;
+	Long result;
 
 	switch(size) {
 		case S_BYTE:

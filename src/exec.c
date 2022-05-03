@@ -45,8 +45,8 @@
 
 /* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
 #define prog_ptr_u ((unsigned char *)prog_ptr)
-void	run68_abort( long );
-extern char *disassemble(long addr, long* next_addr);
+void	run68_abort( Long );
+extern char *disassemble(Long addr, Long* next_addr);
 
 /*
  　機能：1命令実行する
@@ -56,7 +56,7 @@ extern char *disassemble(long addr, long* next_addr);
 int prog_exec()
 {
 	char	*pc_ptr;
-	long	adr;
+	Long	adr;
 	short	save_s;
 
 	/* 上位4ビットで命令を振り分ける */
@@ -228,12 +228,12 @@ void err68a( char *mes, char *file, int line )
    機能：実行時エラーメッセージを表示する(その3)
    引数：
     char*  mes	<in>    メッセージ
-    long   pc   <in>    プログラムカウンタ
-    long   ppc  <in>    一つ前に実行した命令のプログラムカウンタ
+    Long   pc   <in>    プログラムカウンタ
+    Long   ppc  <in>    一つ前に実行した命令のプログラムカウンタ
    戻り値：
     なし
 */
-void err68b(char *mes, long pc, long ppc)
+void err68b(char *mes, Long pc, Long ppc)
 {
     OPBuf_insert(&OP_info);
 	fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
@@ -352,7 +352,7 @@ void text_color( short c )
    機能：カーソル位置を得る
  戻り値：カーソル位置
 */
-long get_locate()
+Long get_locate()
 {
 	UShort x = 0, y = 0;
 
@@ -475,7 +475,7 @@ void OPBuf_display(n)
     for (i = n-1; 0 <= i; i --)
     {
         const EXEC_INSTRUCTION_INFO *op;
-        long addr, naddr;
+        Long addr, naddr;
         char *s, hex[64];
         unsigned short code;
         int j;
@@ -541,10 +541,10 @@ int get_idx(int *pc, char *regstr)
  　　　　サイズに応じてPCを進める
  戻り値：データの値
 */
-long get_imi(int *pc, char size )
+Long get_imi(int *pc, char size )
 {
 	UChar	*mem;
-	long	d;
+	Long	d;
 
 	mem = (UChar *)prog_ptr + (*pc);
 

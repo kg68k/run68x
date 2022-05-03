@@ -24,12 +24,12 @@
 
 // /* conditions.c */
 
-// void general_conditions(long result, int size);
-// void add_conditions(long src , long dest, long result, int size, BOOL zero_flag);
-// void cmp_conditions(long src , long dest, long result, int size);
-// void sub_conditions(long src , long dest, long result, int size, BOOL zero_flag);
-// void neg_conditions(long dest, long result, int size, BOOL zero_flag);
-// void check(char *mode, long src, long dest, long result, int size, short before);
+// void general_conditions(Long result, int size);
+// void add_conditions(Long src , Long dest, Long result, int size, BOOL zero_flag);
+// void cmp_conditions(Long src , Long dest, Long result, int size);
+// void sub_conditions(Long src , Long dest, Long result, int size, BOOL zero_flag);
+// void neg_conditions(Long dest, Long result, int size, BOOL zero_flag);
+// void check(char *mode, Long src, Long dest, Long result, int size, short before);
 
 #include "run68.h"
 
@@ -51,7 +51,7 @@ static void ccr2bitmap(short ccr, char *bitmap) {
 	bitmap[j] = '\0';
 }
 
-void check(char *mode, long src, long dest, long result, int size, short before) {
+void check(char *mode, Long src, Long dest, Long result, int size, short before) {
 	char  befstr[9];
 	char  aftstr[9];
 
@@ -61,9 +61,9 @@ void check(char *mode, long src, long dest, long result, int size, short before)
 	printf("%s: 0x%08x 0x%08x 0x%08x %1d %8s %8s\n", mode, src, dest, result, size, befstr, aftstr);
 }
 
-long getMSB(long num, int size) {
+Long getMSB(Long num, int size) {
 
-	long ret;
+	Long ret;
 
 	switch (size) {
 		case S_BYTE:
@@ -82,8 +82,8 @@ long getMSB(long num, int size) {
 	return(ret);
 }
 
-long getBitsByDataSize(long num, int size) {
-	long ret;
+Long getBitsByDataSize(Long num, int size) {
+	Long ret;
 	switch (size) {
 		case S_BYTE:
 			ret = num & 0xff;
@@ -117,7 +117,7 @@ long getBitsByDataSize(long num, int size) {
  *   general_conditions(result, size);
  *
  * 【引数】
- *   long result;    <in>  Result値
+ *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
  *
  * 【返値】
@@ -125,11 +125,11 @@ long getBitsByDataSize(long num, int size) {
  *
  */
 
-void general_conditions(long result, int size) {
+void general_conditions(Long result, int size) {
 
 	int 	Rm;
 
-	Rm = (getMSB(result, size) != (long)0);
+	Rm = (getMSB(result, size) != (Long)0);
 
 	/* Overflow Flag */
 	CCR_V_OFF();
@@ -161,9 +161,9 @@ void general_conditions(long result, int size) {
  *   add_conditions(src, dest, result, size, zero_flag);
  *
  * 【引数】
- *   long src;       <in>  Source値
- *   long dest;      <in>  Destination値
- *   long result;    <in>  Result値
+ *   Long src;       <in>  Source値
+ *   Long dest;      <in>  Destination値
+ *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
  *   BOOL zero_flag; <in>  addx用演算前 zero flag 値。
  *                         その他の場合は常に 1 を指定のこと。
@@ -173,13 +173,13 @@ void general_conditions(long result, int size) {
  *
  */
 
-void add_conditions(long src, long dest, long result, int size, BOOL zero_flag) {
+void add_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag) {
 
 	int 	Sm, Dm, Rm;
 
-	Sm = (getMSB(src,    size) != (long)0);
-	Dm = (getMSB(dest,   size) != (long)0);
-	Rm = (getMSB(result, size) != (long)0);
+	Sm = (getMSB(src,    size) != (Long)0);
+	Dm = (getMSB(dest,   size) != (Long)0);
+	Rm = (getMSB(result, size) != (Long)0);
 
 	/* Overflow Flag */
 	if ((Sm && Dm && !Rm) || (!Sm && !Dm && Rm)) {
@@ -221,9 +221,9 @@ void add_conditions(long src, long dest, long result, int size, BOOL zero_flag) 
  *   cmp_conditions(src, dest, result, size, zero_flag);
  *
  * 【引数】
- *   long src;       <in>  Source値
- *   long dest;      <in>  Destination値
- *   long result;    <in>  Result値
+ *   Long src;       <in>  Source値
+ *   Long dest;      <in>  Destination値
+ *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
  *   BOOL zero_flag; <in>  subx用演算前 zero flag 値。
  *                         その他の場合は常に 1 を指定のこと。
@@ -233,13 +233,13 @@ void add_conditions(long src, long dest, long result, int size, BOOL zero_flag) 
  *
  */
 
-void cmp_conditions(long src, long dest, long result, int size) {
+void cmp_conditions(Long src, Long dest, Long result, int size) {
 
 	int 	Sm, Dm, Rm;
 
-	Sm = (getMSB(src,    size) != (long)0);
-	Dm = (getMSB(dest,   size) != (long)0);
-	Rm = (getMSB(result, size) != (long)0);
+	Sm = (getMSB(src,    size) != (Long)0);
+	Dm = (getMSB(dest,   size) != (Long)0);
+	Rm = (getMSB(result, size) != (Long)0);
 
 	/* Overflow Flag */
 	if ((!Sm && Dm && !Rm) || (Sm && !Dm && Rm)) {
@@ -279,9 +279,9 @@ void cmp_conditions(long src, long dest, long result, int size) {
  *   sub_conditions(src, dest, result, size, zero_flag);
  *
  * 【引数】
- *   long src;       <in>  Source値
- *   long dest;      <in>  Destination値
- *   long result;    <in>  Result値
+ *   Long src;       <in>  Source値
+ *   Long dest;      <in>  Destination値
+ *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
  *   BOOL zero_flag; <in>  subx用演算前 zero flag 値。
  *                         その他の場合は常に 1 を指定のこと。
@@ -291,7 +291,7 @@ void cmp_conditions(long src, long dest, long result, int size) {
  *
  */
 
-void sub_conditions(long src, long dest, long result, int size, BOOL zero_flag) {
+void sub_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag) {
 
 	cmp_conditions(src, dest, result, size);
 
@@ -318,8 +318,8 @@ void sub_conditions(long src, long dest, long result, int size, BOOL zero_flag) 
  *   neg_conditions(dest, result, size, zero_flag);
  *
  * 【引数】
- *   long dest;      <in>  Destination値
- *   long result;    <in>  Result値
+ *   Long dest;      <in>  Destination値
+ *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
  *   BOOL zero_flag; <in>  negx用演算前 zero flag 値。
  *                         その他の場合は常に 1 を指定のこと。
@@ -329,12 +329,12 @@ void sub_conditions(long src, long dest, long result, int size, BOOL zero_flag) 
  *
  */
 
-void neg_conditions(long dest, long result, int size, BOOL zero_flag) {
+void neg_conditions(Long dest, Long result, int size, BOOL zero_flag) {
 
 	int 	Dm, Rm;
 
-	Dm = (getMSB(dest,   size) != (long)0);
-	Rm = (getMSB(result, size) != (long)0);
+	Dm = (getMSB(dest,   size) != (Long)0);
+	Rm = (getMSB(result, size) != (Long)0);
 
 	/* Overflow Flag */
 	if (Dm && Rm) {

@@ -196,7 +196,7 @@ static	int	Lea( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	save_pc;
+	Long	save_pc;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -271,7 +271,7 @@ static	int	Tas( char code )
 {
 	char	mode;
 	char	reg;
-	long	data;
+	Long	data;
 	int	work_mode;
 
 	mode = ((code & 0x38) >> 3);
@@ -318,8 +318,8 @@ static	int	Tst( char code )
 	char	size;
 	char	mode;
 	char	reg;
-	long	data;
-	long	save_pc;
+	Long	data;
+	Long	save_pc;
 
 	save_pc = pc;
 	size = ((code >> 6) & 0x03);
@@ -350,8 +350,8 @@ static	int	Pea( char code )
 {
 	char	mode;
 	char	reg;
-	long	data;
-	long	save_pc;
+	Long	data;
+	Long	save_pc;
 
 	save_pc = pc;
 	mode = ((code & 0x38) >> 3);
@@ -378,7 +378,7 @@ static	int	Pea( char code )
 */
 static	int	Movem_f( char code )
 {
-	long	mem_adr;
+	Long	mem_adr;
 	char	mode;
 	char	reg;
 	char	size;
@@ -386,7 +386,7 @@ static	int	Movem_f( char code )
 	short	rlist;
 	short	mask = 1;
 	short	disp = 0;
-	long	save_pc;
+	Long	save_pc;
 	int		i;
 	int		work_mode;
 
@@ -469,14 +469,14 @@ static	int	Movem_f( char code )
 */
 static	int	Movem_t( char code )
 {
-	long	mem_adr;
+	Long	mem_adr;
 	char	mode;
 	char	reg;
 	char	size;
 	char	size2;
 	short	rlist;
 	short	mask = 1;
-	long	save_pc;
+	Long	save_pc;
 	int		i;
 	int		work_mode;
 
@@ -562,7 +562,7 @@ static	int	Move_f_sr( char code )
 {
 	char	mode;
 	char	reg;
-	long	save_pc;
+	Long	save_pc;
 
 	save_pc = pc;
 	mode = ((code & 0x38) >> 3);
@@ -570,7 +570,7 @@ static	int	Move_f_sr( char code )
 
 	/* ディスティネーションのアドレッシングモードに応じた処理 */
 	// ※アクセス権限がEA_ALLになっているが、これは後でチェックの必要がある
-	if (set_data_at_ea(EA_All, mode, reg, S_WORD, (long)sr)) {
+	if (set_data_at_ea(EA_All, mode, reg, S_WORD, (Long)sr)) {
 		return(TRUE);
 	}
 
@@ -590,8 +590,8 @@ static	int	Move_t_sr( char code )
 {
 	char	mode;
 	char	reg;
-	long	save_pc;
-	long	data;
+	Long	save_pc;
+	Long	data;
 
 	save_pc = pc;
 	mode = ((code & 0x38) >> 3);
@@ -680,8 +680,8 @@ static	int	Move_t_ccr( char code )
 {
 	char	mode;
 	char	reg;
-	long	save_pc;
-	long	data;
+	Long	save_pc;
+	Long	data;
 
 	save_pc = pc;
 	mode = ((code & 0x38) >> 3);
@@ -710,8 +710,8 @@ static	int	Move_t_ccr( char code )
 static	int	Swap( char code )
 {
 	char	reg;
-	long	data;
-	long	data2;
+	Long	data;
+	Long	data2;
 
 	reg = (code & 0x07);
 	data = ((rd [ reg ] >> 16) & 0xFFFF);
@@ -739,8 +739,8 @@ static	int	Clr( char code )
 	char	size;
 	char	mode;
 	char	reg;
-	long	save_pc;
-	long	data;
+	Long	save_pc;
+	Long	data;
 	int	work_mode;
 
 	save_pc = pc;
@@ -834,9 +834,9 @@ static	int	Neg( char code )
 	char	size;
 	char	mode;
 	char	reg;
-	long	data;
-	long	save_pc;
-	long	dest_data;
+	Long	data;
+	Long	save_pc;
+	Long	dest_data;
 	int	work_mode;
 
 	save_pc = pc;
@@ -889,11 +889,11 @@ static	int	Negx( char code )
 	char	size;
 	char	mode;
 	char	reg;
-	long	data;
-	long	save_pc;
+	Long	data;
+	Long	save_pc;
 	short	save_z;
 	short	save_x;
-	long	dest_data;
+	Long	dest_data;
 	int	work_mode;
 
 	save_pc = pc;
@@ -949,8 +949,8 @@ static	int	Not( char code )
 	char	size;
 	char	mode;
 	char	reg;
-	long	data;
-	long	save_pc;
+	Long	data;
+	Long	save_pc;
 	int	work_mode;
 
 	save_pc = pc;
@@ -1002,7 +1002,7 @@ static	int	Jmp( char code1, char code2 )
 {
 	char	mode;
 	char	reg;
-	long	save_pc;
+	Long	save_pc;
 
 	save_pc = pc;
 
@@ -1032,8 +1032,8 @@ static	int	Jsr( char code )
 {
 	char	mode;
 	char	reg;
-	long	data;
-	long	save_pc;
+	Long	data;
+	Long	save_pc;
 
 	save_pc = pc;
 	mode = ((code & 0x38) >> 3);
@@ -1120,7 +1120,7 @@ static	int	Rte()
 static	int	Rts()
 {
 #if defined(DEBUG_JSR)
-	long	save_pc;
+	Long	save_pc;
 	save_pc = pc - 2;
 #endif
 
@@ -1158,10 +1158,10 @@ static	int	Nbcd( char code2 )
 	char	mode = (code2 & 0x38) >> 3;
 	char	work_mode;
 	char	size = 0;	/* S_BYTE 固定 */
-	long	src_data;
-	long	dst_data;
-	long	kekka;
-	long	X;
+	Long	src_data;
+	Long	dst_data;
+	Long	kekka;
+	Long	X;
 
 /*
 	0: 2byte: dm

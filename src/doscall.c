@@ -64,64 +64,150 @@
 #if !defined(__GNUC__)
 #include <conio.h>
 #endif
-#if !defined(WIN32)
-#include <dos.h>
-#include <direct.h>
+
+#if defined(__APPLE__)
+#else
+	#if !defined(WIN32)
+	#include <dos.h>
+	#include <direct.h>
+	#endif
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "ansicolor-w32.h"
+#if defined(__APPLE__)
+#else
 #include <io.h>
+#endif
 
-static long Gets( long );
-static long Kflush( short );
-static long Ioctrl( short, long );
-static long Dup( short );
-static long Dup2( short, short );
-static long Malloc( long );
-static long Mfree( long );
-static long Dskfre( short, long );
-static long Setblock( long, long );
-static long Create( char *, short );
-static long Newfile( char *, short );
-static long Open( char *, short );
-static long Close( short );
-static long Fgets( long, short );
-static long Read( short, long, long );
-static long Write( short, long, long );
-static long Delete( char * );
-static long Seek( short, long, short );
-static long Rename( long, long );
-static long Chmod( long, short );
-static long Mkdir( long );
-static long Rmdir( long );
-static long Chdir( long );
-static long Curdir( short, char* );
-static long Files( long, long, short );
-static long Nfiles( long );
-static long Filedate( short, long );
-static long Getdate( void );
-static long Setdate( short );
-static long Gettime( int );
-static long Settim2( long );
-static long Getenv( long, long, long );
-static long Namests( long, long );
-static long Nameck( long, long );
-static long Conctrl( short, long );
-static long Keyctrl( short, long );
-static void Fnckey( short, long );
-static long Intvcg( UShort );
-static long Intvcs( UShort, long );
-static long Assign( short, long );
-static long Getfcb( short );
-static long Exec01( long, long, long, int );
-static long Exec2( long, long, long );
-static long Exec3( long, long, long );
-static void Exec4( long );
+static Long Gets( Long );
+static Long Kflush( short );
+static Long Ioctrl( short, Long );
+static Long Dup( short );
+static Long Dup2( short, short );
+static Long Malloc( Long );
+static Long Mfree( Long );
+static Long Dskfre( short, Long );
+static Long Setblock( Long, Long );
+static Long Create( char *, short );
+static Long Newfile( char *, short );
+static Long Open( char *, short );
+static Long Close( short );
+static Long Fgets( Long, short );
+static Long Read( short, Long, Long );
+static Long Write( short, Long, Long );
+static Long Delete( char * );
+static Long Seek( short, Long, short );
+static Long Rename( Long, Long );
+static Long Chmod( Long, short );
+static Long Mkdir( Long );
+static Long Rmdir( Long );
+static Long Chdir( Long );
+static Long Curdir( short, char* );
+static Long Files( Long, Long, short );
+static Long Nfiles( Long );
+static Long Filedate( short, Long );
+static Long Getdate( void );
+static Long Setdate( short );
+static Long Gettime( int );
+static Long Settim2( Long );
+static Long Getenv( Long, Long, Long );
+static Long Namests( Long, Long );
+static Long Nameck( Long, Long );
+static Long Conctrl( short, Long );
+static Long Keyctrl( short, Long );
+static void Fnckey( short, Long );
+static Long Intvcg( UShort );
+static Long Intvcs( UShort, Long );
+static Long Assign( short, Long );
+static Long Getfcb( short );
+static Long Exec01( Long, Long, Long, int );
+static Long Exec2( Long, Long, Long );
+static Long Exec3( Long, Long, Long );
+static void Exec4( Long );
 static void get_jtime( UShort *, UShort *, int );
-static long gets2( char *, int );
+static Long gets2( char *, int );
 
-long Getenv_common(const char *name_p, char *buf_p);
+Long Getenv_common(const char *name_p, char *buf_p);
+
+#if defined(__APPLE__)
+void CloseHandle( FILE* fp ) {
+	fclose( fp );
+}
+int CreateDirectoryA(char * name, void* ptr) {
+	printf("CreateDirectoryA(\"%s\")\n", name);
+	return 1;
+}
+
+int RemoveDirectoryA(char * name) {
+	printf("RemoveDirectoryA(\"%s\")\n", name);
+	return 1;
+}
+
+int SetCurrentDirectory(char * name) {
+	printf("SetCurrentDirectory(\"%s\")\n", name);
+	return 1;
+}
+
+int _dos_getfileattr( char* name, void *ret ) {
+	printf("_dos_getfileattr(\"%s\")\n", name);
+
+	return 1;
+}
+
+int _dos_setfileattr( char* name, void *ret ) {
+	printf("_dos_setfileattr(\"%s\")\n", name);
+
+	return 1;
+}
+
+int _dos_write( FILE* fp, void* data, int size, size_t *res ) {
+	printf("_dos_write()\n" );
+	*res = fwrite(data, size, 1, fp);
+	return 0;
+}
+
+void _flushall()
+{
+//	printf("_flushall()\n" );
+}
+
+char _getch()
+{
+	printf("_getch()\n" );
+	return getchar();
+}
+
+char _getche()
+{
+	printf("_getche()\n" );
+	return getchar();
+}
+
+void dos_getdrive(Long *drv) {
+	printf("dos_getdrive()\n" );
+	*drv = 0;
+}
+
+void dos_setdrive(Long a, Long* b) {
+	printf("dos_setdrive(%d, %p)\n", a, b );
+}
+
+int kbhit()
+{
+	printf("kbhit()\n");	
+	return 1;
+}
+
+char ungetch(char c)
+{
+	printf("ungetch()\n");	
+	return 0;
+}
+#endif
+
+
+
 
 /*
  　機能：DOSCALLを実行する
@@ -131,14 +217,14 @@ long Getenv_common(const char *name_p, char *buf_p);
 int dos_call( UChar code )
 {
 	char *data_ptr = 0;
-	long stack_adr;
-	long data;
-	long env;
-	long buf;
-	long len;
+	Long stack_adr;
+	Long data;
+	Long env;
+	Long buf;
+	Long len;
 	short    srt;
 	short    fhdl;
-	long c = 0;
+	Long c = 0;
 	int    i;
 #if defined(WIN32)
 	DWORD st;
@@ -177,7 +263,7 @@ int dos_call( UChar code )
 			// 非リダイレクト
 			WriteW32( 1, finfo[ 1 ].fh, data_ptr, 1 );
 		} else {
-			long nwritten;
+			Long nwritten;
 			/* Win32API */
 			WriteFile( finfo[ 1 ].fh, &c, 1,
 					   (LPDWORD)&nwritten, NULL);
@@ -262,7 +348,7 @@ int dos_call( UChar code )
 		if (GetConsoleMode(finfo[1].fh, &st) != 0) {
 			WriteW32( 1, finfo[ 1 ].fh, data_ptr, len );
 		} else {
-			long nwritten;
+			Long nwritten;
 			/* Win32API */
 			WriteFile( finfo[ 1 ].fh, data_ptr, len,
 					   (LPDWORD)&nwritten, NULL);
@@ -1015,16 +1101,16 @@ int dos_call( UChar code )
  　機能：
      DOSCALL GETSを実行する
    パラメータ：
-     long  buf    <in>    入力バッファアドレス
+     Long  buf    <in>    入力バッファアドレス
    戻り値：
-     long  入力文字数
+     Long  入力文字数
  */
-static long Gets( long buf )
+static Long Gets( Long buf )
 {
 	char    str [ 256 ];
 	char    *buf_ptr;
 	UChar    max;
-	long len;
+	Long len;
 
 	buf_ptr = prog_ptr + buf;
 	max = (UChar)(buf_ptr[ 0 ]);
@@ -1038,11 +1124,11 @@ static long Gets( long buf )
  　機能：
      DOSCALL KFLUSHを実行する
    パラメータ：
-     long  buf    <in>    モード
+     Long  buf    <in>    モード
    戻り値：
-     long  キーコード等
+     Long  キーコード等
  */
-static long Kflush( short mode )
+static Long Kflush( short mode )
 {
 	UChar    c;
 
@@ -1074,11 +1160,11 @@ static long Kflush( short mode )
      DOSCALL IOCTRLを実行する
    パラメータ：
      short    mode      <in>    モード
-     long  stack_adr <in>    スタックアドレス
+     Long  stack_adr <in>    スタックアドレス
    戻り値：
-     long  バイト数等
+     Long  バイト数等
  */
-static long Ioctrl( short mode, long stack_adr )
+static Long Ioctrl( short mode, Long stack_adr )
 {
 	short    fno;
 
@@ -1123,11 +1209,11 @@ static long Ioctrl( short mode, long stack_adr )
    パラメータ：
      short    org       <in>    オリジナルファイルハンドル?
    戻り値：
-     long  複写先のハンドルまたはエラーコード
+     Long  複写先のハンドルまたはエラーコード
  */
-static long Dup( short org )
+static Long Dup( short org )
 {
-	long ret;
+	Long ret;
 	int    i;
 
 	if ( org < 5 )
@@ -1156,7 +1242,7 @@ static long Dup( short org )
  　機能：DOSCALL DUP2を実行する
  戻り値：エラーコード
  */
-static long Dup2( short org, short new )
+static Long Dup2( short org, short new )
 {
 	if ( new < 5 || org < 5 )
 	  return( -14 );
@@ -1183,19 +1269,19 @@ static long Dup2( short org, short new )
  　機能：
      DOSCALL MALLOCを実行する
    パラメータ：
-     long  size      <in>    メモリサイズ(バイト)
+     Long  size      <in>    メモリサイズ(バイト)
    戻り値：
-     long  メモリブロックへのポインタ(>0)
+     Long  メモリブロックへのポインタ(>0)
               エラーコード(<0)
  */
-static long Malloc( long size )
+static Long Malloc( Long size )
 {
 	char    *mem_ptr;
-	long mem_adr;    /* メモリブロックのアドレス */
-	long mem_end;    /* メモリブロックの終端アドレス */
-	long end_adr;    /* メモリブロックの一番低位のアドレス */
-	long next_adr;    /* 次のメモリブロックのアドレス */
-	long data;
+	Long mem_adr;    /* メモリブロックのアドレス */
+	Long mem_end;    /* メモリブロックの終端アドレス */
+	Long end_adr;    /* メモリブロックの一番低位のアドレス */
+	Long next_adr;    /* 次のメモリブロックのアドレス */
+	Long data;
 
 	mem_adr  = psp [ nest_cnt ];
 	end_adr  = mem_get( mem_adr + 0x08, S_LONG );
@@ -1236,15 +1322,15 @@ static long Malloc( long size )
  　機能：
      DOSCALL MFREEを実行する
    パラメータ：
-     long  adr       <in>    メモリアドレス
+     Long  adr       <in>    メモリアドレス
    戻り値：
-     long  エラーコード(<0)
+     Long  エラーコード(<0)
  */
-static long Mfree( long adr )
+static Long Mfree( Long adr )
 {
-	long prev_adr;
-	long next_adr;
-	long data;
+	Long prev_adr;
+	Long next_adr;
+	Long data;
 
 	if ( adr < 0 )
 	  return( -9 );    /* 無効なメモリ管理ポインタ */
@@ -1281,18 +1367,18 @@ static long Mfree( long adr )
  　機能：
      DOSCALL DSKFREを実行する
    パラメータ：
-     long  drv       <in>    ドライブ番号(0)
-     long  buf       <in>    メモリアドレス
+     Long  drv       <in>    ドライブ番号(0)
+     Long  buf       <in>    メモリアドレス
    戻り値：
-     long  ディスクの空き容量(バイト>0)
+     Long  ディスクの空き容量(バイト>0)
               エラーコード(<0)
  */
-static long Dskfre( short drv, long buf )
+static Long Dskfre( short drv, Long buf )
 {
-	long disksize;
+	Long disksize;
 #if defined(WIN32)
 	BOOL b;
-	unsigned long SectorsPerCluster, BytesPerSector,
+	unsigned Long SectorsPerCluster, BytesPerSector,
 	NumberOfFreeClusters, TotalNumberOfClusters;
 	b = GetDiskFreeSpaceA(
 		NULL,
@@ -1340,18 +1426,18 @@ static long Dskfre( short drv, long buf )
    機能：
      DOSCALL SETBLOCKを実行する
    パラメータ：
-     long  adr       <in>    アドレス
-     long  size      <in>    サイズ
+     Long  adr       <in>    アドレス
+     Long  size      <in>    サイズ
    戻り値：
-     long  エラーコード
+     Long  エラーコード
  */
-static long Setblock( long adr, long size )
+static Long Setblock( Long adr, Long size )
 {
-	long data;
-	long tail_adr;
-	long near_adr;
-	long mem_adr;
-	long next_adr;
+	Long data;
+	Long tail_adr;
+	Long near_adr;
+	Long mem_adr;
+	Long next_adr;
 
 	if( adr == 0 )
 	  adr = psp [ nest_cnt ] + MB_SIZE;
@@ -1393,21 +1479,21 @@ static long Setblock( long adr, long size )
    機能：
      DOSCALL CREATEを実行する
    パラメータ：
-     long  p         <in>    ファイルパス名文字列のポインタ
+     Long  p         <in>    ファイルパス名文字列のポインタ
      short    atr       <in>    ファイル属性
    戻り値：
-     long  ファイルハンドル(>=0)
+     Long  ファイルハンドル(>=0)
               エラーコード(<0)
  */
-static long Create( char *p, short atr )
+static Long Create( char *p, short atr )
 {
 #if defined(WIN32)
 	HANDLE  fp;
 #else
 	FILE    *fp;
 #endif
-	long ret;
-	long i;
+	Long ret;
+	Long i;
 	int    len;
 
 	ret = 0;
@@ -1454,16 +1540,16 @@ static long Create( char *p, short atr )
  　機能：DOSCALL NEWFILEを実行する
  戻り値：ファイルハンドル(負ならエラーコード)
  */
-static long Newfile( char *p, short atr )
+static Long Newfile( char *p, short atr )
 {
 #if defined(WIN32)
 	HANDLE  fp;
 #else
 	FILE    *fp;
 #endif
-	long ret;
-	long i;
-	long len;
+	Long ret;
+	Long i;
+	Long len;
 
 	ret = 0;
 	for ( i = 5; i < FILE_MAX; i++ ) {
@@ -1528,7 +1614,7 @@ static long Newfile( char *p, short atr )
  　機能：DOSCALL OPENを実行する
  戻り値：ファイルハンドル(負ならエラーコード)
  */
-static long Open( char *p, short mode )
+static Long Open( char *p, short mode )
 {
 #if defined(WIN32)
 	HANDLE fh;
@@ -1538,8 +1624,8 @@ static long Open( char *p, short mode )
 	char    md [ 4 ];
 #endif
 	int    len;
-	long ret;
-	long i;
+	Long ret;
+	Long i;
 
 	switch( mode ) {
 	  case 0: /* 読み込みオープン */
@@ -1626,7 +1712,7 @@ static long Open( char *p, short mode )
  　機能：DOSCALL CLOSEを実行する
  戻り値：エラーコード
  */
-static long Close( short hdl )
+static Long Close( short hdl )
 {
 	if ( finfo [ hdl ].fh == NULL )
 	  return( -6 );    /* オープンされていない */
@@ -1655,8 +1741,8 @@ static long Close( short hdl )
 		GetFileTime(fh, &ft0, &ft1, &ft2);
 		// 秒→100nsecに変換する。
 		datetime = ((__int64)finfo [ hdl ].date*86400L + finfo [ hdl ].time) * 10000000;
-		ft2.dwLowDateTime = (unsigned long)(datetime & 0xffffffff);
-		ft2.dwHighDateTime = (unsigned long)(datetime >> 32);
+		ft2.dwLowDateTime = (unsigned Long)(datetime & 0xffffffff);
+		ft2.dwHighDateTime = (unsigned Long)(datetime >> 32);
 		SetFileTime(fh, &ft0, &ft1, &ft2);
 		CloseHandle(fh);
 		finfo [ hdl ].date = 0;
@@ -1680,7 +1766,7 @@ static long Close( short hdl )
  　機能：DOSCALL FGETSを実行する
  戻り値：エラーコード
  */
-static long Fgets( long adr, short hdl )
+static Long Fgets( Long adr, short hdl )
 {
 	char    buf [ 257 ];
 	char    *p;
@@ -1736,10 +1822,10 @@ static long Fgets( long adr, short hdl )
  　機能：DOSCALL READを実行する
  戻り値：読み込んだバイト数(負ならエラーコード)
  */
-static long Read( short hdl, long buf, long len )
+static Long Read( short hdl, Long buf, Long len )
 {
 	char    *read_buf;
-	long read_len;
+	Long read_len;
 	BOOL    ret;
 
 	if ( finfo [ hdl ].fh == NULL )
@@ -1765,10 +1851,10 @@ static long Read( short hdl, long buf, long len )
  　機能：DOSCALL WRITEを実行する
  戻り値：書き込んだバイト数(負ならエラーコード)
  */
-static long Write( short hdl, long buf, long len )
+static Long Write( short hdl, Long buf, Long len )
 {
 	char    *write_buf;
-	long write_len = 0;
+	Long write_len = 0;
 	unsigned len2;
 
 	if ( finfo [ hdl ].fh == NULL )
@@ -1793,6 +1879,12 @@ static long Write( short hdl, long buf, long len )
 	}
 	if (finfo [ hdl ].fh == stdout)
 	  fflush( stdout );
+#elif defined(__APPLE__)
+	write_len = fwrite( write_buf, 1, len, finfo [ hdl ].fh );
+	if (finfo [ hdl ].fh == stdout)
+	  fflush( stdout );
+#else
+	#error NOTIMPLEMENTED
 #endif
 
 	return( write_len );
@@ -1802,7 +1894,7 @@ static long Write( short hdl, long buf, long len )
  　機能：DOSCALL DELETEを実行する
  戻り値：ファイルハンドル(負ならエラーコード)
  */
-static long Delete( char *p )
+static Long Delete( char *p )
 {
 	int    err_save;
 	unsigned int    len;
@@ -1848,10 +1940,10 @@ static long Delete( char *p )
  　機能：DOSCALL SEEKを実行する
  戻り値：先頭からのオフセット(負ならエラーコード)
  */
-static long Seek( short hdl, long offset, short mode )
+static Long Seek( short hdl, Long offset, short mode )
 {
 	int    sk;
-	long ret;
+	Long ret;
 
 #if defined(WIN32)
 	if (finfo [ hdl ].fh == INVALID_HANDLE_VALUE)
@@ -1898,7 +1990,7 @@ static long Seek( short hdl, long offset, short mode )
  　機能：DOSCALL RENAMEを実行する
  戻り値：エラーコード
  */
-static long Rename( long old, long new1 )
+static Long Rename( Long old, Long new1 )
 {
 	char    *old_ptr;
 	char    *new_ptr;
@@ -1920,10 +2012,10 @@ static long Rename( long old, long new1 )
  　機能：DOSCALL CHMODを実行する
  戻り値：エラーコード
  */
-static long Chmod( long adr, short atr )
+static Long Chmod( Long adr, short atr )
 {
 	char    *name_ptr;
-	unsigned long ret;
+	ULong ret;
 
 	name_ptr = prog_ptr + adr;
 	if ( atr == -1 ) {
@@ -1957,7 +2049,7 @@ static long Chmod( long adr, short atr )
  　機能：DOSCALL MKDIRを実行する
  戻り値：エラーコード
  */
-static long Mkdir( long name )
+static Long Mkdir( Long name )
 {
 	char    *name_ptr;
 
@@ -1974,7 +2066,7 @@ static long Mkdir( long name )
  　機能：DOSCALL RMDIRを実行する
  戻り値：エラーコード
 	 */
-static long Rmdir( long name )
+static Long Rmdir( Long name )
 {
 	char    *name_ptr;
 
@@ -1992,7 +2084,7 @@ static long Rmdir( long name )
  　機能：DOSCALL CHDIRを実行する
  戻り値：エラーコード
  */
-static long Chdir( long name )
+static Long Chdir( Long name )
 {
 	char    *name_ptr;
 
@@ -2008,7 +2100,7 @@ static long Chdir( long name )
    戻り値：
      エラーコード
  */
-static long Curdir( short drv, char *buf_ptr )
+static Long Curdir( short drv, char *buf_ptr )
 {
 	char    str [ 67 ];
 	char     *ret_ptr = str; /* NULL以外なら何でもよい。*/
@@ -2043,7 +2135,7 @@ static long Curdir( short drv, char *buf_ptr )
 	str[sizeof(str)-1] = '\0';
 	strcpy( buf_ptr, str);
 #else
-	unsigned getdrv;
+	unsigned getdrv, dmy;
 	if ( drv != 0 ) {
 #if defined(DOSX)
 		dos_getdrive( &getdrv );
@@ -2078,14 +2170,18 @@ static long Curdir( short drv, char *buf_ptr )
    機能：
      DOSCALL FILESを実行する
    パラメータ：
-     long  buf       <in>    ファイル検索バッファのアドレス
-     long  name      <in>    ファイル名(ワイルドカード含む)へのポインタ
+     Long  buf       <in>    ファイル検索バッファのアドレス
+     Long  name      <in>    ファイル名(ワイルドカード含む)へのポインタ
      short    atr       <in>    属性
    戻り値：
      エラーコード
  */
-static long Files( long buf, long name, short atr )
+static Long Files( Long buf, Long name, short atr )
 {
+#if defined(__APPLE__)
+	printf("DOSCALL FILES:not defined yet %s %s\n", __FILE__, __LINE__ );
+#else
+
 	WIN32_FIND_DATA f_data;
 	HANDLE handle;
 	char        *name_ptr;
@@ -2154,6 +2250,7 @@ static long Files( long buf, long name, short atr )
 	/* PACKEDNAMEをセット */
 	strncpy(&buf_ptr[30], f_data.cFileName, 22);
 	buf_ptr[30+22] = 0;
+#endif
 	return( 0 );
 }
 
@@ -2161,8 +2258,11 @@ static long Files( long buf, long name, short atr )
  　機能：DOSCALL NFILESを実行する
  戻り値：エラーコード
  */
-static long Nfiles( long buf )
+static Long Nfiles( Long buf )
 {
+#if defined(__APPLE__)
+	printf("DOSCALL NFILES:not defined yet %s %s\n", __FILE__, __LINE__ );
+#else
 	WIN32_FIND_DATA f_data;
 	HANDLE handle;
 	unsigned int i;
@@ -2225,7 +2325,7 @@ static long Nfiles( long buf )
         }
 		 */
 		f_data.nFileSizeHigh = 0;
-		f_data.nFileSizeLow = *((unsigned long*)&buf_ptr[29]);
+		f_data.nFileSizeLow = *((unsigned Long*)&buf_ptr[29]);
 		/* ファイルのハンドルをバッファから取得する。*/
 		handle = *((HANDLE*)&buf_ptr[2]);
 		b = FindNextFile(handle, &f_data);
@@ -2278,6 +2378,7 @@ static long Nfiles( long buf )
 	/* PACKEDNAMEをセット */
 	strncpy(&buf_ptr[30], f_data.cFileName, 22);
 	buf_ptr[30+22] = 0;
+#endif
 	return( 0 );
 }
 
@@ -2285,8 +2386,11 @@ static long Nfiles( long buf )
  　機能：DOSCALL FILEDATEを実行する
  戻り値：エラーコード
  */
-static long Filedate( short hdl, long dt )
+static Long Filedate( short hdl, Long dt )
 {
+#if defined(__APPLE__)
+	printf("DOSCALL FILEDATE:not defined yet %s %s\n", __FILE__, __LINE__ );
+#else
 #if defined(WIN32)
 	FILETIME ctime, atime, wtime;
 	__int64 ll_wtime;
@@ -2314,8 +2418,8 @@ static long Filedate( short hdl, long dt )
 		b = SetFileTime(hFile, &ctime, &atime, &wtime);
 		if (b)
 			return( -19 );    /* 書き込み不可 */
-		finfo [ hdl ].date = (unsigned long)(ll_wtime / 10000000 / 86400);
-		finfo [ hdl ].time = (unsigned long)((ll_wtime / 10000000) % 86400);
+		finfo [ hdl ].date = (unsigned Long)(ll_wtime / 10000000 / 86400);
+		finfo [ hdl ].time = (unsigned Long)((ll_wtime / 10000000) % 86400);
 #elif defined(DOSX)
 		fdate = (unsigned short)(dt >> 16);
 		ftime = (unsigned short)(dt & 0xFFFF);
@@ -2334,7 +2438,7 @@ static long Filedate( short hdl, long dt )
 	hFile = finfo [ hdl ].fh;
 	GetFileTime(hFile, &ctime, &atime, &wtime);
 	ll_wtime = (((__int64)wtime.dwLowDateTime) << 32) + (__int64)wtime.dwLowDateTime;
-	return (long)(((ll_wtime / 86400 / 10000000) << 16)
+	return (Long)(((ll_wtime / 86400 / 10000000) << 16)
 					+ (ll_wtime / 10000000) % 86400);
 #else
 	if ( dos_getftime( dosfh, &fd, &ft ) != 0 )
@@ -2345,27 +2449,33 @@ static long Filedate( short hdl, long dt )
 	get_jtime( &fdate, &ftime, 1 );
 	return( (fdate << 16) | ftime );
 #endif
+#endif
 }
 
 /*
  　機能：DOSCALL GETDATEを実行する
  戻り値：現在の日付
  */
-static long Getdate()
+static Long Getdate()
 {
-	long       ret;
+	Long       ret;
 
+#if defined(__APPLE__)
+	ret = 0;
+	printf("DOSCALL GETDATE:not defined yet %s %s\n", __FILE__, __LINE__ );
+#else
 #if defined(WIN32)
 	SYSTEMTIME stime;
 	//GetSystemTime(&stime);
 	GetLocalTime(&stime);
-	ret = ((long)(stime.wDayOfWeek) << 16) + (((long)(stime.wYear) - 1980) << 9) +
-		((long)(stime.wMonth) << 5) + (long)(stime.wDay);
+	ret = ((Long)(stime.wDayOfWeek) << 16) + (((Long)(stime.wYear) - 1980) << 9) +
+		((Long)(stime.wMonth) << 5) + (Long)(stime.wDay);
 #else
 	struct dos_date_t ddate;
 	dos_getdate( &ddate );
 	ret = (ddate.dayofweek << 16) + ((ddate.year -1980) << 9) +
 		(ddate.month << 5) + ddate.day;
+#endif
 #endif
 	return( ret );
 }
@@ -2374,8 +2484,12 @@ static long Getdate()
  　機能：DOSCALL SETDATEを実行する
  戻り値：エラーコード
  */
-static long Setdate( short dt )
+static Long Setdate( short dt )
 {
+#if defined(__APPLE__)
+	printf("DOSCALL SETDATE:not defined yet %s %s\n", __FILE__, __LINE__ );
+#else
+
 #if defined(WIN32)
 	SYSTEMTIME stime;
 	BOOL b;
@@ -2398,6 +2512,7 @@ static long Setdate( short dt )
 	if ( dos_setdate( &ddate ) != 0 )
 		return( -14 );        /* パラメータ不正 */
 #endif
+#endif
 	return( 0 );
 }
 
@@ -2405,19 +2520,22 @@ static long Setdate( short dt )
  　機能：DOSCALL GETTIME / GETTIME2を実行する
  戻り値：現在の時刻
  */
-static long Gettime( int flag )
+static Long Gettime( int flag )
 {
-	long       ret;
+	Long       ret;
+#if defined(__APPLE__)
+	printf("DOSCALL GETTIME:not defined yet %s %s\n", __FILE__, __LINE__ );
+#else
 #if defined(WIN32)
 	SYSTEMTIME stime;
 	// GetSystemTime(&stime);
 	GetLocalTime(&stime);
 	if ( flag == 0 )
 		// ret = stime.wHour << 11 + stime.wMinute << 5 + stime.wSecond >> 1;
-		ret = ((long)(stime.wHour) << 11) + ((long)(stime.wMinute) << 5) + ((long)(stime.wSecond) >> 1);
+		ret = ((Long)(stime.wHour) << 11) + ((Long)(stime.wMinute) << 5) + ((Long)(stime.wSecond) >> 1);
 	else
 		// ret = stime.wHour << 16 + stime.wMinute << 8 + stime.wSecond;
-		ret = ((long)(stime.wHour) << 16) + ((long)(stime.wMinute) << 8) + (long)(stime.wSecond);
+		ret = ((Long)(stime.wHour) << 16) + ((Long)(stime.wMinute) << 8) + (Long)(stime.wSecond);
 #else
 	struct dos_time_t dtime;
 	dos_gettime( &dtime );
@@ -2427,6 +2545,7 @@ static long Gettime( int flag )
 	else
 		ret = (dtime.hour << 16) + (dtime.minute << 8) + dtime.second;
 #endif
+#endif
 	return( ret );
 }
 
@@ -2434,8 +2553,12 @@ static long Gettime( int flag )
  　機能：DOSCALL SETTIM2を実行する
  戻り値：エラーコード
  */
-static long Settim2( long tim )
+static Long Settim2( Long tim )
 {
+#if defined(__APPLE__)
+	printf("DOSCALL SETTIM2:not defined yet %s %s\n", __FILE__, __LINE__ );
+#else
+
 #if defined(WIN32)
 	SYSTEMTIME stime;
 	BOOL b;
@@ -2457,6 +2580,7 @@ static long Settim2( long tim )
 	if ( dos_settime( &dtime ) != 0 )
 		return( -14 );        /* パラメータ不正 */
 #endif
+#endif
 	return( 0 );
 }
 
@@ -2464,16 +2588,16 @@ static long Settim2( long tim )
  　機能：DOSCALL GETENVを実行する
  戻り値：エラーコード
  */
-static long Getenv( long name, long env, long buf )
+static Long Getenv( Long name, Long env, Long buf )
 {
-	long ret;
+	Long ret;
 	if ( env != 0 )
 		return( -10 );
 	ret = Getenv_common(prog_ptr + name, prog_ptr + buf);
 	return ret;
 }
 
-long Getenv_common(const char *name_p, char *buf_p)
+Long Getenv_common(const char *name_p, char *buf_p)
 {
 	unsigned char *mem_ptr;
 	/*
@@ -2499,7 +2623,7 @@ long Getenv_common(const char *name_p, char *buf_p)
 				mem_ptr ++;
 			}
 			/* 空文字列の場合もある。*/
-			/*            *buf_p = (long)((char*)mem_ptr - prog_ptr);*/
+			/*            *buf_p = (Long)((char*)mem_ptr - prog_ptr);*/
 			strcpy(buf_p, mem_ptr);
 			return 0;
 		}
@@ -2519,7 +2643,7 @@ long Getenv_common(const char *name_p, char *buf_p)
    戻り値：
      エラーコード
  */
-static long Namests( long name, long buf )
+static Long Namests( Long name, Long buf )
 {
 	char     nbuf [ 256 ];
 	char     cud [ 67 ];
@@ -2621,7 +2745,7 @@ static long Namests( long name, long buf )
  　機能：DOSCALL NAMECKを実行する
  戻り値：エラーコード
  */
-static long Nameck( long name, long buf )
+static Long Nameck( Long name, Long buf )
 {
 	char     nbuf [ 89 ];
 	char     *name_ptr;
@@ -2703,10 +2827,10 @@ static long Nameck( long name, long buf )
  　機能：DOSCALL CONCTRLを実行する
  戻り値：modeによって異なる
  */
-static long Conctrl( short mode, long adr )
+static Long Conctrl( short mode, Long adr )
 {
 	char   *p;
-	long   mes;
+	Long   mes;
 	UShort usrt;
 	short  srt;
 	short  x, y;
@@ -2813,7 +2937,7 @@ static long Conctrl( short mode, long adr )
  　機能：DOSCALL KEYCTRLを実行する
  戻り値：キーコード等(modeによって異なる)
  */
-static long Keyctrl( short mode, long stack_adr )
+static Long Keyctrl( short mode, Long stack_adr )
 {
 	UChar    c;
 
@@ -2856,7 +2980,7 @@ static long Keyctrl( short mode, long stack_adr )
  　機能：DOSCALL FNCKEYを実行する
  戻り値：なし
  */
-static void Fnckey( short mode, long buf )
+static void Fnckey( short mode, Long buf )
 {
 	char    *buf_ptr;
 
@@ -2872,10 +2996,10 @@ static void Fnckey( short mode, long buf )
  　機能：DOSCALL INTVCGを実行する
  戻り値：ベクタの値
  */
-static long Intvcg( UShort intno )
+static Long Intvcg( UShort intno )
 {
-	long  adr2;
-	long  mae;
+	Long  adr2;
+	Long  mae;
 	short save_s;
 
 	if ( intno >= 0xFF00 ) {    /* DOSCALL */
@@ -2903,10 +3027,10 @@ static long Intvcg( UShort intno )
  　機能：DOSCALL INTVCSを実行する
  戻り値：設定前のベクタ
  */
-static long Intvcs( UShort intno, long adr )
+static Long Intvcs( UShort intno, Long adr )
 {
-	long adr2;
-	long mae;
+	Long adr2;
+	Long mae;
 	short    save_s;
 
 	if ( intno >= 0xFF00 ) {    /* DOSCALL */
@@ -2928,10 +3052,10 @@ static long Intvcs( UShort intno, long adr )
  　機能：DOSCALL ASSIGNを実行する
  戻り値：エラーコード他
  */
-static long Assign( short mode, long stack_adr )
+static Long Assign( short mode, Long stack_adr )
 {
-	long drv;
-	long buf;
+	Long drv;
+	Long buf;
 	char    *drv_ptr;
 	char    *buf_ptr;
 
@@ -2961,7 +3085,7 @@ static long Assign( short mode, long stack_adr )
  　機能：DOSCALL GETFCBを実行する
  戻り値：FCBのアドレス
  */
-static long Getfcb( short fhdl )
+static Long Getfcb( short fhdl )
 {
 	static unsigned char fcb [ 4 ] [ 0x60 ] = {
 		{0x01,0xC1,0x00,0x02,0xC6,0x04,0x00,0x00,0x00,0x00,
@@ -3024,19 +3148,19 @@ static long Getfcb( short fhdl )
  　機能：DOSCALL EXEC(mode=0,1)を実行する
  戻り値：エラーコード等
  */
-static long Exec01( long nm, long cmd, long env, int md )
+static Long Exec01( Long nm, Long cmd, Long env, int md )
 {
 	FILE *fp;
 	char fname [ 89 ];
 	char *name_ptr;
 	int  loadmode;
-	long mem;
-	long prev_adr;
-	long end_adr;
-	long pc1;
-	long size;
-	long prog_size;
-	long prog_size2;
+	Long mem;
+	Long prev_adr;
+	Long end_adr;
+	Long pc1;
+	Long size;
+	Long prog_size;
+	Long prog_size2;
 
 	loadmode = ((nm >> 24) & 0x03);
 	nm &= 0xFFFFFF;
@@ -3052,7 +3176,7 @@ static long Exec01( long nm, long cmd, long env, int md )
 		return( -8 );
 
 	mem = Malloc( mem_aloc );
-	if ( (mem=Malloc( mem_aloc )) == (long)0x82000000 ) {
+	if ( (mem=Malloc( mem_aloc )) == (Long)0x82000000 ) {
 		fclose( fp );
 		return( -8 );        /* メモリが確保できない */
 	}
@@ -3105,7 +3229,7 @@ static long Exec01( long nm, long cmd, long env, int md )
  　機能：DOSCALL EXEC(mode=2)を実行する
  戻り値：エラーコード
  */
-static long Exec2( long nm, long cmd, long env )
+static Long Exec2( Long nm, Long cmd, Long env )
 {
 	FILE *fp;
 	char *name_ptr;
@@ -3141,15 +3265,15 @@ static long Exec2( long nm, long cmd, long env )
  　機能：DOSCALL EXEC(mode=3)を実行する
  戻り値：エラーコード等
  */
-static long Exec3( long nm, long adr1, long adr2 )
+static Long Exec3( Long nm, Long adr1, Long adr2 )
 {
 	FILE *fp;
 	char fname [ 89 ];
 	char *name_ptr;
 	int  loadmode;
-	long ret;
-	long prog_size;
-	long prog_size2;
+	Long ret;
+	Long prog_size;
+	Long prog_size2;
 
 	loadmode = ((nm >> 24) & 0x03);
 	nm   &= 0xFFFFFF;
@@ -3175,7 +3299,7 @@ static long Exec3( long nm, long adr1, long adr2 )
  　機能：DOSCALL EXEC(mode=4)を実行する
  戻り値：エラーコード等
  */
-static void Exec4( long adr )
+static void Exec4( Long adr )
 {
 	nest_pc [ nest_cnt ] = pc;
 	nest_sp [ nest_cnt ] = ra [ 7 ];
@@ -3250,7 +3374,7 @@ static void get_jtime( UShort *d, UShort *t, int offset )
  　機能：getsの代わりをする
  戻り値：なし
  */
-static long gets2( char *str, int max )
+static Long gets2( char *str, int max )
 {
 	int    c;
 	int    cnt;

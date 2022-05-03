@@ -73,9 +73,9 @@ static	int	Suba( char code1, char code2 )
 	char	src_reg;
 	char	dst_reg;
 	char	size;
-	long	src_data;
-	long	save_pc;
-	long	dest_data;
+	Long	src_data;
+	Long	save_pc;
+	Long	dest_data;
 
 	save_pc = pc;
 	dst_reg = ((code1 & 0x0E) >> 1);
@@ -131,7 +131,7 @@ static	int	Subx( char code1, char code2 )
 	char	dst_reg;
 	short	save_z;
 	short	save_x;
-	long	dest_data;
+	Long	dest_data;
 
 #ifdef TEST_CCR
 	short	before;
@@ -205,10 +205,10 @@ static	int	Sub1( char code1, char code2 )
 	char	src_reg;
 	char	dst_reg;
 	short	disp = 0;
-	long	save_pc;
+	Long	save_pc;
 	int	work_mode;
-	long	src_data;
-	long	dest_data;
+	Long	src_data;
+	Long	dest_data;
 
 #ifdef TEST_CCR
 	short	before;
@@ -294,9 +294,9 @@ static	int	Sub2( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	src_data;
-	long	save_pc;
-	long	dest_data;
+	Long	src_data;
+	Long	save_pc;
+	Long	dest_data;
 
 #ifdef TEST_CCR
 	short	before;
@@ -315,7 +315,7 @@ static	int	Sub2( char code1, char code2 )
 		return(TRUE);
 	}
 
-	/* レジスタへの格納である為、long で値を得ておかないと、格納時に上位ワードを破壊してしまう */
+	/* レジスタへの格納である為、Long で値を得ておかないと、格納時に上位ワードを破壊してしまう */
 	if (get_data_at_ea(EA_All, EA_DD, dst_reg, S_LONG /*size*/, &dest_data)) {
 		return(TRUE);
 	}

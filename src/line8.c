@@ -64,10 +64,10 @@ int	line8( char *pc_ptr )
 		char	src_reg = (code2 & 0x7);
 		char	dst_reg = ((code1 & 0xE) >> 1);
 		char	size = 0;	/* S_BYTE ŒÅ’è */
-		long	src_data;
-		long	dst_data;
-		long	kekka;
-		long	X;
+		Long	src_data;
+		Long	dst_data;
+		Long	kekka;
+		Long	X;
 
 		if ( (code2 & 0x8) != 0 ) {
 			/* -(am),-(an); */
@@ -168,8 +168,8 @@ static	int	Divu( char code1, char code2 )
 	ULong	data;
 	ULong	ans;
 	UShort	mod;
-	long	save_pc;
-	long	waru_l;
+	Long	save_pc;
+	Long	waru_l;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -222,11 +222,11 @@ static	int	Divs( char code1, char code2 )
 	char	src_reg;
 	char	dst_reg;
 	short	waru;
-	long	data;
-	long	ans;
+	Long	data;
+	Long	ans;
 	short	mod;
-	long	save_pc;
-	long	waru_l;
+	Long	save_pc;
+	Long	waru_l;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -280,10 +280,10 @@ static	int	Or1( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	data;
-	long	save_pc;
-	long	src_data;
-	long	work_mode;
+	Long	data;
+	Long	save_pc;
+	Long	src_data;
+	Long	work_mode;
 
 	save_pc = pc;
 	size = ((code2 >> 6) & 0x03);
@@ -338,9 +338,9 @@ static	int	Or2( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	src_data;
-	long	save_pc;
-	long	data;
+	Long	src_data;
+	Long	save_pc;
+	Long	data;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);

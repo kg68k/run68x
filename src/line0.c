@@ -129,13 +129,13 @@ int	line0( char *pc_ptr )
 */
 static	int	Ori( char code )
 {
-	long	src_data;
+	Long	src_data;
 	char	mode;
 	char	reg;
 	char	size;
-	long	save_pc;
+	Long	save_pc;
 	int	work_mode;
-	long	data;
+	Long	data;
 
 	save_pc = pc;
 	size = ((code >> 6) & 0x03);
@@ -241,13 +241,13 @@ static	int	Ori_t_sr()
 */
 static	int	Andi( char code )
 {
-	long	src_data;
+	Long	src_data;
 	char	mode;
 	char	reg;
 	char	size;
-	long	save_pc;
-	long	work_mode;
-	long	data;
+	Long	save_pc;
+	Long	work_mode;
+	Long	data;
 
 	save_pc = pc;
 	size = ((code >> 6) & 0x03);
@@ -354,13 +354,13 @@ static	int	Andi_t_sr()
 */
 static	int	Addi( char code )
 {
-	long	src_data;
+	Long	src_data;
 	char	mode;
 	char	reg;
 	char	size;
-	long	save_pc;
+	Long	save_pc;
 	int	work_mode;
-	long	dest_data;
+	Long	dest_data;
 
 #ifdef TEST_CCR
 	short before;
@@ -427,13 +427,13 @@ static	int	Addi( char code )
 */
 static	int	Subi( char code )
 {
-	long	src_data;
+	Long	src_data;
 	char	mode;
 	char	reg;
 	char	size;
-	long	save_pc;
+	Long	save_pc;
 	int	work_mode;
-	long	dest_data;
+	Long	dest_data;
 
 #ifdef TEST_CCR
 	short before;
@@ -503,10 +503,10 @@ static	int	Eori( char code )
 	char	size;
 	char	mode;
 	char	reg;
-	long	data;
-	long	src_data;
-	long	save_pc;
-	long	work_mode;
+	Long	data;
+	Long	src_data;
+	Long	save_pc;
+	Long	work_mode;
 
 	save_pc = pc;
 	size = ((code >> 6) & 0x03);
@@ -606,14 +606,14 @@ static	int	Cmpi( char code )
 	char	mode;
 	char	reg;
 	char	size;
-	long	src_data;
-	long	save_pc;
+	Long	src_data;
+	Long	save_pc;
 	short	save_x;
-	long	dest_data;
+	Long	dest_data;
 
 #ifdef TEST_CCR
 	short	before;
-	long	result;
+	Long	result;
 #endif
 
 	save_pc = pc;
@@ -665,12 +665,12 @@ static	int	Cmpi( char code )
 */
 static	int	Btsti( char code )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	mode;
 	char	reg;
 	UChar	bitno;
-	long	data;
-	long	mask = 1;
+	Long	data;
+	Long	mask = 1;
 	int	size;
 
 	save_pc = pc;
@@ -712,12 +712,12 @@ static	int	Btsti( char code )
 */
 static	int	Btst( char code1, char code2 )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	mode;
 	char	reg;
 	UChar	bitno;
-	long	data;
-	long	mask = 1;
+	Long	data;
+	Long	mask = 1;
 	int	size;
 
 	save_pc = pc;
@@ -761,14 +761,14 @@ static	int	Btst( char code1, char code2 )
 */
 static	int	Bchgi( char code )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	mode;
 	char	reg;
 	UChar	bitno;
-	long	mask = 1;
+	Long	mask = 1;
 	int	size;
 	int	work_mode;
-	long	data;
+	Long	data;
 
 	save_pc = pc;
 	mode = (code & 0x38) >> 3;
@@ -826,12 +826,12 @@ static	int	Bchgi( char code )
 */
 static	int	Bchg( char code1, char code2 )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	mode;
 	char	reg;
 	UChar	bitno;
-	long	data;
-	long	mask = 1;
+	Long	data;
+	Long	mask = 1;
 	int	size;
 	int	work_mode;
 
@@ -892,13 +892,13 @@ static	int	Bchg( char code1, char code2 )
 */
 static	int	Bclri( char code )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	mode;
 	char	reg;
 	UChar	bitno;
 	short	disp = 0;
-	long	data;
-	long	mask = 1;
+	Long	data;
+	Long	mask = 1;
 	int	size;
 	int	work_mode;
 
@@ -957,13 +957,13 @@ static	int	Bclri( char code )
 */
 static	int	Bclr( char code1, char code2 )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	mode;
 	char	reg;
 	UChar	bitno;
 	short	disp = 0;
-	long	data;
-	long	mask = 1;
+	Long	data;
+	Long	mask = 1;
 	int	size;
 	int	work_mode;
 
@@ -1023,11 +1023,11 @@ static	int	Bclr( char code1, char code2 )
 */
 static	int	Bseti( char code )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	mode;
 	char	reg;
 	UChar	bitno;
-	long	data;
+	Long	data;
 	short	disp = 0;
 	ULong	mask = 1;
 	int	size;
@@ -1088,11 +1088,11 @@ static	int	Bseti( char code )
 */
 static	int	Bset( char code1, char code2 )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	mode;
 	char	reg;
 	UChar	bitno;
-	long	data;
+	Long	data;
 	short	disp = 0;
 	ULong	mask = 1;
 	int	size;
@@ -1157,7 +1157,7 @@ static	int	Movep_f( char code1, char code2 )
 	char	d_reg;
 	char	a_reg;
 	short	disp;
-	long	adr;
+	Long	adr;
 
 	d_reg = ((code1 >> 1) & 0x07);
 	a_reg = (code2 & 0x07);
@@ -1194,7 +1194,7 @@ static	int	Movep_t( char code1, char code2 )
 	char	a_reg;
 	short	disp;
 	ULong	data;
-	long	adr;
+	Long	adr;
 
 	d_reg = ((code1 >> 1) & 0x07);
 	a_reg = (code2 & 0x07);

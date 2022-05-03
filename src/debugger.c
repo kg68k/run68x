@@ -51,7 +51,7 @@ static char *command_name[] = {
 
 /* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
 #define prog_ptr_u ((unsigned char *)prog_ptr)
-unsigned long stepcount;
+ULong stepcount;
 
 static RUN68_COMMAND analyze(const char *line, int *argc, char** argv);
 static short determine_string(const char *str);
@@ -62,8 +62,8 @@ static void run68_dump(int argc, char **argv);
 static void display_registers();
 static void set_breakpoint(int argc, char **argv);
 static void clear_breakpoint();
-static unsigned long get_stepcount(int argc, char **argv);
-extern char *disassemble(long addr, long* next_addr);
+static ULong get_stepcount(int argc, char **argv);
+extern char *disassemble(Long addr, Long* next_addr);
 static unsigned short watchcode(int argc, char **argv);
 
 
@@ -82,7 +82,7 @@ RUN68_COMMAND debugger(BOOL running)
 
     if (running)
     {
-        long naddr, addr = pc;
+        Long naddr, addr = pc;
         char hex[64];
         char *s = disassemble(addr, &naddr);
         unsigned short code;
@@ -325,9 +325,9 @@ static void display_help()
 
 static void run68_dump(int argc, char **argv)
 {
-    static long dump_addr = -1;
-    static long size = 32;
-    long sadr;
+    static Long dump_addr = -1;
+    static Long size = 32;
+    Long sadr;
     int i, j;
 
     if (dump_addr == -1)
@@ -368,7 +368,7 @@ static void run68_dump(int argc, char **argv)
     }
     for (i = 0; i < size; i ++)
     {
-        unsigned long d;
+        ULong d;
         d = (unsigned char)prog_ptr_u[sadr+i];
         if (i % 16 == 0)
         {
@@ -461,9 +461,9 @@ static void display_history(int argc, char **argv)
 
 static void display_list(int argc, char **argv)
 {
-    static long list_addr = 0;
-    static long old_pc = 0;
-    long addr, naddr;
+    static Long list_addr = 0;
+    static Long old_pc = 0;
+    Long addr, naddr;
     int  i, j, n;
 
     n = 10;
@@ -531,9 +531,9 @@ static void display_list(int argc, char **argv)
     list_addr = naddr;
 }
 
-static unsigned long get_stepcount(int argc, char **argv)
+static ULong get_stepcount(int argc, char **argv)
 {
-    unsigned long count = 0;
+    ULong count = 0;
     if (argc == 1)
     {
         return 0;

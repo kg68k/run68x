@@ -40,11 +40,11 @@
  *   retcode = get_ea(save_pc, AceptAdrMode, mode, reg, &data);
  *
  * 【引数】
- *   long save_pc;      <in>  PC相対時の基準となるPC値
+ *   Long save_pc;      <in>  PC相対時の基準となるPC値
  *   int  AceptAdrMode; <in>  アドレッシングモード MD_??
  *   int  mode;         <in>  アドレッシングモード MD_??
  *   int  reg;          <in>  レジスタ番号またはアドレッシングモード　MR_??
- *   long *data;        <out> 取得するデータを格納する場所へのポインタ
+ *   Long *data;        <out> 取得するデータを格納する場所へのポインタ
  *
  * 【返値】
  *   TURE:  エラー
@@ -52,10 +52,10 @@
  *
  */
 
-BOOL get_ea(long save_pc, int AceptAdrMode, int mode, int reg, long *data)
+BOOL get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data)
 {
 	short	disp;
-	long	idx;
+	Long	idx;
 	BOOL	retcode = FALSE;
 
 	/* 操作しやすいようにモードを統合 */
@@ -120,7 +120,7 @@ BOOL get_ea(long save_pc, int AceptAdrMode, int mode, int reg, long *data)
  *   int AceptAdrMode; <in>  処理可能なアドレッシングモード群 EA_????*
  *   int mode;         <in>  アドレッシングモード MD_??
  *   int reg;          <in>  レジスタ番号またはアドレッシングモード　MR_??
- *   long *data;       <out> 取得するデータを格納する場所へのポインタ
+ *   Long *data;       <out> 取得するデータを格納する場所へのポインタ
  *
  * 【返値】
  *   TURE:  エラー
@@ -128,13 +128,13 @@ BOOL get_ea(long save_pc, int AceptAdrMode, int mode, int reg, long *data)
  *
  */
 
-BOOL get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, long *data)
+BOOL get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data)
 {
 	short	disp;
-	long	idx;
+	Long	idx;
 	BOOL	retcode;
 	int	gmode;
-	long	save_pc;
+	Long	save_pc;
 
 	save_pc = pc;
 	retcode = FALSE;
@@ -248,7 +248,7 @@ BOOL get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, long *data)
  *   int AceptAdrMode; <in>  処理可能なアドレッシングモード群 EA_????*
  *   int mode;         <in>  アドレッシングモード MD_??
  *   int reg;          <in>  レジスタ番号またはアドレッシングモード　MR_??
- *   long data;        <in>  設定するデータ
+ *   Long data;        <in>  設定するデータ
  *
  * 【返値】
  *   TURE:  エラー
@@ -256,13 +256,13 @@ BOOL get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, long *data)
  *
  */
 
-BOOL set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, long data)
+BOOL set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data)
 {
 	short	disp;
-	long	idx;
+	Long	idx;
 	BOOL	retcode;
 	int	gmode;
-	long	save_pc;
+	Long	save_pc;
 
 	save_pc = pc;
 	retcode = FALSE;
@@ -380,7 +380,7 @@ BOOL set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, long data)
  *   int AceptAdrMode; <in>  処理可能なアドレッシングモード群 EA_????*
  *   int mode;         <in>  アドレッシングモード MD_??
  *   int reg;          <in>  レジスタ番号またはアドレッシングモード　MR_??
- *   long *data;       <out> 取得するデータを格納する場所へのポインタ
+ *   Long *data;       <out> 取得するデータを格納する場所へのポインタ
  *
  * 【返値】
  *   TURE:  エラー
@@ -388,9 +388,9 @@ BOOL set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, long data)
  *
  */
 
-BOOL get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size, long *data)
+BOOL get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size, Long *data)
 {
-	long save_pc;
+	Long save_pc;
 	BOOL retcode;
 
 	save_pc = pc;

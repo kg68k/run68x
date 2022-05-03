@@ -68,12 +68,12 @@
  *
  */
 
-#define RUN68VERSION "0.09a"
+#define RUN68VERSION "0.09a+MacOS"
 #if !defined(_RUN68_H_)
 #define _RUN68_H_
 
 #if defined(__GNUC__)
-#define __int64 long long
+#define __int64 Long Long
 #endif
 
 #if defined(_WIN32) /* for Cygnus GCC */
@@ -81,6 +81,16 @@
 #define WIN32
 #endif
 #endif
+
+#include <stdlib.h>	// for intXX_t
+
+typedef	int8_t		Char ;
+typedef	uint8_t		UChar ;
+typedef	int16_t		Short ;
+typedef	uint16_t	UShort ;
+typedef	int32_t		Long ;			// 64bit 環境対応
+typedef	uint32_t	ULong ;			// 64bit 環境対応
+
 
 /*
 #undef	TRACE
@@ -180,9 +190,9 @@
 #define EA_VariableMemory	0x01fc	/* 0000 0001 1111 1100 */
 
 /* EaAccess.c */
-BOOL get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, long *data) ;
-BOOL set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, long data) ;
-BOOL get_ea(long save_pc, int AceptAdrMode, int mode, int reg, long *data) ;
+BOOL get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data) ;
+BOOL set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data) ;
+BOOL get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data) ;
 
 #define	CCR_X_ON()	sr |= 0x0010
 #define	CCR_X_OFF()	sr &= 0xFFEF
@@ -204,9 +214,6 @@ BOOL get_ea(long save_pc, int AceptAdrMode, int mode, int reg, long *data) ;
 #define	SR_S_REF()	(sr & 0x2000)
 #define	SR_T_REF()	(sr & 0x8000)
 
-typedef	unsigned char	UChar ;
-typedef	unsigned short	UShort ;
-typedef	unsigned long	ULong ;
 
 
 typedef struct	{
@@ -231,12 +238,12 @@ typedef struct	{
 
 /* デバッグ用に実行した命令の情報を保存しておく構造体 */
 typedef struct {
-    long    pc;
+    Long    pc;
     /* 本当は全レジスタを保存しておきたい。*/
     unsigned short code; /* OPコード */
-    long    rmem;        /* READしたメモリ */
+    Long    rmem;        /* READしたメモリ */
     char    rsize;       /* B/W/L or N(READなし) movemの場合は最後の一つ */
-    long    wmem;        /* WRITEしたメモリ */
+    Long    wmem;        /* WRITEしたメモリ */
     char    wsize;       /* B/W/L or N(WRITEなし) movemの場合は最後の一つ */
     char    mnemonic[64]; /* ニーモニック(できれば) */
 } EXEC_INSTRUCTION_INFO;
@@ -245,7 +252,7 @@ typedef struct {
  /* フラグ */
 extern BOOL func_trace_f;
 extern BOOL trace_f;
-extern long trap_pc;
+extern Long trap_pc;
 extern jmp_buf jmp_when_abort;
 extern unsigned short cwatchpoint;
 /* 標準入力のハンドル */
@@ -263,19 +270,19 @@ void	readenv_from_ini(char *path);
 
 /* load.c */
 FILE	*prog_open(char *, int ) ;
-long	prog_read( FILE *, char *, long, long *, long *, int ) ;
-int	make_psp( char *, long, long, long, long ) ;
+Long	prog_read( FILE *, char *, Long, Long *, Long *, int ) ;
+int	make_psp( char *, Long, Long, Long, Long ) ;
 
 /* exec.c */
 int	prog_exec( void ) ;
 int	get_cond( char ) ;
 void	err68( char * ) ;
 void    err68a(char *mes, char *file, int line);
-void    err68b(char *mes, long pc, long ppc);
+void    err68b(char *mes, Long pc, Long ppc);
 void	inc_ra( char, char ) ;
 void	dec_ra( char, char ) ;
 void	text_color( short ) ;
-long	get_locate( void ) ;
+Long	get_locate( void ) ;
 void    OPBuf_insert(const EXEC_INSTRUCTION_INFO *op);
 void    OPBuf_clear();
 int     OPBuf_numentries();
@@ -283,14 +290,14 @@ const   EXEC_INSTRUCTION_INFO *OPBuf_getentry(int no);
 void    OPBuf_display(int n);
 
 /* calc.c */
-long add_long(long src, long dest, int size);
-long sub_long(long src, long dest, int size);
+Long add_long(Long src, Long dest, int size);
+Long sub_long(Long src, Long dest, int size);
 
 /* mem.c */
-long	idx_get( void ) ;
-long	imi_get ( char ) ;
-long	mem_get ( long, char ) ;
-void	mem_set ( long, long, char ) ;
+Long	idx_get( void ) ;
+Long	imi_get ( char ) ;
+Long	mem_get ( Long, char ) ;
+void	mem_set ( Long, Long, char ) ;
 
 /* doscall.c */
 int	dos_call( UChar ) ;
@@ -319,7 +326,7 @@ int	linee( char * ) ;
 int	linef( char * ) ;
 
 /* eaaccess.c */
-BOOL get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size, long *data) ;
+BOOL get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size, Long *data) ;
 
 /* debugger.c */
 typedef enum {
@@ -344,47 +351,47 @@ typedef enum {
 RUN68_COMMAND debugger(BOOL running);
 
 /* conditions.c */
-void general_conditions(long dest, int size);
-void add_conditions(long src , long dest, long result, int size, BOOL zero_flag);
-void cmp_conditions(long src , long dest, long result, int size);
-void sub_conditions(long src , long dest, long result, int size, BOOL zero_flag);
-void neg_conditions(long dest, long result, int size, BOOL zero_flag);
-void check(char *mode, long src, long dest, long result, int size, short before);
+void general_conditions(Long dest, int size);
+void add_conditions(Long src , Long dest, Long result, int size, BOOL zero_flag);
+void cmp_conditions(Long src , Long dest, Long result, int size);
+void sub_conditions(Long src , Long dest, Long result, int size, BOOL zero_flag);
+void neg_conditions(Long dest, Long result, int size, BOOL zero_flag);
+void check(char *mode, Long src, Long dest, Long result, int size, short before);
 
 #ifdef	MAIN
 	FILEINFO finfo [ FILE_MAX ] ;	/* ファイル管理テーブル */
 	INI_INFO ini_info ;		/* iniファイルの内容 */
 	char	size_char [ 3 ] = { 'b', 'w', 'l' } ;
-	long	ra [ 8 ] ;	/* アドレスレジスタ */
-	long	rd [ 8 + 1 ] ;	/* データレジスタ */
-	long	usp ;		/* USP */
-	long	pc ;		/* プログラムカウンタ */
+	Long	ra [ 8 ] ;	/* アドレスレジスタ */
+	Long	rd [ 8 + 1 ] ;	/* データレジスタ */
+	Long	usp ;		/* USP */
+	Long	pc ;		/* プログラムカウンタ */
 	short	sr ;		/* ステータスレジスタ */
 	char	*prog_ptr ;	/* プログラムをロードしたメモリへのポインタ */
 	int	trap_count ;	/* 割り込み処理中なら０ */
-	long	superjsr_ret ;	/* DOSCALL SUPER_JSRの戻りアドレス */
-	long	psp [ NEST_MAX ] ;	/* PSP */
-	long	nest_pc [ NEST_MAX ] ;	/* 親プロセスへの戻りアドレスを保存 */
-	long	nest_sp [ NEST_MAX ] ;	/* 親プロセスのスタックポインタを保存 */
+	Long	superjsr_ret ;	/* DOSCALL SUPER_JSRの戻りアドレス */
+	Long	psp [ NEST_MAX ] ;	/* PSP */
+	Long	nest_pc [ NEST_MAX ] ;	/* 親プロセスへの戻りアドレスを保存 */
+	Long	nest_sp [ NEST_MAX ] ;	/* 親プロセスのスタックポインタを保存 */
 	char	nest_cnt ;	/* 子プロセスを起動するたびに＋１ */
-	long	mem_aloc ;	/* メインメモリの大きさ */
+	Long	mem_aloc ;	/* メインメモリの大きさ */
 #else
 	extern	FILEINFO finfo [ FILE_MAX ] ;
 	extern	INI_INFO ini_info ;
 	extern	char	size_char [ 3 ] ;
-	extern	long	ra [ 8 ] ;
-	extern	long	rd [ 8 + 1 ] ;
-	extern	long	usp ;
-	extern	long	pc ;
+	extern	Long	ra [ 8 ] ;
+	extern	Long	rd [ 8 + 1 ] ;
+	extern	Long	usp ;
+	extern	Long	pc ;
 	extern	short	sr ;
 	extern	char	*prog_ptr ;
 	extern	int	trap_count ;
-	extern	long	superjsr_ret ;
-	extern	long	psp [ NEST_MAX ] ;
-	extern	long	nest_pc [ NEST_MAX ] ;
-	extern	long	nest_sp [ NEST_MAX ] ;
+	extern	Long	superjsr_ret ;
+	extern	Long	psp [ NEST_MAX ] ;
+	extern	Long	nest_pc [ NEST_MAX ] ;
+	extern	Long	nest_sp [ NEST_MAX ] ;
 	extern	char	nest_cnt ;
-	extern	long	mem_aloc ;
+	extern	Long	mem_aloc ;
 #endif
 
 /*

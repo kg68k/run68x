@@ -40,28 +40,28 @@
 /* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
 #define prog_ptr_u ((unsigned char *)prog_ptr)
 
-static char *disa0(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disa1_2_3(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disa4(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disa5(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disa6(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disa7(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disa8(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disa9_d(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disab(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disac(long addr, unsigned short code, long *next_addr, char *mnemonic);
-static char *disae(long addr, unsigned short code, long *next_addr, char *mnemonic);
+static char *disa0(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disa4(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disa5(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disa6(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disa7(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disa8(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disa9_d(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disab(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disac(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
+static char *disae(Long addr, unsigned short code, Long *next_addr, char *mnemonic);
 
 /*
    機能：
      指定したアドレスから始まるMPU命令を文字列に変換する。
    パラメータ：
-     long  addr      <in>  命令のアドレス
-     long *next_addr <out> 次の命令のアドレス
+     Long  addr      <in>  命令のアドレス
+     Long *next_addr <out> 次の命令のアドレス
    戻り値：
 */
 
-char *disassemble(long addr, long* next_addr)
+char *disassemble(Long addr, Long* next_addr)
 {
     static char mnemonic[64], *ptr;
     unsigned short code;
@@ -129,8 +129,8 @@ char *disassemble(long addr, long* next_addr)
     return ptr;
 }
 
-static BOOL effective_address(long addr, short mode, short reg, char size,
-                              unsigned short mask, char *str, long *next_addr);
+static BOOL effective_address(Long addr, short mode, short reg, char size,
+                              unsigned short mask, char *str, Long *next_addr);
 
 static void fill_space(char *str, unsigned int n)
 {
@@ -144,10 +144,10 @@ static void fill_space(char *str, unsigned int n)
     str[n] = '\0';
 }
 
-static char *disa0(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disa0(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     char *p;
-    unsigned long d1;
+    ULong d1;
     char size = '?';
 
     /* まずは全ビット固定の命令を調べる */
@@ -216,7 +216,7 @@ L1:
         }
         *next_addr = addr + 4;
         d1 = ((unsigned short)prog_ptr_u[addr + 2] << 8) + (unsigned short)prog_ptr_u[addr + 3];
-        size = ' ';  /* Data registers are long only. Others are byte only. */
+        size = ' ';  /* Data registers are Long only. Others are byte only. */
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
         sprintf(p, "#%d,", d1);
@@ -245,8 +245,8 @@ L2:
         case 0x0080:
             strcat(mnemonic, ".l");
             *next_addr = addr + 6;
-            d1 = ((unsigned long)prog_ptr_u[addr + 2] << 24) + ((unsigned long)prog_ptr_u[addr + 3] << 16)
-               + ((unsigned long)prog_ptr_u[addr + 4] << 8) + (unsigned long)prog_ptr_u[addr + 5];
+            d1 = ((ULong)prog_ptr_u[addr + 2] << 24) + ((ULong)prog_ptr_u[addr + 3] << 16)
+               + ((ULong)prog_ptr_u[addr + 4] << 8) + (ULong)prog_ptr_u[addr + 5];
             size = 'l';
             break;
         case 0x00c0:
@@ -294,7 +294,7 @@ L2:
         p = mnemonic + strlen(mnemonic);
         sprintf(p, "d%01d,", (code & 0x0e00) >> 9);
         *next_addr = addr + 2;
-        size = ' ';  /* Data registers are long only. Others are byte only. */
+        size = ' ';  /* Data registers are Long only. Others are byte only. */
         goto AddEA;
     } else if ((code & 0x0038) == 0x0008)
     {
@@ -347,23 +347,23 @@ ErrorReturn:
 /*
    機能：
    パラメータ：
-     long   addr       <in>  オペランドのアドレス(使うとは限らない)
+     Long   addr       <in>  オペランドのアドレス(使うとは限らない)
      ushort mode       <in>  実効アドレスのモードフィールド(0-7)
      ushort reg        <in>  実効アドレスのレジスタフィールド(0-7)
      char   size       <in>  即値の場合のデータサイズ('b'/'w'/'l')
      ushort mask       <in>  無効なモードをビット位置の1により指定
      char   *str       <out> 実効アドレスを文字列にして書き込む
-     long   *next_addr <out> 次のオペランドまたは命令のアドレス
+     Long   *next_addr <out> 次のオペランドまたは命令のアドレス
    戻り値：
      BOOL   FALSEならエラー。エラー時もnext_addrは有効。
 */
-static BOOL effective_address(long addr, short mode, short reg, char size,
-                              unsigned short mask, char *str, long *next_addr)
+static BOOL effective_address(Long addr, short mode, short reg, char size,
+                              unsigned short mask, char *str, Long *next_addr)
 {
     short disp, ext;
     unsigned short absw;
-    unsigned long  absl;
-    unsigned long  imm;
+    ULong  absl;
+    ULong  imm;
 
     switch(mode)
     {
@@ -410,10 +410,10 @@ static BOOL effective_address(long addr, short mode, short reg, char size,
             *next_addr = addr + 2;
             break;
         case 0x1: /* パターン8:絶対ロングアドレス */
-            absl = ((unsigned long)prog_ptr_u[addr] << 24)
-                 + ((unsigned long)prog_ptr_u[addr + 1] << 16)
-                 + ((unsigned long)prog_ptr_u[addr + 2] << 8)
-                 + (unsigned long)prog_ptr_u[addr + 3];
+            absl = ((ULong)prog_ptr_u[addr] << 24)
+                 + ((ULong)prog_ptr_u[addr + 1] << 16)
+                 + ((ULong)prog_ptr_u[addr + 2] << 8)
+                 + (ULong)prog_ptr_u[addr + 3];
             sprintf(str, "$%06x", absl);
             *next_addr = addr + 4;
             break;
@@ -435,19 +435,19 @@ static BOOL effective_address(long addr, short mode, short reg, char size,
             switch(size)
             {
             case 'b':
-                imm = (unsigned long)prog_ptr_u[addr + 1];
+                imm = (ULong)prog_ptr_u[addr + 1];
                 *next_addr = addr + 2;
                 break;
             case 'w':
-                imm = ((unsigned long)prog_ptr_u[addr] << 8)
-                    + (unsigned long)prog_ptr_u[addr + 1];
+                imm = ((ULong)prog_ptr_u[addr] << 8)
+                    + (ULong)prog_ptr_u[addr + 1];
                 *next_addr = addr + 2;
                 break;
             case 'l':
-                imm = ((unsigned long)prog_ptr_u[addr] << 24)
-                    + ((unsigned long)prog_ptr_u[addr + 1] << 16)
-                    + ((unsigned long)prog_ptr_u[addr + 2] << 8)
-                    + (unsigned long)prog_ptr_u[addr + 3];
+                imm = ((ULong)prog_ptr_u[addr] << 24)
+                    + ((ULong)prog_ptr_u[addr + 1] << 16)
+                    + ((ULong)prog_ptr_u[addr + 2] << 8)
+                    + (ULong)prog_ptr_u[addr + 3];
                 *next_addr = addr + 4;
                 break;
             default:
@@ -466,7 +466,7 @@ ErrorReturn:
     return FALSE;
 }
 
-static char *disa1_2_3(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     char dstr[64], sstr[64];
     BOOL b;
@@ -519,7 +519,7 @@ ErrorReturn:
     return NULL;
 }
 
-static char *disa4(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disa4(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     signed short disp;
     char reg[10], *p, size;
@@ -902,7 +902,7 @@ ErrorReturn:
     return NULL;
 }
 
-static char *disa5(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disa5(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     char size = ' ';
     char *p;
@@ -1020,9 +1020,9 @@ ErrorReturn:
     return NULL;
 }
 
-static char *disa6(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disa6(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
-    long jaddr;
+    Long jaddr;
     char *p;
 
     switch(code & 0xf00)
@@ -1099,7 +1099,7 @@ ErrorReturn:
     return NULL;
 }
 
-static char *disa7(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disa7(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     if (code & 0x0100)
     {
@@ -1107,14 +1107,14 @@ static char *disa7(long addr, unsigned short code, long *next_addr, char *mnemon
         return NULL;
     } else
     {
-        sprintf(mnemonic, "moveq.l #%d,d%1d", (long)((signed char)(code & 0xff)),
+        sprintf(mnemonic, "moveq.l #%d,d%1d", (Long)((signed char)(code & 0xff)),
                 (code & 0x0e00) >> 9);
     }
     *next_addr = addr + 2;
     return mnemonic;
 }
 
-static char *disa8(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disa8(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     BOOL b;
     char *p, size = ' ';
@@ -1205,7 +1205,7 @@ ErrorReturn:
     return NULL;
 }
 
-static char *disa9_d(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disa9_d(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     BOOL b;
     char *p, size, reg = 'd';
@@ -1309,7 +1309,7 @@ ErrorReturn:
     return NULL;
 }
 
-static char *disab(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disab(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     char size, reg = 'd';
     char *p;
@@ -1391,7 +1391,7 @@ ErrorReturn:
     return NULL;
 }
 
-static char *disac(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disac(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     char size;
     char *p;
@@ -1479,7 +1479,7 @@ ErrorReturn:
     return NULL;
 }
 
-static char *disae(long addr, unsigned short code, long *next_addr, char *mnemonic)
+static char *disae(Long addr, unsigned short code, Long *next_addr, char *mnemonic)
 {
     char size, dir, count[10];
     char *p;

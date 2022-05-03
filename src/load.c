@@ -34,13 +34,13 @@
 
 static	UChar	xhead [ XHEAD_SIZE ];
 
-static	long	xfile_cnv( long *, long, int );
-static	int	xrelocate( long, long, long );
-static	long	xhead_getl( int );
-static	int	set_fname( char *, long );
+static	Long	xfile_cnv( Long *, Long, int );
+static	int	xrelocate( Long, Long, Long );
+static	Long	xhead_getl( int );
+static	int	set_fname( char *, Long );
 
 /* doscall.c */
-long Getenv_common(const char *name_p, char *buf_p);
+Long Getenv_common(const char *name_p, char *buf_p);
 
 static char *GetAPath(char **path_p, char *buf);
 
@@ -170,13 +170,13 @@ ErrorReturn:
  戻り値：正 = 実行開始アドレス
  　　　　負 = エラーコード
 */
-long	prog_read( FILE *fp, char *fname, long read_top,
-		   long *prog_sz, long *prog_sz2, int mes_flag )
+Long	prog_read( FILE *fp, char *fname, Long read_top,
+		   Long *prog_sz, Long *prog_sz2, int mes_flag )
 		/* prog_sz2はロードモード＋リミットアドレスの役割も果たす */
 {
 	char	*read_ptr;
-	long	read_sz;
-	long	pc_begin;
+	Long	read_sz;
+	Long	pc_begin;
 	int	x_flag = FALSE;
 	int	loadmode;
 	int	i;
@@ -267,13 +267,13 @@ long	prog_read( FILE *fp, char *fname, long read_top,
  戻り値： 0 = エラー
  　　　　!0 = プログラム開始アドレス
 */
-static	long	xfile_cnv( long *prog_size, long read_top, int mes_flag )
+static	Long	xfile_cnv( Long *prog_size, Long read_top, int mes_flag )
 {
-	long	pc_begin;
-	long	code_size;
-	long	data_size;
-	long	bss_size;
-	long	reloc_size;
+	Long	pc_begin;
+	Long	code_size;
+	Long	data_size;
+	Long	bss_size;
+	Long	reloc_size;
 
 	if ( xhead_getl( 0x3C ) != 0 ) {
 		if ( mes_flag == TRUE )
@@ -306,10 +306,10 @@ static	long	xfile_cnv( long *prog_size, long read_top, int mes_flag )
  戻り値： TRUE = 正常終了
  　　　　FALSE = 異常終了
 */
-static	int	xrelocate( long reloc_adr, long reloc_size, long read_top )
+static	int	xrelocate( Long reloc_adr, Long reloc_size, Long read_top )
 {
-	long	prog_adr;
-	long	data;
+	Long	prog_adr;
+	Long	data;
 	UShort	disp;
 
 	prog_adr = read_top;
@@ -329,10 +329,10 @@ static	int	xrelocate( long reloc_adr, long reloc_size, long read_top )
  　機能：xheadからロングデータをゲットする
  戻り値：データの値
 */
-static	long	xhead_getl( int adr )
+static	Long	xhead_getl( int adr )
 {
 	UChar	*p;
-	long	d;
+	Long	d;
 
 	p = &( xhead [ adr ] );
 
@@ -348,8 +348,8 @@ static	long	xhead_getl( int adr )
  戻り値： TRUE = 正常終了
  　　　　FALSE = 異常終了
 */
-int	make_psp( char *fname, long prev_adr, long end_adr, long process_id,
-		  long prog_size2 )
+int	make_psp( char *fname, Long prev_adr, Long end_adr, Long process_id,
+		  Long prog_size2 )
 {
 	char	*mem_ptr;
 
@@ -379,7 +379,7 @@ int	make_psp( char *fname, long prev_adr, long end_adr, long process_id,
  戻り値： TRUE = 正常終了
  　　　　FALSE = 異常終了
 */
-static	int	set_fname( char *p, long psp_adr )
+static	int	set_fname( char *p, Long psp_adr )
 {
 	char	 cud [ 67 ];
 	char	 *mem_ptr;

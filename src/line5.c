@@ -96,9 +96,9 @@ static	int	Scc( char code1, char code2 )
 {
 	char	mode;
 	char	reg;
-	long	save_pc;
+	Long	save_pc;
 	int	ret;
-	long	src_data;
+	Long	src_data;
 
 	save_pc = pc;
 	mode = (code2 & 0x38) >> 3;
@@ -134,7 +134,7 @@ static	int	Addq( char code1, char code2 )
 	short	disp = 0;
 	int	work_mode;
 
-	long	dest_data;
+	Long	dest_data;
 
 	src_data = (code1 & 0x0E) >> 1;
 	if ( src_data == 0 )
@@ -168,8 +168,8 @@ static	int	Addq( char code1, char code2 )
 	rd[8] = dest_data;
 
 	/* Add演算 */
-	//rd [ 8 ] = add_rd( 8, (long)src_data, size );
-	rd [ 8 ] = add_long((long)src_data, dest_data, size );
+	//rd [ 8 ] = add_rd( 8, (Long)src_data, size );
+	rd [ 8 ] = add_long((Long)src_data, dest_data, size );
 
 	/* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
 	if (mode == EA_AIPD) {
@@ -185,7 +185,7 @@ static	int	Addq( char code1, char code2 )
 	// アドレスレジスタ直接の場合はレジスタは変化しない
 	if (mode != EA_AD) {
 		/* フラグの変化 */
-		add_conditions((long)src_data, dest_data, rd[8], size, 1);
+		add_conditions((Long)src_data, dest_data, rd[8], size, 1);
 	}
 
 	return( FALSE );
@@ -204,7 +204,7 @@ static	int	Subq( char code1, char code2 )
 	char	src_data;
 	short	disp = 0;
 	int	work_mode;
-	long	dest_data;
+	Long	dest_data;
 
 	src_data = (code1 & 0x0E) >> 1;
 	if ( src_data == 0 )
@@ -238,8 +238,8 @@ static	int	Subq( char code1, char code2 )
 	rd[8] = dest_data;
 
 	/* Add演算 */
-	//rd [ 8 ] = sub_rd( 8, (long)src_data, size );
-	rd [ 8 ] = sub_long((long)src_data, dest_data, size );
+	//rd [ 8 ] = sub_rd( 8, (Long)src_data, size );
+	rd [ 8 ] = sub_long((Long)src_data, dest_data, size );
 
 	/* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
 	if (mode == EA_AIPD) {
@@ -255,7 +255,7 @@ static	int	Subq( char code1, char code2 )
 	// アドレスレジスタ直接の場合はレジスタは変化しない
 	if (mode != EA_AD) {
 		/* フラグの変化 */
-		sub_conditions((long)src_data, dest_data, rd[8], size, 1);
+		sub_conditions((Long)src_data, dest_data, rd[8], size, 1);
 	}
 
 	return( FALSE );

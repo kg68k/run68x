@@ -45,13 +45,13 @@
 */
 int	line2( char *pc_ptr )
 {
-	long	save_pc;
+	Long	save_pc;
 	char	src_mode;
 	char	dst_mode;
 	char	src_reg;
 	char	dst_reg;
 	char	code1, code2;
-	long	src_data;
+	Long	src_data;
 	int	size;
 
 	code1 = *(pc_ptr++);

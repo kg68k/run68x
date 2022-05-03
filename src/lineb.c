@@ -77,11 +77,11 @@ static	int	Cmp( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	src_data;
-	long	save_pc;
+	Long	src_data;
+	Long	save_pc;
 	short	save_x;
-	long	dest_data;
-	long	result;
+	Long	dest_data;
+	Long	result;
 
 #ifdef TEST_CCR
 	short	before;
@@ -157,11 +157,11 @@ static	int	Cmpa( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	src_data;
-	long	save_pc;
-	long	old;
-	long	ans;
-	long	dest_data;
+	Long	src_data;
+	Long	save_pc;
+	Long	old;
+	Long	ans;
+	Long	dest_data;
 
 #ifdef TEST_CCR
 	short	before;
@@ -253,9 +253,9 @@ static	int	Cmpm( char code1, char code2 )
 	char	size;
 	char	src_reg;
 	char	dst_reg;
-	long	src_data;
-	long	dest_data;
-	long	result;
+	Long	src_data;
+	Long	dest_data;
+	Long	result;
 
 	size = ((code2 >> 6) & 0x03);
 	src_reg = (code2 & 0x07);
@@ -307,9 +307,9 @@ static	int	Eor( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	data;
-	long	save_pc;
-	long	src_data;
+	Long	data;
+	Long	save_pc;
+	Long	src_data;
 	int	work_mode;
 
 	save_pc = pc;

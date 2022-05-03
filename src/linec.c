@@ -68,12 +68,12 @@ int	linec( char *pc_ptr )
 			char	src_reg = (code2 & 0x7);
 			char	dst_reg = ((code1 & 0xE) >> 1);
 			char	size = 0;	/* S_BYTE ŒÅ’è */
-			long	src_data;
-			long	dst_data;
-			long	low;
-			long	high;
-			long	kekka;
-			long	X;
+			Long	src_data;
+			Long	dst_data;
+			Long	low;
+			Long	high;
+			Long	kekka;
+			Long	X;
 
 			if ( (code2 & 0x8) != 0 ) {
 				/* -(am),-(an); */
@@ -189,10 +189,10 @@ static	int	And1( char code1, char code2 )
 	char	src_reg;
 	char	dst_reg;
 	short	disp = 0;
-	long	data;
-	long	save_pc;
+	Long	data;
+	Long	save_pc;
 	int	work_mode;
-	long	src_data;
+	Long	src_data;
 
 	save_pc = pc;
 	size = ((code2 >> 6) & 0x03);
@@ -263,10 +263,10 @@ static	int	And2( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	src_data;
-	long	save_pc;
+	Long	src_data;
+	Long	save_pc;
     int     work_pc;
-	long	data;
+	Long	data;
 
 	save_pc = pc;
 	work_pc = pc;
@@ -309,7 +309,7 @@ static	int	Exg( char code1, char code2 )
 	char	src_reg;
 	char	dst_reg;
 	char	mode;
-	long	tmp;
+	Long	tmp;
 
 	mode = ((code2 & 0xF8) >> 3);
 	src_reg = ((code1 & 0x0E) >> 1);
@@ -356,8 +356,8 @@ static	int	Mulu( char code1, char code2 )
 	UShort	src_data;
 	UShort	dst_data;
 	ULong	ans;
-	long	save_pc;
-	long	src_data_l;
+	Long	save_pc;
+	Long	src_data_l;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -396,9 +396,9 @@ static	int	Muls( char code1, char code2 )
 	char	mode;
 	short	src_data;
 	short	dst_data;
-	long	ans;
-	long	save_pc;
-	long	src_data_l;
+	Long	ans;
+	Long	save_pc;
+	Long	src_data_l;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);

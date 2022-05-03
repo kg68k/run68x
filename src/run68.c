@@ -80,16 +80,16 @@
 static  int     exec_trap(BOOL *restart);
 static  int     exec_notrap(BOOL *restart);
 static  void    trap_table_make( void );
-extern char *disassemble(long addr, long* next_addr);
+extern char *disassemble(Long addr, Long* next_addr);
 
  /* フラグ(グローバル変数) */
 BOOL func_trace_f = FALSE;
 BOOL trace_f = FALSE;
 BOOL debug_on = FALSE;
 BOOL debug_flag = FALSE;
-long trap_pc = 0;
+Long trap_pc = 0;
 unsigned short cwatchpoint = 0x4afc;
-extern unsigned long stepcount;
+extern ULong stepcount;
 char ini_file_name[MAX_PATH];
 #if defined(WIN32)
 /* 標準入力のハンドル */
@@ -98,6 +98,21 @@ HANDLE stdin_handle;
 
 /* アボート処理のためのジャンプバッファ */
 jmp_buf jmp_when_abort;
+
+#if defined (__APPLE__)
+char *strlwr(char *str)
+{
+  unsigned char *p = (unsigned char *)str;
+
+  while (*p) {
+     *p = tolower((unsigned char)*p);
+      p++;
+  }
+
+  return str;
+}
+#endif
+
 
  /* 命令実行情報(グローバル変数) */
 EXEC_INSTRUCTION_INFO OP_info;
@@ -113,8 +128,8 @@ int main( int argc, char *argv[], char *envp[] )
 	char	*read_ptr;
 	int	env_len = 0;		/* 環境の長さ */
 #endif
-	long	prog_size;		/* プログラムサイズ(bss含む) */
-	long	prog_size2;		/* プログラムサイズ(bss除く) */
+	Long	prog_size;		/* プログラムサイズ(bss含む) */
+	Long	prog_size2;		/* プログラムサイズ(bss除く) */
 	int	arg_len = 0;		/* コマンドラインの長さ */
 	int	i, j;
 	int argbase = 0;        /* アプリケーションコマンドラインの開始位置 */
@@ -206,6 +221,8 @@ Restart:
 		fprintf(stderr, "Windows Vista/7/8/10");
 #elif defined(DOSX)
 		fprintf(stderr, "32bitDOS");
+#elif defined(__APPLE__)
+		fprintf(stderr, "MacOS");
 #else
 		fprintf(stderr, "POSIX");
 #endif
@@ -400,8 +417,8 @@ static int exec_trap(BOOL *restart)
 {
 	UChar	*trap_mem1;
 	UChar	*trap_mem2;
-	long	trap_adr;
-	long    prev_pc = 0; /* 1サイクル前に実行した命令のPC */
+	Long	trap_adr;
+	Long    prev_pc = 0; /* 1サイクル前に実行した命令のPC */
 	RUN68_COMMAND cmd;
 	BOOL    cont_flag = TRUE;
 	int     ret;
@@ -426,7 +443,7 @@ static int exec_trap(BOOL *restart)
 			superjsr_ret = 0;
 		}
 		if ( trap_count == 1 ) {
-			if ( *((long *)trap_mem1) != 0 ) {
+			if ( *((Long *)trap_mem1) != 0 ) {
 				trap_adr = *trap_mem1;
 				trap_adr = ((trap_adr << 8) | *(trap_mem1 + 1));
 				trap_adr = ((trap_adr << 8) | *(trap_mem1 + 2));
@@ -439,7 +456,7 @@ static int exec_trap(BOOL *restart)
 				pc = trap_adr;
 				SR_S_ON();
 			}
-			else if ( *((long *)trap_mem2) != 0 ) {
+			else if ( *((Long *)trap_mem2) != 0 ) {
 				trap_adr = *trap_mem2;
 				trap_adr = ((trap_adr << 8) | *(trap_mem2 + 1));
 				trap_adr = ((trap_adr << 8) | *(trap_mem2 + 2));

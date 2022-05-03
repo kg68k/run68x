@@ -25,25 +25,28 @@
 #if defined(DOSX)
 #include <dos.h>
 #else
-#include <sys/sysinfo.h>
+  #if !defined(__APPLLE__)
+  #else
+    #include <sys/sysinfo.h>
+  #endif
 #endif
 #include <time.h>
 #elif defined(WIN32)
 #include <windows.h>
 #endif
 
-static long	Putc( UShort );
-static long	Color( short );
+static Long	Putc( UShort );
+static Long	Color( short );
 static void	Putmes( void );
-static long	Dateget( void );
-static long	Timeget( void );
-static long	Datebin( long );
-static long	Timebin( long );
-static long	Dateasc( long, long );
-static long	Timeasc( long, long );
-static void	Dayasc( long, long );
-static long	Intvcs( long, long );
-static void	Dmamove( long, long, long, long );
+static Long	Dateget( void );
+static Long	Timeget( void );
+static Long	Datebin( Long );
+static Long	Timebin( Long );
+static Long	Dateasc( Long, Long );
+static Long	Timeasc( Long, Long );
+static void	Dayasc( Long, Long );
+static Long	Intvcs( Long, Long );
+static void	Dmamove( Long, Long, Long, Long );
 
 /*
  　機能：IOCSCALLを実行する
@@ -153,6 +156,10 @@ int iocs_call()
 			ul = time( NULL );
 			rd [ 0 ] = (ul % (60 * 60 * 24)) * 100;
 			rd [ 1 ] = ((ul / (60 * 60 * 24)) & 0xFFFF);
+#elif defined(__APPLE__)
+			ul = gettimeofday();
+			rd [ 0 ] = (ul % 0x83D600);
+			rd [ 1 ] = (ul / 0x83D600);
 #else
             {
 				struct sysinfo info;
@@ -232,7 +239,7 @@ int iocs_call()
  　機能：文字を表示する
  戻り値：カーソル位置
 */
-static long Putc( UShort code )
+static Long Putc( UShort code )
 {
 	if ( code == 0x1A ) {
 		printf( "%c[0J", 0x1B ); /* 最終行左端まで消去 */
@@ -248,7 +255,7 @@ static long Putc( UShort code )
  　機能：文字のカラー属性を指定する
  戻り値：変更前のカラーまたは現在のカラー
 */
-static long Color( short arg )
+static Long Color( short arg )
 {
 	if ( arg == -1 )	/* 現在のカラーを調べる(未サポート) */
 		return( 3 );
@@ -292,9 +299,9 @@ static void Putmes()
  　機能：日付を得る
  戻り値：BCDの日付データ
 */
-static long Dateget()
+static Long Dateget()
 {
-	long	ret;
+	Long	ret;
 #if defined(WIN32)
     SYSTEMTIME st;
     GetSystemTime(&st);
@@ -333,9 +340,9 @@ static long Dateget()
  　機能：時刻を得る
  戻り値：BCDの時刻データ
 */
-static long Timeget()
+static Long Timeget()
 {
-	long	ret;
+	Long	ret;
 #if defined(WIN32)
     SYSTEMTIME st;
     GetSystemTime(&st);
@@ -371,7 +378,7 @@ static long Timeget()
  　機能：BCD表現の日付データをバイナリ表現に直す
  戻り値：バイナリの日付データ
 */
-static long Datebin( long bcd )
+static Long Datebin( Long bcd )
 {
 	UShort	youbi;
 	UShort	year;
@@ -390,7 +397,7 @@ static long Datebin( long bcd )
  　機能：BCD表現の時刻データをバイナリ表現に直す
  戻り値：バイナリの時刻データ
 */
-static long Timebin( long bcd )
+static Long Timebin( Long bcd )
 {
 	UShort	hh;
 	UShort	mm;
@@ -407,7 +414,7 @@ static long Timebin( long bcd )
  　機能：バイナリ表現の日付データを文字列に直す
  戻り値：-1のときエラー
 */
-static long Dateasc( long data, long adr )
+static Long Dateasc( Long data, Long adr )
 {
 	char	*data_ptr;
 	UShort	year;
@@ -456,7 +463,7 @@ static long Dateasc( long data, long adr )
  　機能：バイナリ表現の時刻データを文字列に直す
  戻り値：-1のときエラー
 */
-static long Timeasc( long data, long adr )
+static Long Timeasc( Long data, Long adr )
 {
 	char	*data_ptr;
 	UShort	hh;
@@ -485,7 +492,7 @@ static long Timeasc( long data, long adr )
  　機能：曜日番号から文字列を得る
  戻り値：なし
 */
-static void Dayasc( long data, long adr )
+static void Dayasc( Long data, Long adr )
 {
 	char	*data_ptr;
 
@@ -524,10 +531,10 @@ static void Dayasc( long data, long adr )
  　機能：ベクタ・テーブルを書き換える
  戻り値：設定前の処理アドレス
 */
-static long Intvcs( long no, long adr )
+static Long Intvcs( Long no, Long adr )
 {
-	long	adr2;
-	long	mae = 0;
+	Long	adr2;
+	Long	mae = 0;
 	short	save_s;
 
 	no &= 0xFFFF;
@@ -546,11 +553,11 @@ static long Intvcs( long no, long adr )
  　機能：DMA転送をする
  戻り値：設定前の処理アドレス
 */
-static void Dmamove( long md, long size, long adr1, long adr2 )
+static void Dmamove( Long md, Long size, Long adr1, Long adr2 )
 {
 	char	*p1;
 	char	*p2;
-	long	tmp;
+	Long	tmp;
 
 	if ( (md & 0x80) != 0 ) {
 		/* adr1 -> adr2転送にする */

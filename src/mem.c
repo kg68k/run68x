@@ -24,21 +24,21 @@
 #include <stdio.h>
 #include "run68.h"
 
-static	int	mem_red_chk( long );
-static	int	mem_wrt_chk( long );
-void	run68_abort( long );
+static	int	mem_red_chk( Long );
+static	int	mem_wrt_chk( Long );
+void	run68_abort( Long );
 
 /*
  　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
  　　　　の値を得る
  戻り値：その値
 */
-long idx_get()
+Long idx_get()
 {
 	char	*mem;
 	char	idx2;
 	char	idx_reg;
-	long	idx;
+	Long	idx;
 
 	mem = prog_ptr + pc;
 	idx2 = *(mem++);
@@ -63,10 +63,10 @@ long idx_get()
  　　　　サイズに応じてPCを進める
  戻り値：データの値
 */
-long imi_get( char size )
+Long imi_get( char size )
 {
 	UChar	*mem;
-	long	d;
+	Long	d;
 
 	mem = (UChar *)prog_ptr + pc;
 
@@ -93,10 +93,10 @@ long imi_get( char size )
  　機能：メモリから指定されたサイズのデータをゲットする
  戻り値：データの値
 */
-long mem_get( long adr, char size )
+Long mem_get( Long adr, char size )
 {
 	UChar   *mem;
-	long	d;
+	Long	d;
 
 	if ( adr < ENV_TOP || adr >= mem_aloc ) {
 		if ( mem_red_chk( adr ) == FALSE )
@@ -124,7 +124,7 @@ long mem_get( long adr, char size )
  　機能：メモリに指定されたサイズのデータをセットする
  戻り値：なし
 */
-void mem_set( long adr, long d, char size )
+void mem_set( Long adr, Long d, char size )
 {
 	UChar   *mem;
 
@@ -156,7 +156,7 @@ void mem_set( long adr, long d, char size )
  戻り値： TRUE = OK
          FALSE = NGだが、0を読み込んだとみなす
 */
-static int mem_red_chk( long adr )
+static int mem_red_chk( Long adr )
 {
 	char message[256];
 
@@ -181,7 +181,7 @@ static int mem_red_chk( long adr )
  戻り値： TRUE = OK
          FALSE = NGだが、何も書き込まずにOKとみなす
 */
-static int mem_wrt_chk( long adr )
+static int mem_wrt_chk( Long adr )
 {
 	char message[256];
 
@@ -208,7 +208,7 @@ static int mem_wrt_chk( long adr )
 /*
  機能：異常終了する
 */
-void run68_abort( long adr )
+void run68_abort( Long adr )
 {
 	int	i;
 
