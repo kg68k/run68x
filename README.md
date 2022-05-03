@@ -18,5 +18,6 @@ $ make
 How to use
 ----------
 
+```
 $ ./run68 mdx2mus.x bos14.mdx
-
+```
