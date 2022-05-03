@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.13)
 
 project(run68 C)
 set(CMAKE_C_FLAGS 
-    "-Wno-return-type -Wno-switch -Wno-implicit-function-declaration -Wno-format -Wno-invalid-source-encoding -Wno-pointer-integer-compare -Wno-int-to-pointer-cast -Wno-pointer-sign -Wno-incompatible-pointer-types")
+    "-Wno-int-conversion -Wno-return-type -Wno-switch -Wno-implicit-function-declaration -Wno-format -Wno-invalid-source-encoding -Wno-pointer-integer-compare -Wno-int-to-pointer-cast -Wno-pointer-sign -Wno-incompatible-pointer-types")
 
 set(SRC 
     src/ansicolor-w32.c

@@ -78,6 +78,7 @@
 
 #if defined(__APPLE__)
 #include <time.h>
+#include <dirent.h>
 #else
 #include <io.h>
 #endif
@@ -187,12 +188,12 @@ char _getche()
 }
 
 void dos_getdrive(Long *drv) {
-//	printf("dos_getdrive()\n" );
-	*drv = 0;
+	printf("dos_getdrive(%p)\n", drv );
+	*drv = 1;	// 1 = A:
 }
 
-void dos_setdrive(Long a, Long* b) {
-	printf("dos_setdrive(%d, %p)\n", a, b );
+void dos_setdrive(Long drv, Long* dmy) {
+	printf("dos_setdrive(%d, %p)\n", drv, dmy );
 }
 
 int _kbhit()
@@ -434,6 +435,12 @@ int dos_call( UChar code )
 		srt += 1;
 		dos_setdrive( srt, &drv );
 		rd [ 0 ] = drv;
+#else
+		srt += 1;
+		int drv = 0;
+		dos_setdrive( srt, &drv );
+		rd [ 0 ] = drv;
+
 #endif
 		// Verify
 #if defined(WIN32)
@@ -452,6 +459,11 @@ int dos_call( UChar code )
 		srt += 1;
 		if ( srt != drv )
 		  rd [ 0 ] = -15;
+#else
+			dos_getdrive( &drv );
+			srt += 1;
+			if ( srt != drv )
+				rd [ 0 ] = -15;
 #endif
 		break;
 	  case 0x0F:    /* DRVCTRL(何もしない) */
@@ -1506,6 +1518,22 @@ static Long Create( char *p, short atr )
 	Long ret;
 	Long i;
 	int    len;
+	
+	
+#if defined(__APPLE__)
+	char* name = p;
+	int namelen = strlen(name);
+	for (int i=0;i<namelen;++i) {
+		if ( name[i] == '\\' ) {
+			name[i] = '/';
+		}
+		if ( name[i] == ':' ) {
+			p = &name[i+1];
+		}
+	}
+	printf("Create(\"%s\", %d) = %s\n", name, atr, p);
+#endif
+
 
 	ret = 0;
 	for ( i = 5; i < FILE_MAX; i++ ) {
@@ -1637,6 +1665,20 @@ static Long Open( char *p, short mode )
 	int    len;
 	Long ret;
 	Long i;
+
+#if defined(__APPLE__)
+	char* name = p;
+	int namelen = strlen(name);
+	for (int i=0;i<namelen;++i) {
+		if ( name[i] == '\\' ) {
+			name[i] = '/';
+		}
+		if ( name[i] == ':' ) {
+			p = &name[i+1];
+		}
+	}
+	printf("Open(\"%s\", %d) = %s\n", name, mode, p);
+#endif
 
 	switch( mode ) {
 	  case 0: /* 読み込みオープン */
@@ -2190,6 +2232,72 @@ static Long Curdir( short drv, char *buf_ptr )
 static Long Files( Long buf, Long name, short atr )
 {
 #if defined(__APPLE__)
+	
+	char        *name_ptr;
+	char        *buf_ptr;
+	name_ptr = prog_ptr + name;
+	buf_ptr  = prog_ptr + buf;
+	
+	{
+		FILE* fp = fopen( name_ptr, "rb" );
+		if (fp != NULL) {
+			fclose(fp);
+			
+			/* 予約領域をセット */
+			buf_ptr[0] = atr;  /* ファイルの属性 */
+			buf_ptr[1] = 0;    /* ドライブ番号(not used) */
+//			*((HANDLE*)&buf_ptr[2]) = handle; /* サーチハンドル */
+			{
+//				BOOL b = handle != INVALID_HANDLE_VALUE;
+			}
+			/* DATEとTIMEをセット */
+			{
+/*
+				SYSTEMTIME st;
+				unsigned short s;
+				FileTimeToSystemTime(&f_data.ftLastWriteTime, &st);
+				s = (st.wHour << 11) +
+				(st.wMinute << 5) +
+				st.wSecond / 2;
+				buf_ptr[22] = (s & 0xff00) >> 8;
+				buf_ptr[23] = s & 0xff;
+				s =((st.wYear - 1980) << 9) +
+				(st.wMonth << 5) +
+				st.wDay;
+				buf_ptr[24] = (s & 0xff00) >> 8;
+				buf_ptr[25] = s & 0xff;
+*/
+			}
+			// FILELENをセット
+			size_t size = 64;
+			buf_ptr[26] = (unsigned char)((size & 0xff000000) >> 24);
+			buf_ptr[27] = (unsigned char)((size & 0x00ff0000) >> 16);
+			buf_ptr[28] = (unsigned char)((size & 0x0000ff00) >> 8);
+			buf_ptr[29] = (unsigned char)(size & 0x000000ff);
+			/* PACKEDNAMEをセット */
+			strncpy(&buf_ptr[30], name_ptr, 22);
+			buf_ptr[30+22] = 0;
+
+			return 0;
+		}
+	}
+
+	char *path = name_ptr;
+	DIR *dir;
+	struct dirent *dent;
+
+
+	
+	dir = opendir(path);
+	printf("opendir(%s)=%p\n", path, dir );
+	if (dir == NULL) {
+//		perror(path);
+	} else {
+		while ((dent = readdir(dir)) != NULL) {
+			printf("%s\n", dent->d_name);
+		}
+		closedir(dir);
+	}
 	printf("DOSCALL FILES:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 
@@ -2770,6 +2878,25 @@ static Long Namests( Long name, Long buf )
 /*
  　機能：DOSCALL NAMECKを実行する
  戻り値：エラーコード
+ 
+ $ff37	_NAMECK		ファイル名の展開
+ 
+ 引数	FILE.l		ファイル名のポインタ
+		BUFFER.l	バッファのポインタ
+ 
+ 返値	d0.l = $ff	ファイル指定なし
+		d0.l =   0	ワイルドカード指定なし
+		d0.l <   0	エラーコード(BUFFER の内容は意味がない)
+		d0.l = その他	ワイルドカード指定あり(d0.l はワイルドカードの文字数)
+ 
+	FILE で指定したファイルを、BUFFER で指定した 91 バイトのバッファに展開する.
+ 
+ offset	size
+ 0	  1+1.b	ドライブ名＋':'
+ 2	 64+1.b	パス名＋0
+ 67	 18+1.b	ファイル名＋0
+ 86	1+3+1.b	拡張子('.'＋拡張子＋0)
+ 
  */
 static Long Nameck( Long name, Long buf )
 {
@@ -2837,15 +2964,21 @@ static Long Nameck( Long name, Long buf )
 		BOOL b;
 		b = GetCurrentDirectoryA(sizeof(path), path);
 		drv = path[0] - 'A' + 1;
-#else
-		dos_getdrive( &drv );
-#endif
 		buf_ptr [ 0 ] = drv - 1 + 'A';
 		buf_ptr [ 1 ] = ':';
+#elif defined(DOSX)
+		dos_getdrive( &drv );
+		buf_ptr [ 0 ] = drv - 1 + 'A';
+		buf_ptr [ 1 ] = ':';
+#else
+		dos_getdrive( &drv );
+		buf_ptr [ 0 ] = drv - 1 + 'A';
+		buf_ptr [ 1 ] = ':';
+#endif
 	} else {
 		memcpy( buf_ptr, nbuf, 2 );
 	}
-
+	printf("NAMECK=%s\n", buf_ptr);
 	return( ret );
 }
 
@@ -3339,7 +3472,7 @@ static void Exec4( Long adr )
  */
 static void get_jtime( UShort *d, UShort *t, int offset )
 {
-	static month_day [ 13 ] = {
+	static int month_day [ 13 ] = {
 		31, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
 	};
 	short    year;
