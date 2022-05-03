@@ -75,7 +75,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "ansicolor-w32.h"
+
 #if defined(__APPLE__)
+#include <time.h>
 #else
 #include <io.h>
 #endif
@@ -2480,11 +2482,16 @@ static Long Getdate()
 	dos_getdate( &ddate );
 	ret = (ddate.dayofweek << 16) + ((ddate.year -1980) << 9) +
 		(ddate.month << 5) + ddate.day;
-#elif defined(__APPLE__)
-	ret = 0;
-	printf("DOSCALL GETDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
-#error DOSCALL GETDATE Not implemented yet.
+	struct tm tm;
+	time_t t = time(NULL);
+	localtime_r(&t, &tm);
+	//	printf("%04d/%02d/%02d %d %02d:%02d:%02d\n",
+	//		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+	//		   tm.tm_wday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	ret = (tm.tm_wday << 16) + ((tm.tm_year + (1980 - 1900)) << 9) +
+			(tm.tm_mon << 5) + tm.tm_mday;
+
 #endif
 	return( ret );
 }
@@ -2550,10 +2557,20 @@ static Long Gettime( int flag )
 		ret = (dtime.hour << 11) + (dtime.minute << 5) + (dtime.second >> 1);
 	else
 		ret = (dtime.hour << 16) + (dtime.minute << 8) + dtime.second;
-#elif defined(__APPLE__)
-	printf("DOSCALL GETTIME:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
-#error DOSCALL GETTIME Not implemented yet.
+	
+	struct tm tm;
+	time_t t = time(NULL);
+	localtime_r(&t, &tm);
+//	printf("%04d/%02d/%02d %d %02d:%02d:%02d\n",
+//		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+//		   tm.tm_wday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	
+	if ( flag == 0 )
+		ret = (tm.tm_hour << 11) + (tm.tm_min << 5) + (tm.tm_sec >> 1);
+	else
+		ret = (tm.tm_hour << 16) + (tm.tm_min << 8) + tm.tm_sec;
+
 #endif
 	return( ret );
 }
