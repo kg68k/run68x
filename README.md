@@ -8,13 +8,16 @@ run68をMac上で動作するようにしたものです。CMakeに変更して�
 Hot to build
 ------------
 
+```
 $ mkdir build
 $ cd build
 $ cmake ..
 $ make
+```
 
 How to use
 ----------
 
+```
 $ ./run68 mdx2mus.x bos14.mdx
-
+```
