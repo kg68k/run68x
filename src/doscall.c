@@ -188,12 +188,12 @@ char _getche()
 }
 
 void dos_getdrive(Long *drv) {
-	printf("dos_getdrive(%p)\n", drv );
+//	printf("dos_getdrive(%p)\n", drv );
 	*drv = 1;	// 1 = A:
 }
 
 void dos_setdrive(Long drv, Long* dmy) {
-	printf("dos_setdrive(%d, %p)\n", drv, dmy );
+//	printf("dos_setdrive(%d, %p)\n", drv, dmy );
 }
 
 int _kbhit()
@@ -1531,7 +1531,7 @@ static Long Create( char *p, short atr )
 			p = &name[i+1];
 		}
 	}
-	printf("Create(\"%s\", %d) = %s\n", name, atr, p);
+//	printf("Create(\"%s\", %d) = %s\n", name, atr, p);
 #endif
 
 
@@ -1677,7 +1677,7 @@ static Long Open( char *p, short mode )
 			p = &name[i+1];
 		}
 	}
-	printf("Open(\"%s\", %d) = %s\n", name, mode, p);
+//	printf("Open(\"%s\", %d) = %s\n", name, mode, p);
 #endif
 
 	switch( mode ) {

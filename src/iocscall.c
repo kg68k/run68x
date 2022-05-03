@@ -35,6 +35,8 @@
 #include <windows.h>
 #endif
 
+#include <sys/time.h>
+
 static Long	Putc( UShort );
 static Long	Color( short );
 static void	Putmes( void );
@@ -157,9 +159,9 @@ int iocs_call()
 			rd [ 0 ] = (ul % (60 * 60 * 24)) * 100;
 			rd [ 1 ] = ((ul / (60 * 60 * 24)) & 0xFFFF);
 #elif defined(__APPLE__)
-			ul = gettimeofday();
-			rd [ 0 ] = (ul % 0x83D600);
-			rd [ 1 ] = (ul / 0x83D600);
+			ul = time( NULL );
+			rd [ 0 ] = (ul % (60 * 60 * 24)) * 100;
+			rd [ 1 ] = ((ul / (60 * 60 * 24)) & 0xFFFF);
 #else
             {
 				struct sysinfo info;
