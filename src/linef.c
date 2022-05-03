@@ -111,9 +111,9 @@ static	void	Pow( Long, Long, Long, Long );
 
 
 /*
- @‹@”\FFƒ‰ƒCƒ“–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šFãƒ©ã‚¤ãƒ³å‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 int	linef( char *pc_ptr )
 {
@@ -122,29 +122,29 @@ int	linef( char *pc_ptr )
 	code = *(pc_ptr++);
 	pc += 2;
 
-	/* DOSƒR[ƒ‹‚Ìˆ— */
+	/* DOSã‚³ãƒ¼ãƒ«ã®å‡¦ç† */
 	if ( code == (char)0xFF )
 		return( dos_call( *pc_ptr ) );
 
-	/* FLOATƒR[ƒ‹‚Ìˆ— */
+	/* FLOATã‚³ãƒ¼ãƒ«ã®å‡¦ç† */
 	if ( code == (char)0xFE )
 		return( fefunc( *pc_ptr ) );
 
-	err68a( "–¢’è‹`‚Ì‚eƒ‰ƒCƒ“–½—ß‚ğÀs‚µ‚Ü‚µ‚½", __FILE__, __LINE__ );
+	err68a( "æœªå®šç¾©ã®ï¼¦ãƒ©ã‚¤ãƒ³å‘½ä»¤ã‚’å®Ÿè¡Œã—ã¾ã—ãŸ", __FILE__, __LINE__ );
 	return( TRUE );
 }
 
 /*
- @‹@”\FFLOAT CALL‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šFLOAT CALLã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	fefunc( UChar code )
 {
 	Long	adr;
 	short	save_s;
 
-	/* FŒn—ñ‚ÌƒxƒNƒ^‚ª‘‚«Š·‚¦‚ç‚ê‚Ä‚¢‚é‚©‚Ç‚¤‚©ŒŸ¸ */
+	/* Fç³»åˆ—ã®ãƒ™ã‚¯ã‚¿ãŒæ›¸ãæ›ãˆã‚‰ã‚Œã¦ã„ã‚‹ã‹ã©ã†ã‹æ¤œæŸ» */
 	save_s = SR_S_REF();
 	SR_S_ON();
 	adr = mem_get( 0x2C, S_LONG );
@@ -184,11 +184,11 @@ static	int	fefunc( UChar code )
 		case 0x08:	/* _IMUL */
 			rd [ 1 ] = (ULong)rd [ 0 ] * (ULong)rd [ 1 ];
 			if ( rd [ 1 ] < 0 )
-				rd [ 0 ] = -1;	/* –{“–‚ÍãˆÊ4ƒoƒCƒg‚ª“ü‚é */
+				rd [ 0 ] = -1;	/* æœ¬å½“ã¯ä¸Šä½4ãƒã‚¤ãƒˆãŒå…¥ã‚‹ */
 			else
-				rd [ 0 ] = 0;	/* –{“–‚ÍãˆÊ4ƒoƒCƒg‚ª“ü‚é */
+				rd [ 0 ] = 0;	/* æœ¬å½“ã¯ä¸Šä½4ãƒã‚¤ãƒˆãŒå…¥ã‚‹ */
 			break;
-		case 0x09:	/* _IDIV */ /* unsigned int œZ d0..d1 d0/d1 */
+		case 0x09:	/* _IDIV */ /* unsigned int é™¤ç®— d0..d1 d0/d1 */
 			{
 				ULong	d0;
 				ULong	d1;
@@ -332,22 +332,22 @@ static	int	fefunc( UChar code )
 			rd [ 0 ] = Fsqr( rd [ 0 ] );
 			break;
 */
-		case 0xE0:		/* __CLMUL : signed int æZ */
+		case 0xE0:		/* __CLMUL : signed int ä¹—ç®— */
 			Clmul( ra [ 7 ] );
 			break;
-		case 0xE1:		/* __CLDIV : signed int œZ */
+		case 0xE1:		/* __CLDIV : signed int é™¤ç®— */
 			Cldiv( ra [ 7 ] );
 			break;
-		case 0xE2:		/* __CLMOD : signed int œZ‚Ìè—] */
+		case 0xE2:		/* __CLMOD : signed int é™¤ç®—ã®å‰°ä½™ */
 			Clmod( ra [ 7 ] );
 			break;
-		case 0xE3:		/* __CUMUL : unsigned int æZ */
+		case 0xE3:		/* __CUMUL : unsigned int ä¹—ç®— */
 			Cumul( ra [ 7 ] );
 			break;
-		case 0xE4:		/* __CUDIV : unsigned int œZ */
+		case 0xE4:		/* __CUDIV : unsigned int é™¤ç®— */
 			Cudiv( ra [ 7 ] );
 			break;
-		case 0xE5:		/* __CUMOD : unsigned int œZ‚Ìè—] */
+		case 0xE5:		/* __CUMOD : unsigned int é™¤ç®—ã®å‰°ä½™ */
 			Cumod( ra [ 7 ] );
 			break;
 		case 0xE6:
@@ -379,7 +379,7 @@ static	int	fefunc( UChar code )
 			break;
 		default:
 			printf( "0x%X\n", code );
-			err68a( "–¢“o˜^‚ÌFEƒtƒ@ƒ“ƒNƒVƒ‡ƒ“ƒR[ƒ‹‚ğÀs‚µ‚Ü‚µ‚½", __FILE__, __LINE__ );
+			err68a( "æœªç™»éŒ²ã®FEãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã‚³ãƒ¼ãƒ«ã‚’å®Ÿè¡Œã—ã¾ã—ãŸ", __FILE__, __LINE__ );
 			return( TRUE );
 	}
 
@@ -387,8 +387,8 @@ static	int	fefunc( UChar code )
 }
 
 /*
- @‹@”\FFEFUNC _LMUL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LMULã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
 static	Long	Lmul( Long d0, Long d1 )
 {
@@ -396,8 +396,8 @@ static	Long	Lmul( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _LDIV‚ğÀs‚·‚é
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
 static	Long	Ldiv( Long d0, Long d1 )
 {
@@ -411,8 +411,8 @@ static	Long	Ldiv( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _LMOD‚ğÀs‚·‚é
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
 static	Long	Lmod( Long d0, Long d1 )
 {
@@ -426,8 +426,8 @@ static	Long	Lmod( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _UMUL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _UMULã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
 static	ULong	Umul( ULong d0, ULong d1 )
 {
@@ -435,8 +435,8 @@ static	ULong	Umul( ULong d0, ULong d1 )
 }
 
 /*
- @‹@”\FFEFUNC _UDIV‚ğÀs‚·‚é
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _UDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
 static	ULong	Udiv( ULong d0, ULong d1 )
 {
@@ -450,8 +450,8 @@ static	ULong	Udiv( ULong d0, ULong d1 )
 }
 
 /*
- @‹@”\FFEFUNC _UMOD‚ğÀs‚·‚é
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _UMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
 static	ULong	Umod( ULong d0, ULong d1 )
 {
@@ -465,8 +465,8 @@ static	ULong	Umod( ULong d0, ULong d1 )
 }
 
 /*
- @‹@”\FFEFUNC _DTOL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF•ÏŠ·‚³‚ê‚½®”
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DTOLã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šå¤‰æ›ã•ã‚ŒãŸæ•´æ•°
 */
 static	Long	Dtol( Long d0, Long d1 )
 {
@@ -478,8 +478,8 @@ static	Long	Dtol( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _LTOF‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LTOFã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	Long	Ltof( Long d0 )
 {
@@ -496,8 +496,8 @@ static	Long	Ltof( Long d0 )
 }
 
 /*
- @‹@”\FFEFUNC _FTOL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF•ÏŠ·‚³‚ê‚½®”
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FTOLã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šå¤‰æ›ã•ã‚ŒãŸæ•´æ•°
 */
 static	Long	Ftol( Long d0 )
 {
@@ -512,8 +512,8 @@ static	Long	Ftol( Long d0 )
 }
 
 /*
- @‹@”\FFEFUNC _FTOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FTODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Ftod( Long d0 )
 {
@@ -531,8 +531,8 @@ static	void	Ftod( Long d0 )
 }
 
 /*
- @‹@”\FFEFUNC _STOL‚ğÀs‚·‚é
- –ß‚è’lF•ÏŠ·‚³‚ê‚½®”
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _STOLã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šå¤‰æ›ã•ã‚ŒãŸæ•´æ•°
 */
 static	Long	Stol( Long adr )
 {
@@ -565,8 +565,8 @@ static	Long	Stol( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _STOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _STODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Stod( Long adr )
 {
@@ -596,8 +596,8 @@ static	void	Stod( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _LTOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LTODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Ltod( Long num )
 {
@@ -609,8 +609,8 @@ static	void	Ltod( Long num )
 }
 
 /*
- @‹@”\FFEFUNC _DTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dtos( Long d0, Long d1, Long a0 )
 {
@@ -629,8 +629,8 @@ static	void	Dtos( Long d0, Long d1, Long a0 )
 }
 
 /*
- @‹@”\FFEFUNC _LTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Ltos( Long num, Long adr )
 {
@@ -643,8 +643,8 @@ static	void	Ltos( Long num, Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _HTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _HTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Htos( Long num, Long adr )
 {
@@ -657,8 +657,8 @@ static	void	Htos( Long num, Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _OTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _OTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Otos( Long num, Long adr )
 {
@@ -671,8 +671,8 @@ static	void	Otos( Long num, Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _BTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _BTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Btos( Long num, Long adr )
 {
@@ -684,8 +684,8 @@ static	void	Btos( Long num, Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _VAL‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _VALã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Val( Long str )
 {
@@ -737,8 +737,8 @@ static	void	Val( Long str )
 }
 
 /*
- @‹@”\FFEFUNC _IUSING‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _IUSINGã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Iusing( Long num, Long keta, Long adr )
 {
@@ -763,8 +763,8 @@ static	void	Iusing( Long num, Long keta, Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _USING‚ğÀs‚·‚é(ƒAƒgƒŠƒrƒ…[ƒgˆê•”–¢‘Î‰)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _USINGã‚’å®Ÿè¡Œã™ã‚‹(ã‚¢ãƒˆãƒªãƒ“ãƒ¥ãƒ¼ãƒˆä¸€éƒ¨æœªå¯¾å¿œ)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Using( Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0 )
 {
@@ -820,7 +820,7 @@ static	void	Using( Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0 )
 		}
 	}
 
-	/* bit5or6‚ª—§‚Á‚Ä‚¢‚½‚ç'-'‚ğæ‚é */
+	/* bit5or6ãŒç«‹ã£ã¦ã„ãŸã‚‰'-'ã‚’å–ã‚‹ */
 	if ( (atr & 0x60) != 0 && arg1.dbl < 0 ) {
 		if ( *p == '-' && (Long)strlen( p ) > isz ) {
 			strcpy( str, p + 1 );
@@ -829,12 +829,12 @@ static	void	Using( Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0 )
 			p2 = p;
 			while( *p2 == ' ' )
 				p2 ++;
-			if ( *p2 == '-' )	/* ”O‚Ì‚½‚ß */
+			if ( *p2 == '-' )	/* å¿µã®ãŸã‚ */
 				*p2 = ' ';
 		}
 	}
 
-	/* '\'‚ğæ“ª‚É•t‰Á */
+	/* '\'ã‚’å…ˆé ­ã«ä»˜åŠ  */
 	if ( (atr & 0x02) != 0) {
 		p2 = p;
 		str [ 0 ] = '\0';
@@ -853,14 +853,14 @@ static	void	Using( Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0 )
 		strcpy( p, str );
 	}
 
-	/* ³‚Ìê‡'+'‚ğæ“ª‚É•t‰Á */
+	/* æ­£ã®å ´åˆ'+'ã‚’å…ˆé ­ã«ä»˜åŠ  */
 	if ( (atr & 0x10) != 0 && arg1.dbl >= 0) {
 		strcpy( str, "+" );
 		strcat( str, p );
 		strcpy( p, str );
 	}
 
-	/* •„†‚ğ––”ö‚É•t‰Á */
+	/* ç¬¦å·ã‚’æœ«å°¾ã«ä»˜åŠ  */
 	if ( (atr & 0x20) != 0 ) {
 		if ( arg1.dbl < 0 )
 			strcat( p, "-" );
@@ -868,7 +868,7 @@ static	void	Using( Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0 )
 			strcat( p, "+" );
 	}
 
-	/* •‰‚Ìê‡'-'‚ğA³‚Ìê‡ƒXƒy[ƒX‚ğ––”ö‚É•t‰Á */
+	/* è² ã®å ´åˆ'-'ã‚’ã€æ­£ã®å ´åˆã‚¹ãƒšãƒ¼ã‚¹ã‚’æœ«å°¾ã«ä»˜åŠ  */
 	if ( (atr & 0x40) != 0 ) {
 		if ( arg1.dbl < 0 )
 			strcat( p, "-" );
@@ -880,8 +880,8 @@ static	void	Using( Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0 )
 }
 
 /*
- @‹@”\FFEFUNC _DTST‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DTSTã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dtst( Long d0, Long d1 )
 {
@@ -904,8 +904,8 @@ static	void	Dtst( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _DCMP‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DCMPã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dcmp( Long d0, Long d1, Long d2, Long d3 )
 {
@@ -935,8 +935,8 @@ static	void	Dcmp( Long d0, Long d1, Long d2, Long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DNEG‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DNEGã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dneg( Long d0, Long d1 )
 {
@@ -950,8 +950,8 @@ static	void	Dneg( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _DADD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DADDã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dadd( Long d0, Long d1, Long d2, Long d3 )
 {
@@ -968,8 +968,8 @@ static	void	Dadd( Long d0, Long d1, Long d2, Long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DSUB‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DSUBã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dsub( Long d0, Long d1, Long d2, Long d3 )
 {
@@ -986,8 +986,8 @@ static	void	Dsub( Long d0, Long d1, Long d2, Long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DMUL‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DMULã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dmul( Long d0, Long d1, Long d2, Long d3 )
 {
@@ -1004,8 +1004,8 @@ static	void	Dmul( Long d0, Long d1, Long d2, Long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Ddiv( Long d0, Long d1, Long d2, Long d3 )
 {
@@ -1028,8 +1028,8 @@ static	void	Ddiv( Long d0, Long d1, Long d2, Long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DMOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dmod( Long d0, Long d1, Long d2, Long d3 )
 {
@@ -1052,8 +1052,8 @@ static	void	Dmod( Long d0, Long d1, Long d2, Long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DABS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DABSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dabs( Long d0, Long d1 )
 {
@@ -1067,8 +1067,8 @@ static	void	Dabs( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _DFLOOR‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DFLOORã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Dfloor( Long d0, Long d1 )
 {
@@ -1082,8 +1082,8 @@ static	void	Dfloor( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _FCVT‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FCVTã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Fcvt( Long d0, Long d1, Long keta, Long adr )
 {
@@ -1106,8 +1106,8 @@ static	void	Fcvt( Long d0, Long d1, Long keta, Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _SIN‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _SINã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Sin( Long d0, Long d1 )
 {
@@ -1122,8 +1122,8 @@ static	void	Sin( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _COS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _COSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cos( Long d0, Long d1 )
 {
@@ -1138,8 +1138,8 @@ static	void	Cos( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _TAN‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _TANã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Tan( Long d0, Long d1 )
 {
@@ -1155,8 +1155,8 @@ static	void	Tan( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _ATAN‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _ATANã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Atan( Long d0, Long d1 )
 {
@@ -1171,8 +1171,8 @@ static	void	Atan( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _LOG‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LOGã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Log( Long d0, Long d1 )
 {
@@ -1194,8 +1194,8 @@ static	void	Log( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _EXP‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _EXPã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Exp( Long d0, Long d1 )
 {
@@ -1219,8 +1219,8 @@ static	void	Exp( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _SQR‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _SQRã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Sqr( Long d0, Long d1 )
 {
@@ -1240,8 +1240,8 @@ static	void	Sqr( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _FTST‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FTSTã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Ftst( Long d0 )
 {
@@ -1267,8 +1267,8 @@ static	void	Ftst( Long d0 )
 }
 
 /*
- @‹@”\FFEFUNC _FMUL‚ğÀs‚·‚éƒƒGƒ‰[‚Í–¢ƒTƒ|[ƒg„
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FMULã‚’å®Ÿè¡Œã™ã‚‹ï¼œã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆï¼
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
 static	Long	Fmul( Long d0, Long d1 )
 {
@@ -1297,8 +1297,8 @@ static	Long	Fmul( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _FDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	Long	Fdiv( Long d0, Long d1 )
 {
@@ -1333,8 +1333,8 @@ static	Long	Fdiv( Long d0, Long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _CLMUL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CLMULã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Clmul( Long adr )
 {
@@ -1351,8 +1351,8 @@ static	void	Clmul( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CLDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CLDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cldiv( Long adr )
 {
@@ -1374,8 +1374,8 @@ static	void	Cldiv( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CLMOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CLMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Clmod( Long adr )
 {
@@ -1397,8 +1397,8 @@ static	void	Clmod( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CUMUL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CUMULã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cumul( ULong adr )
 {
@@ -1415,8 +1415,8 @@ static	void	Cumul( ULong adr )
 }
 
 /*
- @‹@”\FFEFUNC _CUDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CUDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cudiv( ULong adr )
 {
@@ -1438,8 +1438,8 @@ static	void	Cudiv( ULong adr )
 }
 
 /*
- @‹@”\FFEFUNC _CUMOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CUMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cumod( ULong adr )
 {
@@ -1461,8 +1461,8 @@ static	void	Cumod( ULong adr )
 }
 
 /*
- @‹@”\FFEFUNC _CLTOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CLTODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cltod( Long adr )
 {
@@ -1484,8 +1484,8 @@ static	void	Cltod( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDTOL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDTOLã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cdtol( Long adr )
 {
@@ -1503,8 +1503,8 @@ static	void	Cdtol( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CFTOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CFTODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cftod( Long adr )
 {
@@ -1531,8 +1531,8 @@ static	void	Cftod( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDTOF‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDTOFã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cdtof( Long adr )
 {
@@ -1560,8 +1560,8 @@ static	void	Cdtof( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDCMP‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDCMPã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cdcmp( Long adr )
 {
@@ -1601,8 +1601,8 @@ static	void	Cdcmp( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDADD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDADDã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cdadd( Long adr )
 {
@@ -1622,8 +1622,8 @@ static	void	Cdadd( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDSUB‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDSUBã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cdsub( Long adr )
 {
@@ -1643,8 +1643,8 @@ static	void	Cdsub( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDMUL‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDMULã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cdmul( Long adr )
 {
@@ -1664,8 +1664,8 @@ static	void	Cdmul( Long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	Cddiv( Long adr )
 {
@@ -1692,8 +1692,8 @@ static	void	Cddiv( Long adr )
 }
 
 /*
- @‹@”\F”š•¶š—ñ‚Ì”šˆÈŠO‚Ì•”•ª‚Ü‚Å‚Ì’·‚³‚ğ‹‚ß‚é
- –ß‚è’lF’·‚³
+ ã€€æ©Ÿèƒ½ï¼šæ•°å­—æ–‡å­—åˆ—ã®æ•°å­—ä»¥å¤–ã®éƒ¨åˆ†ã¾ã§ã®é•·ã•ã‚’æ±‚ã‚ã‚‹
+ æˆ»ã‚Šå€¤ï¼šé•·ã•
 */
 static	int	Strl( char *p, int base )
 {
@@ -1737,8 +1737,8 @@ static	int	Strl( char *p, int base )
 }
 
 /*
- @‹@”\F”{¸“x•‚“®¬”“_”‚ğƒŒƒWƒXƒ^2‚Â‚ÉˆÚ“®‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šå€ç²¾åº¦æµ®å‹•å°æ•°ç‚¹æ•°ã‚’ãƒ¬ã‚¸ã‚¹ã‚¿2ã¤ã«ç§»å‹•ã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	From_dbl( DBL *p, int reg )
 {
@@ -1753,8 +1753,8 @@ static	void	From_dbl( DBL *p, int reg )
 }
 
 /*
- @‹@”\F4ƒoƒCƒg®”2‚Â‚É“ü‚Á‚½”{¸“x•‚“®¬”“_”‚ğƒGƒ“ƒfƒBƒAƒ“•ÏŠ·‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼š4ãƒã‚¤ãƒˆæ•´æ•°2ã¤ã«å…¥ã£ãŸå€ç²¾åº¦æµ®å‹•å°æ•°ç‚¹æ•°ã‚’ã‚¨ãƒ³ãƒ‡ã‚£ã‚¢ãƒ³å¤‰æ›ã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	To_dbl( DBL *p, Long d0, Long d1 )
 {

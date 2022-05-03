@@ -88,8 +88,8 @@ typedef	int8_t		Char ;
 typedef	uint8_t		UChar ;
 typedef	int16_t		Short ;
 typedef	uint16_t	UShort ;
-typedef	int32_t		Long ;			// 64bit ŠÂ‹«‘Î‰
-typedef	uint32_t	ULong ;			// 64bit ŠÂ‹«‘Î‰
+typedef	int32_t		Long ;			// 64bit ç’°å¢ƒå¯¾å¿œ
+typedef	uint32_t	ULong ;			// 64bit ç’°å¢ƒå¯¾å¿œ
 
 
 /*
@@ -97,7 +97,7 @@ typedef	uint32_t	ULong ;			// 64bit ŠÂ‹«‘Î‰
 #undef	FNC_TRACE
 */
 
-#if defined(WIN32)              /* Win32 API‚ÅDOSƒR[ƒ‹‚ğƒGƒ~ƒ…ƒŒ[ƒg‚·‚éB*/
+#if defined(WIN32)              /* Win32 APIã§DOSã‚³ãƒ¼ãƒ«ã‚’ã‚¨ãƒŸãƒ¥ãƒ¬ãƒ¼ãƒˆã™ã‚‹ã€‚*/
   #undef DOSX
 #endif
 
@@ -107,7 +107,7 @@ typedef	uint32_t	ULong ;			// 64bit ŠÂ‹«‘Î‰
 
 #include <stdio.h>
 #include <setjmp.h>
-#if !defined(WIN32)              /* Win32 API‚ÅDOSƒR[ƒ‹‚ğƒGƒ~ƒ…ƒŒ[ƒg‚·‚éB*/
+#if !defined(WIN32)              /* Win32 APIã§DOSã‚³ãƒ¼ãƒ«ã‚’ã‚¨ãƒŸãƒ¥ãƒ¬ãƒ¼ãƒˆã™ã‚‹ã€‚*/
 #if !defined(DOSX)
 #include <limits.h>
 #define MAX_PATH	PATH_MAX
@@ -121,19 +121,19 @@ typedef	uint32_t	ULong ;			// 64bit ŠÂ‹«‘Î‰
 #define	TRUE		-1
 #define	FALSE		0
 #endif
-#define	XHEAD_SIZE	0x40		/* Xƒtƒ@ƒCƒ‹‚Ìƒwƒbƒ_ƒTƒCƒY */
-#define	HUMAN_HEAD	0x6800		/* Human‚Ìƒƒ‚ƒŠŠÇ—ƒuƒƒbƒNˆÊ’u */
-#define	FCB_WORK	0x20F00		/* DOSCALL GETFCB—pƒ[ƒN—Ìˆæ */
-#define	HUMAN_WORK	0x21000		/* Š„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP0_WORK	0x20FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP1_WORK	0x21FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP2_WORK	0x22FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP3_WORK	0x23FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP4_WORK	0x24FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP5_WORK	0x25FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP6_WORK	0x26FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP7_WORK	0x27FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
-#define	TRAP8_WORK	0x28FF0000	/* TRAPŠ„‚è‚İˆ—æ“™‚Ìƒ[ƒN—Ìˆæ */
+#define	XHEAD_SIZE	0x40		/* Xãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ˜ãƒƒãƒ€ã‚µã‚¤ã‚º */
+#define	HUMAN_HEAD	0x6800		/* Humanã®ãƒ¡ãƒ¢ãƒªç®¡ç†ãƒ–ãƒ­ãƒƒã‚¯ä½ç½® */
+#define	FCB_WORK	0x20F00		/* DOSCALL GETFCBç”¨ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	HUMAN_WORK	0x21000		/* å‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP0_WORK	0x20FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP1_WORK	0x21FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP2_WORK	0x22FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP3_WORK	0x23FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP4_WORK	0x24FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP5_WORK	0x25FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP6_WORK	0x26FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP7_WORK	0x27FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
+#define	TRAP8_WORK	0x28FF0000	/* TRAPå‰²ã‚Šè¾¼ã¿å‡¦ç†å…ˆç­‰ã®ãƒ¯ãƒ¼ã‚¯é ˜åŸŸ */
 #define	ENV_TOP		0x21C00
 #define	ENV_SIZE	0x2000
 #define	STACK_TOP	ENV_TOP + ENV_SIZE
@@ -144,42 +144,42 @@ typedef	uint32_t	ULong ;			// 64bit ŠÂ‹«‘Î‰
 #define	NEST_MAX	20
 #define	FILE_MAX	20
 
-#define	RAS_INTERVAL	10000	/* ƒ‰ƒXƒ^Š„‚è‚İ‚ÌŠÔŠu */
+#define	RAS_INTERVAL	10000	/* ãƒ©ã‚¹ã‚¿å‰²ã‚Šè¾¼ã¿ã®é–“éš” */
 
-#define	S_BYTE	0	/* BYTEƒTƒCƒY */
-#define	S_WORD	1	/* WORDƒTƒCƒY */
-#define	S_LONG	2	/* LONGƒTƒCƒY */
+#define	S_BYTE	0	/* BYTEã‚µã‚¤ã‚º */
+#define	S_WORD	1	/* WORDã‚µã‚¤ã‚º */
+#define	S_LONG	2	/* LONGã‚µã‚¤ã‚º */
 
-#define	MD_DD	0	/* ƒf[ƒ^ƒŒƒWƒXƒ^’¼Ú */
-#define	MD_AD	1	/* ƒAƒhƒŒƒXƒŒƒWƒXƒ^’¼Ú */
-#define	MD_AI	2	/* ƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	MD_AIPI	3	/* ƒ|ƒXƒgƒCƒ“ƒNƒŠƒƒ“ƒgEƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	MD_AIPD	4	/* ƒvƒŠƒfƒNƒŠƒƒ“ƒgEƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	MD_AID	5	/* ƒfƒBƒXƒvƒŒ[ƒXƒƒ“ƒg•t‚«ƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	MD_AIX	6	/* ƒCƒ“ƒfƒbƒNƒX•t‚«ƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	MD_OTH	7	/* ‚»‚Ì‘¼ */
+#define	MD_DD	0	/* ãƒ‡ãƒ¼ã‚¿ãƒ¬ã‚¸ã‚¹ã‚¿ç›´æ¥ */
+#define	MD_AD	1	/* ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ç›´æ¥ */
+#define	MD_AI	2	/* ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	MD_AIPI	3	/* ãƒã‚¹ãƒˆã‚¤ãƒ³ã‚¯ãƒªãƒ¡ãƒ³ãƒˆãƒ»ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	MD_AIPD	4	/* ãƒ—ãƒªãƒ‡ã‚¯ãƒªãƒ¡ãƒ³ãƒˆãƒ»ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	MD_AID	5	/* ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ¡ãƒ³ãƒˆä»˜ãã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	MD_AIX	6	/* ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ä»˜ãã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	MD_OTH	7	/* ãã®ä»– */
 
-#define	MR_SRT	0	/* â‘ÎƒVƒ‡[ƒg */
-#define	MR_LNG	1	/* â‘Îƒƒ“ƒO */
-#define	MR_PC	2	/* ƒvƒƒOƒ‰ƒ€ƒJƒEƒ“ƒ^‘Š‘Î */
-#define	MR_PCX	3	/* ƒCƒ“ƒfƒbƒNƒX•t‚«ƒvƒƒOƒ‰ƒ€ƒJƒEƒ“ƒ^‘Š‘Î */
-#define	MR_IM	4	/* ƒCƒ~ƒfƒBƒGƒCƒgƒf[ƒ^ */
+#define	MR_SRT	0	/* çµ¶å¯¾ã‚·ãƒ§ãƒ¼ãƒˆ */
+#define	MR_LNG	1	/* çµ¶å¯¾ãƒ­ãƒ³ã‚° */
+#define	MR_PC	2	/* ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚«ã‚¦ãƒ³ã‚¿ç›¸å¯¾ */
+#define	MR_PCX	3	/* ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ä»˜ããƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚«ã‚¦ãƒ³ã‚¿ç›¸å¯¾ */
+#define	MR_IM	4	/* ã‚¤ãƒŸãƒ‡ã‚£ã‚¨ã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ */
 
 /* Replace from MD_xx, MR_xx */
-#define	EA_DD	0	/* ƒf[ƒ^ƒŒƒWƒXƒ^’¼Ú */
-#define	EA_AD	1	/* ƒAƒhƒŒƒXƒŒƒWƒXƒ^’¼Ú */
-#define	EA_AI	2	/* ƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	EA_AIPI	3	/* ƒ|ƒXƒgƒCƒ“ƒNƒŠƒƒ“ƒgEƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	EA_AIPD	4	/* ƒvƒŠƒfƒNƒŠƒƒ“ƒgEƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	EA_AID	5	/* ƒfƒBƒXƒvƒŒ[ƒXƒƒ“ƒg•t‚«ƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	EA_AIX	6	/* ƒCƒ“ƒfƒbƒNƒX•t‚«ƒAƒhƒŒƒXƒŒƒWƒXƒ^ŠÔÚ */
-#define	EA_SRT	7	/* â‘ÎƒVƒ‡[ƒg */
-#define	EA_LNG	8	/* â‘Îƒƒ“ƒO */
-#define	EA_PC	9	/* ƒvƒƒOƒ‰ƒ€ƒJƒEƒ“ƒ^‘Š‘Î */
-#define	EA_PCX	10	/* ƒCƒ“ƒfƒbƒNƒX•t‚«ƒvƒƒOƒ‰ƒ€ƒJƒEƒ“ƒ^‘Š‘Î */
-#define	EA_IM	11	/* ƒCƒ~ƒfƒBƒGƒCƒgƒf[ƒ^ */
+#define	EA_DD	0	/* ãƒ‡ãƒ¼ã‚¿ãƒ¬ã‚¸ã‚¹ã‚¿ç›´æ¥ */
+#define	EA_AD	1	/* ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ç›´æ¥ */
+#define	EA_AI	2	/* ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	EA_AIPI	3	/* ãƒã‚¹ãƒˆã‚¤ãƒ³ã‚¯ãƒªãƒ¡ãƒ³ãƒˆãƒ»ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	EA_AIPD	4	/* ãƒ—ãƒªãƒ‡ã‚¯ãƒªãƒ¡ãƒ³ãƒˆãƒ»ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	EA_AID	5	/* ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ¡ãƒ³ãƒˆä»˜ãã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	EA_AIX	6	/* ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ä»˜ãã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿é–“æ¥ */
+#define	EA_SRT	7	/* çµ¶å¯¾ã‚·ãƒ§ãƒ¼ãƒˆ */
+#define	EA_LNG	8	/* çµ¶å¯¾ãƒ­ãƒ³ã‚° */
+#define	EA_PC	9	/* ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚«ã‚¦ãƒ³ã‚¿ç›¸å¯¾ */
+#define	EA_PCX	10	/* ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ä»˜ããƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚«ã‚¦ãƒ³ã‚¿ç›¸å¯¾ */
+#define	EA_IM	11	/* ã‚¤ãƒŸãƒ‡ã‚£ã‚¨ã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ */
 
-/* ‘I‘ğ‰Â”\ÀŒøƒAƒhƒŒƒX‘g‚İ‡‚í‚¹          fedc ba98 7654 3210 */
+/* é¸æŠå¯èƒ½å®ŸåŠ¹ã‚¢ãƒ‰ãƒ¬ã‚¹çµ„ã¿åˆã‚ã›          fedc ba98 7654 3210 */
 #define EA_All			0x0fff	/* 0000 1111 1111 1111 */
 #define EA_Control		0x07e4	/* 0000 0111 1110 0100 */
 #define EA_Data			0x0ffd	/* 0000 1111 1111 1101 */
@@ -236,31 +236,31 @@ typedef struct	{
 	char	io_through ;
 } INI_INFO ;
 
-/* ƒfƒoƒbƒO—p‚ÉÀs‚µ‚½–½—ß‚Ìî•ñ‚ğ•Û‘¶‚µ‚Ä‚¨‚­\‘¢‘Ì */
+/* ãƒ‡ãƒãƒƒã‚°ç”¨ã«å®Ÿè¡Œã—ãŸå‘½ä»¤ã®æƒ…å ±ã‚’ä¿å­˜ã—ã¦ãŠãæ§‹é€ ä½“ */
 typedef struct {
     Long    pc;
-    /* –{“–‚Í‘SƒŒƒWƒXƒ^‚ğ•Û‘¶‚µ‚Ä‚¨‚«‚½‚¢B*/
-    unsigned short code; /* OPƒR[ƒh */
-    Long    rmem;        /* READ‚µ‚½ƒƒ‚ƒŠ */
-    char    rsize;       /* B/W/L or N(READ‚È‚µ) movem‚Ìê‡‚ÍÅŒã‚Ìˆê‚Â */
-    Long    wmem;        /* WRITE‚µ‚½ƒƒ‚ƒŠ */
-    char    wsize;       /* B/W/L or N(WRITE‚È‚µ) movem‚Ìê‡‚ÍÅŒã‚Ìˆê‚Â */
-    char    mnemonic[64]; /* ƒj[ƒ‚ƒjƒbƒN(‚Å‚«‚ê‚Î) */
+    /* æœ¬å½“ã¯å…¨ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’ä¿å­˜ã—ã¦ãŠããŸã„ã€‚*/
+    unsigned short code; /* OPã‚³ãƒ¼ãƒ‰ */
+    Long    rmem;        /* READã—ãŸãƒ¡ãƒ¢ãƒª */
+    char    rsize;       /* B/W/L or N(READãªã—) movemã®å ´åˆã¯æœ€å¾Œã®ä¸€ã¤ */
+    Long    wmem;        /* WRITEã—ãŸãƒ¡ãƒ¢ãƒª */
+    char    wsize;       /* B/W/L or N(WRITEãªã—) movemã®å ´åˆã¯æœ€å¾Œã®ä¸€ã¤ */
+    char    mnemonic[64]; /* ãƒ‹ãƒ¼ãƒ¢ãƒ‹ãƒƒã‚¯(ã§ãã‚Œã°) */
 } EXEC_INSTRUCTION_INFO;
 
 /* run68.c */
- /* ƒtƒ‰ƒO */
+ /* ãƒ•ãƒ©ã‚° */
 extern BOOL func_trace_f;
 extern BOOL trace_f;
 extern Long trap_pc;
 extern jmp_buf jmp_when_abort;
 extern unsigned short cwatchpoint;
-/* •W€“ü—Í‚Ìƒnƒ“ƒhƒ‹ */
+/* æ¨™æº–å…¥åŠ›ã®ãƒãƒ³ãƒ‰ãƒ« */
 #if defined(WIN32)
 extern HANDLE stdin_handle;
 #endif
 
-/* –½—ßÀsî•ñ */
+/* å‘½ä»¤å®Ÿè¡Œæƒ…å ± */
 extern EXEC_INSTRUCTION_INFO OP_info;
 void	term( int ) ;
 
@@ -330,22 +330,22 @@ BOOL get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size, Long *d
 
 /* debugger.c */
 typedef enum {
-    RUN68_COMMAND_BREAK,  /* ƒuƒŒ[ƒNƒ|ƒCƒ“ƒg‚Ìİ’è */
-    RUN68_COMMAND_CLEAR,  /* ƒuƒŒ[ƒNƒ|ƒCƒ“ƒg‚ÌƒNƒŠƒA */
-    RUN68_COMMAND_CONT,   /* Às‚ÌŒp‘± */
-    RUN68_COMMAND_DUMP,   /* ƒƒ‚ƒŠ‚ğƒ_ƒ“ƒv‚·‚é */
-    RUN68_COMMAND_HELP,   /* ƒfƒoƒbƒK‚Ìƒwƒ‹ƒv */
-    RUN68_COMMAND_HISTORY, /* –½—ß‚ÌÀs—š—ğ */
-    RUN68_COMMAND_LIST,   /* ƒfƒBƒXƒAƒZƒ“ƒuƒ‹ */
-    RUN68_COMMAND_NEXT,   /* STEP‚Æ“¯‚¶B‚½‚¾‚µAƒTƒuƒ‹[ƒ`ƒ“ŒÄo‚µ‚ÍƒXƒLƒbƒv */
-    RUN68_COMMAND_QUIT,   /* run68‚ğI—¹‚·‚é */
-    RUN68_COMMAND_REG,    /* ƒŒƒWƒXƒ^‚Ì“à—e‚ğ•\¦‚·‚é */
-    RUN68_COMMAND_RUN,    /* ŠÂ‹«‚ğ‰Šú‰»‚µ‚ÄƒvƒƒOƒ‰ƒ€Às */
-    RUN68_COMMAND_SET,    /* ƒƒ‚ƒŠ‚É’l‚ğƒZƒbƒg‚·‚é */
-    RUN68_COMMAND_STEP,   /* ˆê–½—ß•ªƒXƒeƒbƒvÀs */
-    RUN68_COMMAND_WATCHC, /* –½—ßƒEƒHƒbƒ` */
-    RUN68_COMMAND_NULL,   /* ƒRƒ}ƒ“ƒh‚Å‚Í‚È‚¢(ˆÚ“®‹Ö~) */
-    RUN68_COMMAND_ERROR   /* ƒRƒ}ƒ“ƒhƒGƒ‰[(ˆÚ“®‹Ö~) */
+    RUN68_COMMAND_BREAK,  /* ãƒ–ãƒ¬ãƒ¼ã‚¯ãƒã‚¤ãƒ³ãƒˆã®è¨­å®š */
+    RUN68_COMMAND_CLEAR,  /* ãƒ–ãƒ¬ãƒ¼ã‚¯ãƒã‚¤ãƒ³ãƒˆã®ã‚¯ãƒªã‚¢ */
+    RUN68_COMMAND_CONT,   /* å®Ÿè¡Œã®ç¶™ç¶š */
+    RUN68_COMMAND_DUMP,   /* ãƒ¡ãƒ¢ãƒªã‚’ãƒ€ãƒ³ãƒ—ã™ã‚‹ */
+    RUN68_COMMAND_HELP,   /* ãƒ‡ãƒãƒƒã‚¬ã®ãƒ˜ãƒ«ãƒ— */
+    RUN68_COMMAND_HISTORY, /* å‘½ä»¤ã®å®Ÿè¡Œå±¥æ­´ */
+    RUN68_COMMAND_LIST,   /* ãƒ‡ã‚£ã‚¹ã‚¢ã‚»ãƒ³ãƒ–ãƒ« */
+    RUN68_COMMAND_NEXT,   /* STEPã¨åŒã˜ã€‚ãŸã ã—ã€ã‚µãƒ–ãƒ«ãƒ¼ãƒãƒ³å‘¼å‡ºã—ã¯ã‚¹ã‚­ãƒƒãƒ— */
+    RUN68_COMMAND_QUIT,   /* run68ã‚’çµ‚äº†ã™ã‚‹ */
+    RUN68_COMMAND_REG,    /* ãƒ¬ã‚¸ã‚¹ã‚¿ã®å†…å®¹ã‚’è¡¨ç¤ºã™ã‚‹ */
+    RUN68_COMMAND_RUN,    /* ç’°å¢ƒã‚’åˆæœŸåŒ–ã—ã¦ãƒ—ãƒ­ã‚°ãƒ©ãƒ å®Ÿè¡Œ */
+    RUN68_COMMAND_SET,    /* ãƒ¡ãƒ¢ãƒªã«å€¤ã‚’ã‚»ãƒƒãƒˆã™ã‚‹ */
+    RUN68_COMMAND_STEP,   /* ä¸€å‘½ä»¤åˆ†ã‚¹ãƒ†ãƒƒãƒ—å®Ÿè¡Œ */
+    RUN68_COMMAND_WATCHC, /* å‘½ä»¤ã‚¦ã‚©ãƒƒãƒ */
+    RUN68_COMMAND_NULL,   /* ã‚³ãƒãƒ³ãƒ‰ã§ã¯ãªã„(ç§»å‹•ç¦æ­¢) */
+    RUN68_COMMAND_ERROR   /* ã‚³ãƒãƒ³ãƒ‰ã‚¨ãƒ©ãƒ¼(ç§»å‹•ç¦æ­¢) */
 } RUN68_COMMAND;
 
 RUN68_COMMAND debugger(BOOL running);
@@ -359,22 +359,22 @@ void neg_conditions(Long dest, Long result, int size, BOOL zero_flag);
 void check(char *mode, Long src, Long dest, Long result, int size, short before);
 
 #ifdef	MAIN
-	FILEINFO finfo [ FILE_MAX ] ;	/* ƒtƒ@ƒCƒ‹ŠÇ—ƒe[ƒuƒ‹ */
-	INI_INFO ini_info ;		/* iniƒtƒ@ƒCƒ‹‚Ì“à—e */
+	FILEINFO finfo [ FILE_MAX ] ;	/* ãƒ•ã‚¡ã‚¤ãƒ«ç®¡ç†ãƒ†ãƒ¼ãƒ–ãƒ« */
+	INI_INFO ini_info ;		/* iniãƒ•ã‚¡ã‚¤ãƒ«ã®å†…å®¹ */
 	char	size_char [ 3 ] = { 'b', 'w', 'l' } ;
-	Long	ra [ 8 ] ;	/* ƒAƒhƒŒƒXƒŒƒWƒXƒ^ */
-	Long	rd [ 8 + 1 ] ;	/* ƒf[ƒ^ƒŒƒWƒXƒ^ */
+	Long	ra [ 8 ] ;	/* ã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ */
+	Long	rd [ 8 + 1 ] ;	/* ãƒ‡ãƒ¼ã‚¿ãƒ¬ã‚¸ã‚¹ã‚¿ */
 	Long	usp ;		/* USP */
-	Long	pc ;		/* ƒvƒƒOƒ‰ƒ€ƒJƒEƒ“ƒ^ */
-	short	sr ;		/* ƒXƒe[ƒ^ƒXƒŒƒWƒXƒ^ */
-	char	*prog_ptr ;	/* ƒvƒƒOƒ‰ƒ€‚ğƒ[ƒh‚µ‚½ƒƒ‚ƒŠ‚Ö‚Ìƒ|ƒCƒ“ƒ^ */
-	int	trap_count ;	/* Š„‚è‚İˆ—’†‚È‚ç‚O */
-	Long	superjsr_ret ;	/* DOSCALL SUPER_JSR‚Ì–ß‚èƒAƒhƒŒƒX */
+	Long	pc ;		/* ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚«ã‚¦ãƒ³ã‚¿ */
+	short	sr ;		/* ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ */
+	char	*prog_ptr ;	/* ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’ãƒ­ãƒ¼ãƒ‰ã—ãŸãƒ¡ãƒ¢ãƒªã¸ã®ãƒã‚¤ãƒ³ã‚¿ */
+	int	trap_count ;	/* å‰²ã‚Šè¾¼ã¿å‡¦ç†ä¸­ãªã‚‰ï¼ */
+	Long	superjsr_ret ;	/* DOSCALL SUPER_JSRã®æˆ»ã‚Šã‚¢ãƒ‰ãƒ¬ã‚¹ */
 	Long	psp [ NEST_MAX ] ;	/* PSP */
-	Long	nest_pc [ NEST_MAX ] ;	/* eƒvƒƒZƒX‚Ö‚Ì–ß‚èƒAƒhƒŒƒX‚ğ•Û‘¶ */
-	Long	nest_sp [ NEST_MAX ] ;	/* eƒvƒƒZƒX‚ÌƒXƒ^ƒbƒNƒ|ƒCƒ“ƒ^‚ğ•Û‘¶ */
-	char	nest_cnt ;	/* qƒvƒƒZƒX‚ğ‹N“®‚·‚é‚½‚Ñ‚É{‚P */
-	Long	mem_aloc ;	/* ƒƒCƒ“ƒƒ‚ƒŠ‚Ì‘å‚«‚³ */
+	Long	nest_pc [ NEST_MAX ] ;	/* è¦ªãƒ—ãƒ­ã‚»ã‚¹ã¸ã®æˆ»ã‚Šã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’ä¿å­˜ */
+	Long	nest_sp [ NEST_MAX ] ;	/* è¦ªãƒ—ãƒ­ã‚»ã‚¹ã®ã‚¹ã‚¿ãƒƒã‚¯ãƒã‚¤ãƒ³ã‚¿ã‚’ä¿å­˜ */
+	char	nest_cnt ;	/* å­ãƒ—ãƒ­ã‚»ã‚¹ã‚’èµ·å‹•ã™ã‚‹ãŸã³ã«ï¼‹ï¼‘ */
+	Long	mem_aloc ;	/* ãƒ¡ã‚¤ãƒ³ãƒ¡ãƒ¢ãƒªã®å¤§ãã• */
 #else
 	extern	FILEINFO finfo [ FILE_MAX ] ;
 	extern	INI_INFO ini_info ;
@@ -395,22 +395,22 @@ void check(char *mode, Long src, Long dest, Long result, int size, short before)
 #endif
 
 /*
-‚Oƒ‰ƒCƒ“–½—ßFmovep, addi, subi, cmpi, andi, eori, ori, btst, bset, bclr, bchg
-‚Pƒ‰ƒCƒ“–½—ßFmove.b
-‚Qƒ‰ƒCƒ“–½—ßFmove.l, movea.l
-‚Rƒ‰ƒCƒ“–½—ßFmove.w, movea.w
-‚Sƒ‰ƒCƒ“–½—ßFmoveccr, movesr, moveusp, movem, swap, lea, pea, link, unlk,
-@@@@@@@clr, ext, neg, negx, tst, tas, not, nbcd, jmp, jsr, rtr, rts,
-@@@@@@@trap, trapv, chk, rte, reset, stop, nop
-‚Tƒ‰ƒCƒ“–½—ßFaddq, subq, dbcc, scc
-‚Uƒ‰ƒCƒ“–½—ßFbcc, bra, bsr
-‚Vƒ‰ƒCƒ“–½—ßFmoveq
-‚Wƒ‰ƒCƒ“–½—ßFdivs, divu, or, sbcd
-‚Xƒ‰ƒCƒ“–½—ßFsub, suba, subx
-‚aƒ‰ƒCƒ“–½—ßFcmp, cmpa, cmpm, eor
-‚bƒ‰ƒCƒ“–½—ßFexg, muls, mulu, and, abcd
-‚cƒ‰ƒCƒ“–½—ßFadd, adda, addx
-‚dƒ‰ƒCƒ“–½—ßFasl, asr, lsl, lsr, rol, ror, roxl, roxr
+ï¼ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šmovep, addi, subi, cmpi, andi, eori, ori, btst, bset, bclr, bchg
+ï¼‘ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šmove.b
+ï¼’ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šmove.l, movea.l
+ï¼“ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šmove.w, movea.w
+ï¼”ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šmoveccr, movesr, moveusp, movem, swap, lea, pea, link, unlk,
+ã€€ã€€ã€€ã€€ã€€ã€€ã€€clr, ext, neg, negx, tst, tas, not, nbcd, jmp, jsr, rtr, rts,
+ã€€ã€€ã€€ã€€ã€€ã€€ã€€trap, trapv, chk, rte, reset, stop, nop
+ï¼•ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šaddq, subq, dbcc, scc
+ï¼–ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šbcc, bra, bsr
+ï¼—ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šmoveq
+ï¼˜ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šdivs, divu, or, sbcd
+ï¼™ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šsub, suba, subx
+ï¼¢ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šcmp, cmpa, cmpm, eor
+ï¼£ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šexg, muls, mulu, and, abcd
+ï¼¤ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šadd, adda, addx
+ï¼¥ãƒ©ã‚¤ãƒ³å‘½ä»¤ï¼šasl, asr, lsl, lsr, rol, ror, roxl, roxr
 */
 
 #endif /* !defined(_RUN68_H_) */

@@ -39,15 +39,15 @@ void	read_ini(char *path, char *prog)
     char    *p;
     long    l;
 
-	/* î•ñ\‘¢‘Ì‚Ì‰Šú‰» */
+	/* æƒ…å ±æ§‹é€ ä½“ã®åˆæœŸåŒ– */
 	ini_info.env_lower    = FALSE;
 	ini_info.trap_emulate = FALSE;
 	ini_info.pc98_key     = FALSE;
 	ini_info.io_through   = FALSE;
 	mem_aloc = 0x100000;
 
-/* INIƒtƒ@ƒCƒ‹‚Ìƒtƒ‹ƒpƒX–¼‚ğ“¾‚éB*/
-    /* ‚Ü‚¸‚Íƒtƒ@ƒCƒ‹–¼‚ğæ“¾‚·‚éB*/
+/* INIãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ•ãƒ«ãƒ‘ã‚¹åã‚’å¾—ã‚‹ã€‚*/
+    /* ã¾ãšã¯ãƒ•ã‚¡ã‚¤ãƒ«åã‚’å–å¾—ã™ã‚‹ã€‚*/
     if ((p = strrchr(path, '\\')) != NULL)
     {
         strcpy(buf, p+1);
@@ -58,20 +58,20 @@ void	read_ini(char *path, char *prog)
     {
         strcpy(buf, path);
     }
-    /* Šg’£q.exe‚ğ.ini‚É’u‚«Š·‚¦‚éB*/
+    /* æ‹¡å¼µå­.exeã‚’.iniã«ç½®ãæ›ãˆã‚‹ã€‚*/
     if ((p = strrchr(buf, '.')) == NULL)
     {
-        /* Šg’£q‚ª‚Â‚¢‚Ä‚¢‚È‚¢‚Í’P‚É•t‰Á‚·‚éB*/
+        /* æ‹¡å¼µå­ãŒã¤ã„ã¦ã„ãªã„æ™‚ã¯å˜ã«ä»˜åŠ ã™ã‚‹ã€‚*/
         strcat(buf, ".ini");
     } else if (_stricmp(p, ".exe") == 0)
     {
         strcpy(p, ".ini");
     } else
     {
-        return; /* .exeˆÈŠO‚ÌŠg’£q‚Í‚È‚¢‚Æv‚¤B*/
+        return; /* .exeä»¥å¤–ã®æ‹¡å¼µå­ã¯ãªã„ã¨æ€ã†ã€‚*/
     }
 #if defined(WIN32)
-    /* Ÿ‚ÉAƒtƒ‹ƒpƒX–¼‚ğ“¾‚éB*/
+    /* æ¬¡ã«ã€ãƒ•ãƒ«ãƒ‘ã‚¹åã‚’å¾—ã‚‹ã€‚*/
     l = SearchPath(
         NULL,       // address of search path 
         buf,        // address of filename 
@@ -86,10 +86,10 @@ void	read_ini(char *path, char *prog)
 #if defined(_DEBUG)
     printf("INI:%s\n", path);
 #endif
-    /* ƒtƒ‹ƒpƒX–¼‚ğg‚Á‚Äƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚·‚éB*/
+    /* ãƒ•ãƒ«ãƒ‘ã‚¹åã‚’ä½¿ã£ã¦ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã™ã‚‹ã€‚*/
 	if ( (fp=fopen(path, "r")) == NULL )
 		return;
-	/* ƒvƒƒOƒ‰ƒ€–¼‚ğ“¾‚é */
+	/* ãƒ—ãƒ­ã‚°ãƒ©ãƒ åã‚’å¾—ã‚‹ */
 	for( i = strlen( prog ) - 1; i >= 0; i-- ) {
 		if ( prog [ i ] == '\\' || prog [ i ] == '/' || prog [ i ] == ':' )
 			break;
@@ -101,11 +101,11 @@ void	read_ini(char *path, char *prog)
 	}
 	sprintf( sec_name, "[%s]\n", &(prog [ i ]) );
 	_strlwr( sec_name );
-	/* “à—e‚ğ’²‚×‚é */
+	/* å†…å®¹ã‚’èª¿ã¹ã‚‹ */
 	while( fgets(buf, 1023, fp) != NULL ) {
 		_strlwr(buf);
 
-		/* ƒZƒNƒVƒ‡ƒ“‚ğŒ©‚é */
+		/* ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã‚’è¦‹ã‚‹ */
 		if ( buf[ 0 ] == '[' ) {
             flag = FALSE;
             if ( _stricmp( buf, "[all]\n" ) == 0 )
@@ -115,7 +115,7 @@ void	read_ini(char *path, char *prog)
 			continue;
 		}
 
-		/* ƒL[ƒ[ƒh‚ğŒ©‚é */
+		/* ã‚­ãƒ¼ãƒ¯ãƒ¼ãƒ‰ã‚’è¦‹ã‚‹ */
 		if (flag == TRUE)
         {
 			if ( _stricmp( buf, "envlower\n" ) == 0 )
@@ -149,18 +149,18 @@ void	read_ini(char *path, char *prog)
 	fclose( fp );
 }
 
-/* run68.iniƒtƒ@ƒCƒ‹‚©‚çŠÂ‹«•Ï”‚Ì‰Šú’l‚ğæ“¾‚·‚éB*/
+/* run68.iniãƒ•ã‚¡ã‚¤ãƒ«ã‹ã‚‰ç’°å¢ƒå¤‰æ•°ã®åˆæœŸå€¤ã‚’å–å¾—ã™ã‚‹ã€‚*/
 void	readenv_from_ini(char *path)
 {
 	char	buf [ 1024 ];
 	FILE	*fp;
 	int	len;
-	char	*mem_ptr;       /* ƒƒ‚ƒŠŠÇ—ƒuƒƒbƒN */
+	char	*mem_ptr;       /* ãƒ¡ãƒ¢ãƒªç®¡ç†ãƒ–ãƒ­ãƒƒã‚¯ */
 	char	*read_ptr;
-	int     env_len = 0;    /* ŠÂ‹«‚Ì’·‚³ */
+	int     env_len = 0;    /* ç’°å¢ƒã®é•·ã• */
     BOOL    env_flag;
 
-	/* INIƒtƒ@ƒCƒ‹‚Ì–¼‘O(ƒpƒXŠÜ‚Ş)‚ğ“¾‚é */
+	/* INIãƒ•ã‚¡ã‚¤ãƒ«ã®åå‰(ãƒ‘ã‚¹å«ã‚€)ã‚’å¾—ã‚‹ */
 	strcpy( buf, path );
 	if ( (len=strlen( buf )) < 4 )
 		return;
@@ -170,16 +170,16 @@ void	readenv_from_ini(char *path)
 	if ( (fp=fopen( buf, "r" )) == NULL )
 		return;
 
-    /* ŠÂ‹«•Ï”‚Íiniƒtƒ@ƒCƒ‹‚É‹Lq‚·‚éB*/
+    /* ç’°å¢ƒå¤‰æ•°ã¯iniãƒ•ã‚¡ã‚¤ãƒ«ã«è¨˜è¿°ã™ã‚‹ã€‚*/
    	mem_set( ra [ 3 ], ENV_SIZE, S_LONG );
    	mem_set( ra [ 3 ] + 4, 0, S_BYTE );
-	/* “à—e‚ğ’²‚×‚é */
+	/* å†…å®¹ã‚’èª¿ã¹ã‚‹ */
 	while( fgets( buf, 1023, fp ) != NULL ) {
 		_strlwr( buf );
         if (strlen(buf) != 0 && buf[strlen(buf)-1] == '\n')
             buf[strlen(buf)-1] = '\0';
 
-		/* ƒZƒNƒVƒ‡ƒ“‚ğŒ©‚é */
+		/* ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã‚’è¦‹ã‚‹ */
 		if ( buf[ 0 ] == '[' ) {
             env_flag = FALSE;
             if ( strcmp( buf, "[environment]" ) == 0 ) {
@@ -190,8 +190,8 @@ void	readenv_from_ini(char *path)
 
 		if (env_flag == TRUE)
         {
-            /* ŠÂ‹«•Ï”‚Íiniƒtƒ@ƒCƒ‹‚É‹Lq‚·‚éB*/
-            /* buf‚ÉŠi”[‚³‚ê‚½•¶š—ñ‚Ì‘®‚ğŠm”F‚·‚×‚«‚Å‚ ‚éB*/
+            /* ç’°å¢ƒå¤‰æ•°ã¯iniãƒ•ã‚¡ã‚¤ãƒ«ã«è¨˜è¿°ã™ã‚‹ã€‚*/
+            /* bufã«æ ¼ç´ã•ã‚ŒãŸæ–‡å­—åˆ—ã®æ›¸å¼ã‚’ç¢ºèªã™ã¹ãã§ã‚ã‚‹ã€‚*/
             if ( env_len + strlen(buf) < ENV_SIZE - 5 )
             {
                 mem_ptr = prog_ptr + ra [ 3 ] + 4 + env_len;
