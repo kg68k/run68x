@@ -8,10 +8,12 @@ run68をMac上で動作するようにしたものです。CMakeに変更して�
 Hot to build
 ------------
 
+```
 $ mkdir build
 $ cd build
 $ cmake ..
 $ make
+```
 
 How to use
 ----------
