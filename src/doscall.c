@@ -185,12 +185,18 @@ char _getche()
 }
 
 void dos_getdrive(Long *drv) {
-	printf("dos_getdrive()\n" );
+//	printf("dos_getdrive()\n" );
 	*drv = 0;
 }
 
 void dos_setdrive(Long a, Long* b) {
 	printf("dos_setdrive(%d, %p)\n", a, b );
+}
+
+int _kbhit()
+{
+	printf("_kbhit()\n");	
+	return 1;
 }
 
 int kbhit()
@@ -356,6 +362,11 @@ int dos_call( UChar code )
 #elif defined(DOSX)
 		_dos_write( fileno(finfo[ 1 ].fh), data_ptr,
 					(unsigned)len, &drv );
+#elif defined(__APPLE__)
+//		_dos_write( fileno(finfo[ 1 ].fh), data_ptr, (unsigned)len, &drv );
+		printf("%s", data_ptr);
+#else
+		printf("DOSCALL:PRINT not implemented yet.\n");
 #endif
 		/* printf( "%s", data_ptr ); */
 		rd [ 0 ] = 0;
@@ -367,7 +378,6 @@ int dos_call( UChar code )
 		}
 		rd [ 0 ] = Gets( buf );
 		break;
-#if defined(WIN32) || defined(DOSX)
 		//#elif defined(DOSX)
 	  case 0x0B:    /* KEYSNS */
 		if (func_trace_f) {
@@ -378,7 +388,6 @@ int dos_call( UChar code )
 		else
 		  rd [ 0 ] = 0;
 		break;
-#endif
 	  case 0x0C:    /* KFLUSH */
 		srt = (short)mem_get( stack_adr, S_WORD );
 		if (func_trace_f) {
