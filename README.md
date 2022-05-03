@@ -5,7 +5,7 @@ Human68k CUI Emulator for MacOS
 
 run68をMac上で動作するようにしたものです。CMakeに変更しています。
 
-Hot to build
+How to build
 ------------
 
 ```
