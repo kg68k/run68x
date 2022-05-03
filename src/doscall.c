@@ -2188,7 +2188,7 @@ static Long Curdir( short drv, char *buf_ptr )
 static Long Files( Long buf, Long name, short atr )
 {
 #if defined(__APPLE__)
-	printf("DOSCALL FILES:not defined yet %s %s\n", __FILE__, __LINE__ );
+	printf("DOSCALL FILES:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 
 	WIN32_FIND_DATA f_data;
@@ -2270,7 +2270,7 @@ static Long Files( Long buf, Long name, short atr )
 static Long Nfiles( Long buf )
 {
 #if defined(__APPLE__)
-	printf("DOSCALL NFILES:not defined yet %s %s\n", __FILE__, __LINE__ );
+	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 	WIN32_FIND_DATA f_data;
 	HANDLE handle;
@@ -2398,7 +2398,7 @@ static Long Nfiles( Long buf )
 static Long Filedate( short hdl, Long dt )
 {
 #if defined(__APPLE__)
-	printf("DOSCALL FILEDATE:not defined yet %s %s\n", __FILE__, __LINE__ );
+	printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 #if defined(WIN32)
 	FILETIME ctime, atime, wtime;
@@ -2469,22 +2469,22 @@ static Long Getdate()
 {
 	Long       ret;
 
-#if defined(__APPLE__)
-	ret = 0;
-	printf("DOSCALL GETDATE:not defined yet %s %s\n", __FILE__, __LINE__ );
-#else
 #if defined(WIN32)
 	SYSTEMTIME stime;
 	//GetSystemTime(&stime);
 	GetLocalTime(&stime);
 	ret = ((Long)(stime.wDayOfWeek) << 16) + (((Long)(stime.wYear) - 1980) << 9) +
 		((Long)(stime.wMonth) << 5) + (Long)(stime.wDay);
-#else
+#elif defined(DOSX)
 	struct dos_date_t ddate;
 	dos_getdate( &ddate );
 	ret = (ddate.dayofweek << 16) + ((ddate.year -1980) << 9) +
 		(ddate.month << 5) + ddate.day;
-#endif
+#elif defined(__APPLE__)
+	ret = 0;
+	printf("DOSCALL GETDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
+#else
+#error DOSCALL GETDATE Not implemented yet.
 #endif
 	return( ret );
 }
@@ -2496,7 +2496,7 @@ static Long Getdate()
 static Long Setdate( short dt )
 {
 #if defined(__APPLE__)
-	printf("DOSCALL SETDATE:not defined yet %s %s\n", __FILE__, __LINE__ );
+	printf("DOSCALL SETDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 
 #if defined(WIN32)
@@ -2532,9 +2532,6 @@ static Long Setdate( short dt )
 static Long Gettime( int flag )
 {
 	Long       ret;
-#if defined(__APPLE__)
-	printf("DOSCALL GETTIME:not defined yet %s %s\n", __FILE__, __LINE__ );
-#else
 #if defined(WIN32)
 	SYSTEMTIME stime;
 	// GetSystemTime(&stime);
@@ -2545,7 +2542,7 @@ static Long Gettime( int flag )
 	else
 		// ret = stime.wHour << 16 + stime.wMinute << 8 + stime.wSecond;
 		ret = ((Long)(stime.wHour) << 16) + ((Long)(stime.wMinute) << 8) + (Long)(stime.wSecond);
-#else
+#elif defined(DOSX)
 	struct dos_time_t dtime;
 	dos_gettime( &dtime );
 
@@ -2553,7 +2550,10 @@ static Long Gettime( int flag )
 		ret = (dtime.hour << 11) + (dtime.minute << 5) + (dtime.second >> 1);
 	else
 		ret = (dtime.hour << 16) + (dtime.minute << 8) + dtime.second;
-#endif
+#elif defined(__APPLE__)
+	printf("DOSCALL GETTIME:not defined yet %s %d\n", __FILE__, __LINE__ );
+#else
+#error DOSCALL GETTIME Not implemented yet.
 #endif
 	return( ret );
 }
@@ -2565,7 +2565,7 @@ static Long Gettime( int flag )
 static Long Settim2( Long tim )
 {
 #if defined(__APPLE__)
-	printf("DOSCALL SETTIM2:not defined yet %s %s\n", __FILE__, __LINE__ );
+	printf("DOSCALL SETTIM2:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 
 #if defined(WIN32)
