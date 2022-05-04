@@ -158,8 +158,8 @@ int _dos_getfileattr( char* name, void *ret ) {
 	return 1;
 }
 
-int _dos_setfileattr( char* name, void *ret ) {
-	printf("_dos_setfileattr(\"%s\")\n", name);
+int _dos_setfileattr( char* name, short attr ) {
+	printf("_dos_setfileattr(\"%s\", %d)\n", name, attr);
 
 	return 1;
 }
@@ -198,13 +198,13 @@ void dos_setdrive(Long drv, Long* dmy) {
 
 int _kbhit()
 {
-	printf("_kbhit()\n");	
+//	printf("_kbhit()\n");
 	return 1;
 }
 
 int kbhit()
 {
-	printf("kbhit()\n");	
+//	printf("kbhit()\n");
 	return 1;
 }
 
@@ -1111,6 +1111,19 @@ int dos_call( UChar code )
 		pc =       nest_pc [ nest_cnt ];
 		ra [ 7 ] = nest_sp [ nest_cnt ];
 		rd [ 0 ] = (UShort)srt;
+
+		case 0xf7:	// BUS_ERR
+		{
+			short size  = (short)mem_get( stack_adr, S_WORD );	// アクセスサイズ
+			Long r_ptr  = mem_get( stack_adr + 2, S_LONG );
+			Long w_ptr  = mem_get( stack_adr + 6, S_LONG );
+			if (func_trace_f) {
+				printf("%-10s size=%d P1.l=%08X P2.l=%08X\n", "BUS_ERR",
+					   size, r_ptr, w_ptr);
+			}
+			rd [ 0 ] = 1;//BusErr( buf, data, srt );
+		}
+		break;
 	  default:
 		if (func_trace_f) {
 			printf("%-10s code=0xFF%02X\n", "????????", code );
@@ -2978,7 +2991,7 @@ static Long Nameck( Long name, Long buf )
 	} else {
 		memcpy( buf_ptr, nbuf, 2 );
 	}
-	printf("NAMECK=%s\n", buf_ptr);
+//	printf("NAMECK=%s\n", buf_ptr);
 	return( ret );
 }
 
@@ -3560,3 +3573,28 @@ static Long gets2( char *str, int max )
 
 	return( strlen( str ) );
 }
+
+/*
+	$fff7	_BUS_ERR	Check for bus errors
+		
+		Arg	SIZE.w		アクセスサイズ(1:バイト 2:ワード 4:ロングワード)
+		P1.l		読み込みポインタ
+		P2.l		書き込みポインタ
+		
+		Ret	d0.l =  0	読み書き可能
+		d0.l =  1	P2 に書き込んだ時にバスエラーが発生
+		d0.l =  2	P1 から読み込んだ時にバスエラーが発生
+		d0.l = -1	エラー(Argが異常)
+		
+		SIZE で指定されたサイズで P1 で指定したアドレスから読み込み、そのデータ
+		を P2 で指定したアドレスに書き込んでバスエラーが発生するかどうか調べる.
+		SIZE の値が異常な場合や SIZE = 2,4 で P1,P2 に奇数アドレスを指定した場
+		合はRetが -1 になる.
+		
+		move	SIZE,-(sp)
+		pea	(P2)
+		pea	(P1)
+		DOS	_BUS_ERR
+		lea	(10,sp),sp
+*/
+	
