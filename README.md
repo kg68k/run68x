@@ -1,6 +1,8 @@
 run68mac
 ========
 
+[![CMake](https://github.com/GOROman/run68mac/actions/workflows/cmake.yml/badge.svg?branch=master)](https://github.com/GOROman/run68mac/actions/workflows/cmake.yml)
+
 Human68k CUI Emulator for MacOS
 
 run68をMac上で動作するようにしたものです。CMakeを使用してビルドするように変更しています。
