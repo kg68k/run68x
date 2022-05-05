@@ -37,3 +37,4 @@ set(SRC
 )
 
 add_executable(run68 ${SRC})
+target_link_libraries(run68 PUBLIC m)
