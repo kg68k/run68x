@@ -64,7 +64,7 @@ int iocs_call()
 
     if (func_trace_f)
     {
-        printf( "IOCS(%02X): PC=%06lX\n", no, pc );
+        printf( "IOCS(%02X): PC=%06X\n", no, pc );
     }
 	switch( no ) {
 		case 0x20:	/* B_PUTC */

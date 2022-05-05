@@ -389,17 +389,17 @@ Restart:
 	/* 終了 */
 	if (trace_f || func_trace_f)
 	{
-		printf( "d0-7=%08lx" , rd [ 0 ] );
+		printf( "d0-7=%08x" , rd [ 0 ] );
 		for ( i = 1; i < 8; i++ ) {
-			printf( ",%08lx" , rd [ i ] );
+			printf( ",%08x" , rd [ i ] );
 		}
 		printf("\n");
-		printf( "a0-7=%08lx" , ra [ 0 ] );
+		printf( "a0-7=%08x" , ra [ 0 ] );
 		for ( i = 1; i < 8; i++ ) {
-			printf( ",%08lx" , ra [ i ] );
+			printf( ",%08x" , ra [ i ] );
 		}
 		printf("\n");
-		printf( "  pc=%08lx    sr=%04x\n" , pc, sr );
+		printf( "  pc=%08x    sr=%04x\n" , pc, sr );
 	}
 	term( TRUE );
 	if (restart == TRUE)
