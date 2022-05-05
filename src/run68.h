@@ -82,7 +82,9 @@
 #endif
 #endif
 
-#include <stdlib.h>	// for intXX_t
+
+#include <stdint.h> // for intXX_t
+#include <stdlib.h>	
 
 typedef	int8_t		Char ;
 typedef	uint8_t		UChar ;
