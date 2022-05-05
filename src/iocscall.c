@@ -21,20 +21,17 @@
 #include <stdio.h>
 #include <string.h>
 #include "run68.h"
-#if !defined(WIN32)
-#if defined(DOSX)
-#include <dos.h>
+
+#if defined(WIN32)
+  #include <windows.h>
+#elif defined(DOSX)
+  #include <dos.h>
+#elif defined(__APPLLE__)
 #else
-  #if !defined(__APPLLE__)
-  #else
-    #include <sys/sysinfo.h>
-  #endif
-#endif
-#include <time.h>
-#elif defined(WIN32)
-#include <windows.h>
+  #include <sys/sysinfo.h>
 #endif
 
+#include <time.h>
 #include <sys/time.h>
 
 static Long	Putc( UShort );

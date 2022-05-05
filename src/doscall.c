@@ -61,27 +61,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+
 #if !defined(__GNUC__)
 #include <conio.h>
 #endif
 
-#if defined(__APPLE__)
+#if defined(DOSX)
+  #include <dos.h>
+  #include <direct.h>
+  #include <io.h>
+#elif defined(__APPLE__)
+  #include <time.h>
+  #include <dirent.h>
 #else
-	#if !defined(WIN32)
-	#include <dos.h>
-	#include <direct.h>
-	#endif
+  #include <time.h>
+  #include <dirent.h>
 #endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "ansicolor-w32.h"
 
-#if defined(__APPLE__)
-#include <time.h>
-#include <dirent.h>
-#else
-#include <io.h>
-#endif
 
 static Long Gets( Long );
 static Long Kflush( short );
@@ -133,7 +133,7 @@ static Long gets2( char *, int );
 
 Long Getenv_common(const char *name_p, char *buf_p);
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__linux__)
 void CloseHandle( FILE* fp ) {
 	fclose( fp );
 }
@@ -1950,7 +1950,10 @@ static Long Write( short hdl, Long buf, Long len )
 	if (finfo [ hdl ].fh == stdout)
 	  fflush( stdout );
 #else
-	#error NOTIMPLEMENTED
+	write_len = fwrite( write_buf, 1, len, finfo [ hdl ].fh );
+	if (finfo [ hdl ].fh == stdout)
+	  fflush( stdout );
+//	#error NOTIMPLEMENTED
 #endif
 
 	return( write_len );
@@ -2244,75 +2247,7 @@ static Long Curdir( short drv, char *buf_ptr )
  */
 static Long Files( Long buf, Long name, short atr )
 {
-#if defined(__APPLE__)
-	
-	char        *name_ptr;
-	char        *buf_ptr;
-	name_ptr = prog_ptr + name;
-	buf_ptr  = prog_ptr + buf;
-	
-	{
-		FILE* fp = fopen( name_ptr, "rb" );
-		if (fp != NULL) {
-			fclose(fp);
-			
-			/* 予約領域をセット */
-			buf_ptr[0] = atr;  /* ファイルの属性 */
-			buf_ptr[1] = 0;    /* ドライブ番号(not used) */
-//			*((HANDLE*)&buf_ptr[2]) = handle; /* サーチハンドル */
-			{
-//				BOOL b = handle != INVALID_HANDLE_VALUE;
-			}
-			/* DATEとTIMEをセット */
-			{
-/*
-				SYSTEMTIME st;
-				unsigned short s;
-				FileTimeToSystemTime(&f_data.ftLastWriteTime, &st);
-				s = (st.wHour << 11) +
-				(st.wMinute << 5) +
-				st.wSecond / 2;
-				buf_ptr[22] = (s & 0xff00) >> 8;
-				buf_ptr[23] = s & 0xff;
-				s =((st.wYear - 1980) << 9) +
-				(st.wMonth << 5) +
-				st.wDay;
-				buf_ptr[24] = (s & 0xff00) >> 8;
-				buf_ptr[25] = s & 0xff;
-*/
-			}
-			// FILELENをセット
-			size_t size = 64;
-			buf_ptr[26] = (unsigned char)((size & 0xff000000) >> 24);
-			buf_ptr[27] = (unsigned char)((size & 0x00ff0000) >> 16);
-			buf_ptr[28] = (unsigned char)((size & 0x0000ff00) >> 8);
-			buf_ptr[29] = (unsigned char)(size & 0x000000ff);
-			/* PACKEDNAMEをセット */
-			strncpy(&buf_ptr[30], name_ptr, 22);
-			buf_ptr[30+22] = 0;
-
-			return 0;
-		}
-	}
-
-	char *path = name_ptr;
-	DIR *dir;
-	struct dirent *dent;
-
-
-	
-	dir = opendir(path);
-	printf("opendir(%s)=%p\n", path, dir );
-	if (dir == NULL) {
-//		perror(path);
-	} else {
-		while ((dent = readdir(dir)) != NULL) {
-			printf("%s\n", dent->d_name);
-		}
-		closedir(dir);
-	}
-	printf("DOSCALL FILES:not defined yet %s %d\n", __FILE__, __LINE__ );
-#else
+#if defined(WIN32)
 
 	WIN32_FIND_DATA f_data;
 	HANDLE handle;
@@ -2382,6 +2317,75 @@ static Long Files( Long buf, Long name, short atr )
 	/* PACKEDNAMEをセット */
 	strncpy(&buf_ptr[30], f_data.cFileName, 22);
 	buf_ptr[30+22] = 0;
+
+	
+#else
+	char        *name_ptr;
+	char        *buf_ptr;
+	name_ptr = prog_ptr + name;
+	buf_ptr  = prog_ptr + buf;
+	
+	{
+		FILE* fp = fopen( name_ptr, "rb" );
+		if (fp != NULL) {
+			fclose(fp);
+			
+			/* 予約領域をセット */
+			buf_ptr[0] = atr;  /* ファイルの属性 */
+			buf_ptr[1] = 0;    /* ドライブ番号(not used) */
+//			*((HANDLE*)&buf_ptr[2]) = handle; /* サーチハンドル */
+			{
+//				BOOL b = handle != INVALID_HANDLE_VALUE;
+			}
+			/* DATEとTIMEをセット */
+			{
+/*
+				SYSTEMTIME st;
+				unsigned short s;
+				FileTimeToSystemTime(&f_data.ftLastWriteTime, &st);
+				s = (st.wHour << 11) +
+				(st.wMinute << 5) +
+				st.wSecond / 2;
+				buf_ptr[22] = (s & 0xff00) >> 8;
+				buf_ptr[23] = s & 0xff;
+				s =((st.wYear - 1980) << 9) +
+				(st.wMonth << 5) +
+				st.wDay;
+				buf_ptr[24] = (s & 0xff00) >> 8;
+				buf_ptr[25] = s & 0xff;
+*/
+			}
+			// FILELENをセット
+			size_t size = 64;
+			buf_ptr[26] = (unsigned char)((size & 0xff000000) >> 24);
+			buf_ptr[27] = (unsigned char)((size & 0x00ff0000) >> 16);
+			buf_ptr[28] = (unsigned char)((size & 0x0000ff00) >> 8);
+			buf_ptr[29] = (unsigned char)(size & 0x000000ff);
+			/* PACKEDNAMEをセット */
+			strncpy(&buf_ptr[30], name_ptr, 22);
+			buf_ptr[30+22] = 0;
+
+			return 0;
+		}
+	}
+
+	char *path = name_ptr;
+	DIR *dir;
+	struct dirent *dent;
+
+
+	
+	dir = opendir(path);
+	printf("opendir(%s)=%p\n", path, dir );
+	if (dir == NULL) {
+//		perror(path);
+	} else {
+		while ((dent = readdir(dir)) != NULL) {
+			printf("%s\n", dent->d_name);
+		}
+		closedir(dir);
+	}
+	printf("DOSCALL FILES:not defined yet %s %d\n", __FILE__, __LINE__ );
 #endif
 	return( 0 );
 }
@@ -2392,9 +2396,7 @@ static Long Files( Long buf, Long name, short atr )
  */
 static Long Nfiles( Long buf )
 {
-#if defined(__APPLE__)
-	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
-#else
+#if defined(WIN32)
 	WIN32_FIND_DATA f_data;
 	HANDLE handle;
 	unsigned int i;
@@ -2510,6 +2512,11 @@ static Long Nfiles( Long buf )
 	/* PACKEDNAMEをセット */
 	strncpy(&buf_ptr[30], f_data.cFileName, 22);
 	buf_ptr[30+22] = 0;
+
+#elif defined(__APPLE__)
+	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
+#else
+	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
 #endif
 	return( 0 );
 }
@@ -2521,6 +2528,8 @@ static Long Nfiles( Long buf )
 static Long Filedate( short hdl, Long dt )
 {
 #if defined(__APPLE__)
+	printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
+#elif defined(__linux__)
 	printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 #if defined(WIN32)
@@ -2623,9 +2632,6 @@ static Long Getdate()
  */
 static Long Setdate( short dt )
 {
-#if defined(__APPLE__)
-	printf("DOSCALL SETDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
-#else
 
 #if defined(WIN32)
 	SYSTEMTIME stime;
@@ -2639,7 +2645,7 @@ static Long Setdate( short dt )
 	b = SetLocalTime(&stime);
 	if (!b)
 		return -14;     /* パラメータ不正 */
-#else
+#elif(DOSX)
 	struct dos_date_t ddate;
 
 	ddate.year  = ((dt >> 9) & 0x7F) + 1980;
@@ -2648,7 +2654,8 @@ static Long Setdate( short dt )
 
 	if ( dos_setdate( &ddate ) != 0 )
 		return( -14 );        /* パラメータ不正 */
-#endif
+#else
+	printf("DOSCALL SETDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
 #endif
 	return( 0 );
 }
@@ -2702,9 +2709,6 @@ static Long Gettime( int flag )
  */
 static Long Settim2( Long tim )
 {
-#if defined(__APPLE__)
-	printf("DOSCALL SETTIM2:not defined yet %s %d\n", __FILE__, __LINE__ );
-#else
 
 #if defined(WIN32)
 	SYSTEMTIME stime;
@@ -2717,7 +2721,7 @@ static Long Settim2( Long tim )
 	b = SetSystemTime(&stime);
 	if (!b)
 		return -14;     /* パラメータ不正 */
-#else
+#elif defined(DOSX)
 	struct dos_time_t dtime;
 
 	dtime.hour    = ((tim >> 16) & 0x1F);
@@ -2726,7 +2730,8 @@ static Long Settim2( Long tim )
 	dtime.hsecond = 0;
 	if ( dos_settime( &dtime ) != 0 )
 		return( -14 );        /* パラメータ不正 */
-#endif
+#else
+	printf("DOSCALL SETTIM2:not defined yet %s %d\n", __FILE__, __LINE__ );
 #endif
 	return( 0 );
 }
