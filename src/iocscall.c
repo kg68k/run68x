@@ -26,7 +26,7 @@
   #include <windows.h>
 #elif defined(DOSX)
   #include <dos.h>
-#elif defined(__APPLLE__)
+#elif defined(__APPLE__)
 #else
   #include <sys/sysinfo.h>
 #endif
