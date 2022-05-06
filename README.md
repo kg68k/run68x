@@ -16,9 +16,11 @@ $ mkdir build
 $ cd build
 $ cmake ..
 $ make
+$ make install
 ```
+make install で /usr/local/bin/ 等にインストールされます。
 
-Xcodeでビルドする場合(デバッグが楽)
+デバッグのためにXcodeでビルドする場合
 ```
 $ mkdir build
 $ cd build
@@ -30,7 +32,14 @@ How to use
 ----------
 
 ```
-$ ./run68 mdx2mus.x bos14.mdx
+$ run68 起動したいX68000実行ファイル(*.x *.r) 引数
+```
+
+
+
+起動例
+```
+$ run68 mdx2mus.x bos14.mdx
 ```
 
 SJISが文字化けする場合は iconv を使用
@@ -46,10 +55,9 @@ Loop  counts: 07872 07872 07872 07872 07872 07872 07872 07872 07872
 使用音色番号: 3 6 7 10 11 12 13 15
 ```
 
-
 標準エラー出力も含める場合は |& でリダイレクト
 ```
-$ ./run68  HAS.X |& iconv -f sjis
+$ ./run68 HAS.X |& iconv -f sjis
 X68k High-speed Assembler v3.09 Copyright 1990-94 by Y.Nakamura
 使用法：as ［スイッチ］ ファイル名
 	-t path		テンポラリパス指定
@@ -57,19 +65,5 @@ X68k High-speed Assembler v3.09 Copyright 1990-94 by Y.Nakamura
 	-i path		インクルードパス指定
 	-p [file]	リストファイル作成
 	-n		最適化の禁止
-	-w [n]		ワーニングレベルの指定(0〜4)
-	-u		未定義シンボルを外部参照にする
-	-d		すべてのシンボルを外部定義にする
-	-8		シンボルの識別長を８バイトにする
-	-s symbol[=num]	シンボルの定義
-	-x [file]	シンボルの出力
-	-f [f,m,w,p]	リストファイルのフォーマット指定
-	-l		起動時にタイトルを表示する
-	-e		外部参照オフセットのデフォルトをロングワードにする
-	-b		ロングワードのPC間接を絶対ロングにする
-	-g		SCD用デバッグ情報の出力
-	-c		HAS v2.x互換の最適化を行う
-	-m 680x0	アセンブル対象CPUの指定
-
-	環境変数 HAS の内容がコマンドラインの最後に追加されます
+(...省略)
 ```
