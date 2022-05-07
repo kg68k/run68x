@@ -76,9 +76,9 @@ TIPS
 
 - あたかもX68000のコマンドがMacのターミナル上で動いているように見せる方法
 
-1. /usr/local/bin/x68 以下にX68000形式の実行ファイルを置いておく
+1. /usr/local/x68/bin 以下にX68000形式の実行ファイルを置いておく
 ````
-$ ls /usr/local/bin/x68
+$ ls /usr/local/x68/bin
 CV.x   HAS.X  hlk.x  note.x
 ````
 
@@ -87,7 +87,7 @@ CV.x   HAS.X  hlk.x  note.x
 /usr/local/bin/has.x
 ```sh
 #!/bin/sh
-run68 /usr/local/bin/x68/has.x $@
+run68 /usr/local/x68/bin/has.x $@
 ```
 
 3. 実行属性(+x)を与える
