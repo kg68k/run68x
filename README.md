@@ -5,11 +5,16 @@ run68mac
 
 Human68k CUI Emulator for MacOS
 
-run68をMac上で動作するようにしたものです。CMakeを使用してビルドするように変更しています。
-あらかじめ、brew install cmake などでインストールしておいてください。漢字コードを変換するライブラリには iconv を使用しています。
+run68をMac上で動作するようにしたものです。
 
 How to build
 ------------
+
+CMakeを使用してビルドするように変更しています。あらかじめ、brew install cmake などでインストールしておいてください。漢字コードを変換するライブラリには libiconv を使用しています。
+```
+$ brew install cmake
+$ brew install libiconv
+```
 
 ```
 $ mkdir build
