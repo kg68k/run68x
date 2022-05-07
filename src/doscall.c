@@ -623,7 +623,6 @@ int dos_call( UChar code )
 		}
 		rd[0] = len;
 #else
-				printf("FDL:%d\n", fhdl);
 
 #if defined (USE_ICONV)
 			char utf8_buf[8192];

@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.13)
 
 option(USE_ICONV "Use iconv for converting Shift-JIS to UTF-8." ON)
 
+add_definitions(-DFNC_TRACE -DENV_FROM_INI)
+
 if(USE_ICONV)
     add_definitions(-DUSE_ICONV)
 else()
@@ -56,7 +58,6 @@ if(USE_ICONV)
   endif()
 endif()
 
-message(${LIBS})
 target_link_libraries(run68 PUBLIC ${LIBS})
 
 INSTALL(TARGETS run68 RUNTIME DESTINATION bin)
