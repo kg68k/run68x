@@ -82,6 +82,9 @@
 #include <sys/stat.h>
 #include "ansicolor-w32.h"
 
+#if defined(USE_ICONV)
+#include <iconv.h>
+#endif
 
 static Long Gets( Long );
 static Long Kflush( short );
@@ -365,9 +368,26 @@ int dos_call( UChar code )
 #elif defined(DOSX)
 		_dos_write( fileno(finfo[ 1 ].fh), data_ptr,
 					(unsigned)len, &drv );
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__linux__)
 //		_dos_write( fileno(finfo[ 1 ].fh), data_ptr, (unsigned)len, &drv );
-		printf("%s", data_ptr);
+#if defined (USE_ICONV)
+	{
+		// SJIS to UTF-8
+		char utf8_buf[8192];
+		iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+		size_t inbytes = strlen(data_ptr);
+		size_t outbytes = sizeof(utf8_buf) - 1;
+		char *ptr_in = data_ptr;
+		char *ptr_out = utf8_buf;
+		memset(utf8_buf, 0x00, sizeof(utf8_buf));
+		iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
+		iconv_close(icd);
+
+		printf("%s", utf8_buf);
+	}
+#else
+	printf("%s", data_ptr);
+#endif
 #else
 		printf("DOSCALL:PRINT not implemented yet.\n");
 #endif
@@ -603,10 +623,31 @@ int dos_call( UChar code )
 		}
 		rd[0] = len;
 #else
-		if ( fprintf( finfo [ fhdl ].fh, "%s", data_ptr ) == -1 )
+				printf("FDL:%d\n", fhdl);
+
+#if defined (USE_ICONV)
+			char utf8_buf[8192];
+			if (( finfo [ fhdl ].fh == stdout ) ||  ( finfo [ fhdl ].fh == stderr )) {
+				// SJIS to UTF-8
+				iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+				size_t inbytes  = strlen(data_ptr);
+				size_t outbytes = sizeof(utf8_buf) - 1;
+				char *ptr_in = data_ptr;
+				char *ptr_out = utf8_buf;
+				memset(utf8_buf, 0x00, sizeof(utf8_buf));
+				iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
+				iconv_close(icd);
+
+				data_ptr = utf8_buf;
+			}
+#endif	// USE_ICONV
+
+		if ( fprintf( finfo [ fhdl ].fh, "%s", data_ptr ) == -1 ) {
 		  rd [ 0 ] = 0;
-		else
+		 } else {
 		  rd [ 0 ] = strlen( data_ptr );
+		}
+
 #endif
 		break;
 	  case 0x1F:    /* ALLCLOSE */

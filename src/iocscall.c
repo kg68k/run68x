@@ -31,6 +31,10 @@
   #include <sys/sysinfo.h>
 #endif
 
+#if defined (USE_ICONV)
+  #include<iconv.h>
+#endif
+
 #include <time.h>
 #include <sys/time.h>
 
@@ -72,7 +76,25 @@ int iocs_call()
 			break;
 		case 0x21:	/* B_PRINT */
 			data_ptr = (UChar *)prog_ptr + ra [ 1 ];
+#if defined (USE_ICONV)
+			{
+				// SJIS to UTF-8
+				char utf8_buf[8192];
+				iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+				size_t inbytes  = strlen(data_ptr);
+				size_t outbytes = sizeof(utf8_buf) - 1;
+				char *ptr_in = data_ptr;
+				char *ptr_out = utf8_buf;
+				memset(utf8_buf, 0x00, sizeof(utf8_buf));
+				iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
+				iconv_close(icd);
+
+				printf("%s", utf8_buf);
+			}
+#else
 			printf( "%s", data_ptr );
+#endif
+
 			ra [ 1 ] += strlen((char *)data_ptr);
 			rd [ 0 ] = get_locate();
 			break;

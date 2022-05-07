@@ -1,6 +1,13 @@
 
 cmake_minimum_required(VERSION 3.13)
 
+option(USE_ICONV "Use iconv for converting Shift-JIS to UTF-8." ON)
+
+if(USE_ICONV)
+    add_definitions(-DUSE_ICONV)
+else()
+endif()
+
 project(run68 C)
 set(CMAKE_C_FLAGS 
     "-Wno-int-conversion -Wno-return-type -Wno-switch -Wno-implicit-function-declaration -Wno-format -Wno-invalid-source-encoding -Wno-pointer-integer-compare -Wno-int-to-pointer-cast -Wno-pointer-sign -Wno-incompatible-pointer-types")
@@ -36,6 +43,17 @@ set(SRC
     src/run68.h
 )
 
+set(CMAKE_CXX_STANDARD, 11)
+
 add_executable(run68 ${SRC})
-target_link_libraries(run68 PUBLIC m)
+
+set(LIBS m) # math lib
+
+if(USE_ICONV)
+  set(LIBS ${LIBS} "iconv")
+endif()
+
+message(${LIBS})
+target_link_libraries(run68 PUBLIC ${LIBS})
+
 INSTALL(TARGETS run68 RUNTIME DESTINATION bin)
