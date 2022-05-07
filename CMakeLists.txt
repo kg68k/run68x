@@ -50,7 +50,10 @@ add_executable(run68 ${SRC})
 set(LIBS m) # math lib
 
 if(USE_ICONV)
-  set(LIBS ${LIBS} "iconv")
+
+  if(APPLE)
+    set(LIBS ${LIBS} "iconv")
+  endif()
 endif()
 
 message(${LIBS})
