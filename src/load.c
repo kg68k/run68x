@@ -105,7 +105,6 @@ FILE    *prog_open(char *fname, int mes_flag)
         if (exp != NULL)
         {
             strcpy(fullname, dir);
-			printf("%s\n", fullname);
             if (dir[strlen(dir)-1] != sep_chr)
                 strcat(fullname, sep_str);
             strcat(fullname, fname);
