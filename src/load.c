@@ -105,6 +105,7 @@ FILE    *prog_open(char *fname, int mes_flag)
         if (exp != NULL)
         {
             strcpy(fullname, dir);
+			printf("%s\n", fullname);
             if (dir[strlen(dir)-1] != sep_chr)
                 strcat(fullname, sep_str);
             strcat(fullname, fname);
@@ -137,6 +138,12 @@ ErrorRet:
     return NULL;
 }
 
+#if defined(__APPLE__) || defined(__linux__)
+  #define PATH_DELIMITER ':'
+#else
+  #define PATH_DELIMITER ';'
+#endif
+
 static char *GetAPath(char **path_p, char *buf)
 {
     unsigned int i;
@@ -146,7 +153,7 @@ static char *GetAPath(char **path_p, char *buf)
         *buf = '\0';
         goto ErrorReturn;
     }
-    for (i = 0; i < strlen(*path_p) && (*path_p)[i] != ';'; i ++)
+	for (i = 0; i < strlen(*path_p) && (*path_p)[i] != PATH_DELIMITER; i ++)
     {
         /* 2バイトコードのスキップ */
        ;
