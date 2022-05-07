@@ -5,7 +5,7 @@ run68mac
 
 Human68k CUI Emulator for MacOS
 
-run68をMac上で動作するようにしたものです。
+Human68k上の実行ファイル(*.x, *.r)をCUIで動かすツールrun68。run68を Mac 上で動作するようにしたものです。
 
 How to build
 ------------
@@ -37,9 +37,8 @@ How to use
 ----------
 
 ```
-$ run68 起動したいX68000実行ファイル(*.x *.r) 引数
+$ run68 [実行ファイル(*.x *.r)] [引数]
 ```
-
 
 
 起動例
@@ -71,3 +70,38 @@ X68k High-speed Assembler v3.09 Copyright 1990-94 by Y.Nakamura
 	-n		最適化の禁止
 (...省略)
 ```
+
+TIPS
+----
+
+- あたかもX68000のコマンドがMacのターミナル上で動いているように見せる方法
+
+1. /usr/local/bin/x68 以下にX68000形式の実行ファイルを置いておく
+````
+$ ls /usr/local/bin/x68
+CV.x   HAS.X  hlk.x  note.x
+````
+
+2. 同名のシェルスクリプトをパスが通っている場所に配置(/usr/local/binなど)
+
+/usr/local/bin/has.x
+```sh
+#!/bin/sh
+run68 /usr/local/bin/x68/has.x $@
+```
+
+3. 実行属性(+x)を与える
+````
+$ chmod +x /usr/local/bin/has.x
+````
+
+4. X68000のコマンドが動作可能
+````
+$ has.x
+X68k High-speed Assembler v3.09 Copyright 1990-94 by Y.Nakamura
+使用法：as ［スイッチ］ ファイル名
+	-t path		テンポラリパス指定
+	-o name		オブジェクトファイル名
+	-i path		インクルードパス指定
+...
+````
