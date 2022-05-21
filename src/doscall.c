@@ -1573,7 +1573,7 @@ static Long Create( char *p, short atr )
 	int    len;
 	
 	
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__linux__)
 	char* name = p;
 	int namelen = strlen(name);
 	for (int i=0;i<namelen;++i) {
@@ -1719,7 +1719,7 @@ static Long Open( char *p, short mode )
 	Long ret;
 	Long i;
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__linux__)
 	char* name = p;
 	int namelen = strlen(name);
 	for (int i=0;i<namelen;++i) {
