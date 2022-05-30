@@ -1,18 +1,24 @@
-
 cmake_minimum_required(VERSION 3.13)
-
 option(USE_ICONV "Use iconv for converting Shift-JIS to UTF-8." ON)
 
-add_definitions(-DFNC_TRACE -DENV_FROM_INI)
+#add_definitions(-DFNC_TRACE -DENV_FROM_INI)
+add_definitions(-DENV_FROM_INI)
 
 if(USE_ICONV)
     add_definitions(-DUSE_ICONV)
 else()
 endif()
 
+
 project(run68 C)
+
+if (EMSCRIPTEN)
+set(CMAKE_EXE_LINKER_FLAGS "--embed-file ./fs@ -sFORCE_FILESYSTEM")
+endif()
+
+
 set(CMAKE_C_FLAGS 
-    "-Wno-int-conversion -Wno-return-type -Wno-switch -Wno-implicit-function-declaration -Wno-format -Wno-invalid-source-encoding -Wno-pointer-integer-compare -Wno-int-to-pointer-cast -Wno-pointer-sign -Wno-incompatible-pointer-types")
+    "-O3 -Wno-int-conversion -Wno-return-type -Wno-switch -Wno-implicit-function-declaration -Wno-format -Wno-invalid-source-encoding -Wno-pointer-integer-compare -Wno-int-to-pointer-cast -Wno-pointer-sign -Wno-incompatible-pointer-types")
 
 set(SRC 
     src/ansicolor-w32.c

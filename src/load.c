@@ -137,7 +137,7 @@ ErrorRet:
     return NULL;
 }
 
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
   #define PATH_DELIMITER ':'
 #else
   #define PATH_DELIMITER ';'
