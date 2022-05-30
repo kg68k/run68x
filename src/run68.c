@@ -99,7 +99,7 @@ HANDLE stdin_handle;
 /* アボート処理のためのジャンプバッファ */
 jmp_buf jmp_when_abort;
 
-#if defined (__APPLE__) || defined(__linux__)
+#if defined (__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 char *strlwr(char *str)
 {
   unsigned char *p = (unsigned char *)str;
@@ -223,6 +223,8 @@ Restart:
 		fprintf(stderr, "32bitDOS");
 #elif defined(__APPLE__)
 		fprintf(stderr, "MacOS");
+#elif defined(__EMSCRIPTEN__)
+		fprintf(stderr, "Emscripten");
 #else
 		fprintf(stderr, "POSIX");
 #endif
@@ -714,3 +716,4 @@ void term( int flag )
 		printf( "%c[>5l", 0x1B );
 	}
 }
+

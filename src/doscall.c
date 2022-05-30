@@ -70,7 +70,7 @@
   #include <dos.h>
   #include <direct.h>
   #include <io.h>
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__EMSCRIPTEN__)
   #include <time.h>
   #include <dirent.h>
 #else
@@ -136,7 +136,7 @@ static Long gets2( char *, int );
 
 Long Getenv_common(const char *name_p, char *buf_p);
 
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 void CloseHandle( FILE* fp ) {
 	fclose( fp );
 }
@@ -368,7 +368,7 @@ int dos_call( UChar code )
 #elif defined(DOSX)
 		_dos_write( fileno(finfo[ 1 ].fh), data_ptr,
 					(unsigned)len, &drv );
-#elif defined(__APPLE__) || defined(__linux__)
+#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 //		_dos_write( fileno(finfo[ 1 ].fh), data_ptr, (unsigned)len, &drv );
 #if defined (USE_ICONV)
 	{
@@ -1573,7 +1573,7 @@ static Long Create( char *p, short atr )
 	int    len;
 	
 	
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 	char* name = p;
 	int namelen = strlen(name);
 	for (int i=0;i<namelen;++i) {
@@ -1719,7 +1719,7 @@ static Long Open( char *p, short mode )
 	Long ret;
 	Long i;
 
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 	char* name = p;
 	int namelen = strlen(name);
 	for (int i=0;i<namelen;++i) {
@@ -1985,7 +1985,7 @@ static Long Write( short hdl, Long buf, Long len )
 	}
 	if (finfo [ hdl ].fh == stdout)
 	  fflush( stdout );
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 	write_len = fwrite( write_buf, 1, len, finfo [ hdl ].fh );
 	if (finfo [ hdl ].fh == stdout)
 	  fflush( stdout );
@@ -2553,7 +2553,7 @@ static Long Nfiles( Long buf )
 	strncpy(&buf_ptr[30], f_data.cFileName, 22);
 	buf_ptr[30+22] = 0;
 
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
@@ -2567,9 +2567,7 @@ static Long Nfiles( Long buf )
  */
 static Long Filedate( short hdl, Long dt )
 {
-#if defined(__APPLE__)
-	printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
-#elif defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 	printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 #if defined(WIN32)
