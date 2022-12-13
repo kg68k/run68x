@@ -62,6 +62,11 @@ if(USE_ICONV)
   if(APPLE)
     set(LIBS ${LIBS} "iconv")
   endif()
+
+  execute_process(COMMAND uname OUTPUT_VARIABLE uname)
+  if (uname MATCHES "^MSYS" OR uname MATCHES "^MINGW")
+    set(LIBS ${LIBS} "iconv")
+  endif()
 endif()
 
 target_link_libraries(run68 PUBLIC ${LIBS})
