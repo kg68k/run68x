@@ -73,7 +73,9 @@
 #define _RUN68_H_
 
 #if defined(__GNUC__)
+#if !defined(__int64)
 #define __int64 Long Long
+#endif
 #endif
 
 #if defined(_WIN32) /* for Cygnus GCC */
