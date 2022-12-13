@@ -1454,7 +1454,7 @@ static Long Dskfre( short drv, Long buf )
 	Long disksize;
 #if defined(WIN32)
 	BOOL b;
-	unsigned Long SectorsPerCluster, BytesPerSector,
+	ULong SectorsPerCluster, BytesPerSector,
 	NumberOfFreeClusters, TotalNumberOfClusters;
 	b = GetDiskFreeSpaceA(
 		NULL,
@@ -1847,8 +1847,8 @@ static Long Close( short hdl )
 		GetFileTime(fh, &ft0, &ft1, &ft2);
 		// 秒→100nsecに変換する。
 		datetime = ((__int64)finfo [ hdl ].date*86400L + finfo [ hdl ].time) * 10000000;
-		ft2.dwLowDateTime = (unsigned Long)(datetime & 0xffffffff);
-		ft2.dwHighDateTime = (unsigned Long)(datetime >> 32);
+		ft2.dwLowDateTime = (ULong)(datetime & 0xffffffff);
+		ft2.dwHighDateTime = (ULong)(datetime >> 32);
 		SetFileTime(fh, &ft0, &ft1, &ft2);
 		CloseHandle(fh);
 		finfo [ hdl ].date = 0;
@@ -2499,7 +2499,7 @@ static Long Nfiles( Long buf )
         }
 		 */
 		f_data.nFileSizeHigh = 0;
-		f_data.nFileSizeLow = *((unsigned Long*)&buf_ptr[29]);
+		f_data.nFileSizeLow = *((ULong*)&buf_ptr[29]);
 		/* ファイルのハンドルをバッファから取得する。*/
 		handle = *((HANDLE*)&buf_ptr[2]);
 		b = FindNextFile(handle, &f_data);
@@ -2597,8 +2597,8 @@ static Long Filedate( short hdl, Long dt )
 		b = SetFileTime(hFile, &ctime, &atime, &wtime);
 		if (b)
 			return( -19 );    /* 書き込み不可 */
-		finfo [ hdl ].date = (unsigned Long)(ll_wtime / 10000000 / 86400);
-		finfo [ hdl ].time = (unsigned Long)((ll_wtime / 10000000) % 86400);
+		finfo [ hdl ].date = (ULong)(ll_wtime / 10000000 / 86400);
+		finfo [ hdl ].time = (ULong)((ll_wtime / 10000000) % 86400);
 #elif defined(DOSX)
 		fdate = (unsigned short)(dt >> 16);
 		ftime = (unsigned short)(dt & 0xFFFF);
