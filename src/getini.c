@@ -28,6 +28,14 @@
 #include <string.h>
 #include "run68.h"
 
+/* 文字列末尾の CR LF を \0 で上書きすることで除去 */
+static void chomp(char *buf)
+{
+	while (strlen(buf) != 0 && (buf[strlen(buf)-1] == '\r' || buf[strlen(buf)-1] == '\n')) {
+		buf[strlen(buf)-1] = '\0';
+	}
+}
+
 void	read_ini(char *path, char *prog)
 {
 	char	buf[1024];
@@ -49,6 +57,9 @@ void	read_ini(char *path, char *prog)
 /* INIファイルのフルパス名を得る。*/
     /* まずはファイル名を取得する。*/
     if ((p = strrchr(path, '\\')) != NULL)
+    {
+        strcpy(buf, p+1);
+    } else if ((p = strrchr(path, '/')) != NULL)
     {
         strcpy(buf, p+1);
     } else if ((p = strrchr(path, ':')) != NULL)
@@ -99,16 +110,17 @@ void	read_ini(char *path, char *prog)
 		fclose(fp);
 		return;
 	}
-	sprintf( sec_name, "[%s]\n", &(prog [ i ]) );
+	sprintf( sec_name, "[%s]", &(prog [ i ]) );
 	_strlwr( sec_name );
 	/* 内容を調べる */
 	while( fgets(buf, 1023, fp) != NULL ) {
 		_strlwr(buf);
+		chomp(buf);
 
 		/* セクションを見る */
 		if ( buf[ 0 ] == '[' ) {
             flag = FALSE;
-            if ( _stricmp( buf, "[all]\n" ) == 0 )
+            if ( _stricmp( buf, "[all]" ) == 0 )
 				flag = TRUE;
 			else if ( _stricmp( buf, sec_name ) == 0 )
 				flag = TRUE;
@@ -118,21 +130,21 @@ void	read_ini(char *path, char *prog)
 		/* キーワードを見る */
 		if (flag == TRUE)
         {
-			if ( _stricmp( buf, "envlower\n" ) == 0 )
+			if ( _stricmp( buf, "envlower" ) == 0 )
 	    		ini_info.env_lower = TRUE;
-			else if ( _stricmp( buf, "trapemulate\n" ) == 0 )
+			else if ( _stricmp( buf, "trapemulate" ) == 0 )
 			    ini_info.trap_emulate = TRUE;
-			else if ( _stricmp( buf, "pc98\n" ) == 0 )
+			else if ( _stricmp( buf, "pc98" ) == 0 )
 	    		ini_info.pc98_key = TRUE;
-			else if ( _stricmp( buf, "iothrough\n" ) == 0 )
+			else if ( _stricmp( buf, "iothrough" ) == 0 )
 			    ini_info.io_through = TRUE;
 			else if ( strncmp( buf, "mainmemory=", 11 ) == 0 ) {
-				if (strlen(buf) < 13 || 14 < strlen(buf))
+				if (strlen(buf) < 12 || 13 < strlen(buf))
 		    		continue;
                 if ('0' <= buf[11] && buf[11] <= '9')
                 {
                     c = buf[11] - '0';
-                    if (strlen(buf) == 14 && '0' <= buf[12] && buf[12] <= '9')
+                    if (strlen(buf) == 13 && '0' <= buf[12] && buf[12] <= '9')
                     {
                         c = c*10 + buf[11] - '0';
                     } else {
@@ -176,8 +188,7 @@ void	readenv_from_ini(char *path)
 	/* 内容を調べる */
 	while( fgets( buf, 1023, fp ) != NULL ) {
 		_strlwr( buf );
-        if (strlen(buf) != 0 && buf[strlen(buf)-1] == '\n')
-            buf[strlen(buf)-1] = '\0';
+		chomp(buf);
 
 		/* セクションを見る */
 		if ( buf[ 0 ] == '[' ) {
