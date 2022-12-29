@@ -3,9 +3,10 @@ run68mac
 
 [![CMake](https://github.com/GOROman/run68mac/actions/workflows/cmake.yml/badge.svg)](https://github.com/GOROman/run68mac/actions/workflows/cmake.yml)
 
-Human68k CUI Emulator for MacOS
+Human68k CUI Emulator
 
 Human68k上の実行ファイル(*.x, *.r)をCUIで動かすツールrun68。run68を Mac 上で動作するようにしたものです。
+（Mac以外の環境でも使えるようになりました。）
 
 How to build
 ------------
