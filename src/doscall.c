@@ -101,6 +101,9 @@ static Long Open( char *, short );
 static Long Close( short );
 static Long Fgets( Long, short );
 static Long Read( short, Long, Long );
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+static Long Read_conv( short, void *, size_t );
+#endif
 static Long Write( short, Long, Long );
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 static Long Write_conv( short, void *, size_t );
@@ -170,9 +173,9 @@ int _dos_setfileattr( char* name, short attr ) {
 	return 1;
 }
 
-int _dos_write( FILE* fp, void* data, int size, size_t *res ) {
-	printf("_dos_write()\n" );
-	*res = fwrite(data, size, 1, fp);
+int _dos_write( int fd, void* data, int size, size_t *res ) {
+//	printf("_dos_write()\n" );
+	*res = write(fd, data, size);
 	return 0;
 }
 
@@ -1925,12 +1928,38 @@ static Long Read( short hdl, Long buf, Long len )
 	read_buf = prog_ptr + buf;
 #if defined(WIN32)
 	ret = ReadFile(finfo [ hdl ].fh, read_buf, len, (LPDWORD)&read_len, NULL);
+#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+	read_len = Read_conv( hdl, read_buf, len );
 #else
 	read_len = fread( read_buf, 1, len, finfo [ hdl ].fh );
 #endif
 
 	return( read_len );
 }
+
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+static Long Read_conv( short hdl, void *buf, size_t size )
+{
+	Long read_len;
+	FILE *fp = finfo[hdl].fh;
+
+	if ( fp == NULL )
+	  return( -6 );
+
+	if (!isatty(fileno(fp))) {
+		read_len = fread( buf, 1, size, fp );
+	} else {
+		int crlf_len;
+
+		read_len = gets2(buf, size);
+		crlf_len = size - read_len >= 2 ? 2 : size - read_len;
+		memcpy(buf + read_len, "\r\n", crlf_len);
+		read_len += crlf_len;
+	}
+
+	return read_len;
+}
+#endif
 
 /*
  　機能：DOSCALL WRITEを実行する
@@ -3650,7 +3679,7 @@ static Long gets2( char *str, int max )
 		str[ cnt ++ ] = EOF;
 #if defined(WIN32)
 	WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "\x01B[1A", 4, &dmy, NULL);
-#else
+#elif defined(DOSX)
 	_dos_write( fileno(stdout), "\x01B[1A", 4, &dmy );
 #endif
 	/* printf("%c[1A", 0x1B); */    /* カーソルを１行上に */
