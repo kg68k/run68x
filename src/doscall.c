@@ -102,6 +102,9 @@ static Long Close( short );
 static Long Fgets( Long, short );
 static Long Read( short, Long, Long );
 static Long Write( short, Long, Long );
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+static Long Write_conv( short, void *, size_t );
+#endif
 static Long Delete( char * );
 static Long Seek( short, Long, short );
 static Long Rename( Long, Long );
@@ -282,6 +285,8 @@ int dos_call( UChar code )
 		}
 #elif defined(DOSX)
 		_dos_write( fileno(finfo[ 1 ].fh), &c, 1, &drv );
+#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+		Write_conv( 1, &c, 1 );
 #endif
 		rd [ 0 ] = 0;
 		break;
@@ -369,25 +374,7 @@ int dos_call( UChar code )
 		_dos_write( fileno(finfo[ 1 ].fh), data_ptr,
 					(unsigned)len, &drv );
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-//		_dos_write( fileno(finfo[ 1 ].fh), data_ptr, (unsigned)len, &drv );
-#if defined (USE_ICONV)
-	{
-		// SJIS to UTF-8
-		char utf8_buf[8192];
-		iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
-		size_t inbytes = strlen(data_ptr);
-		size_t outbytes = sizeof(utf8_buf) - 1;
-		char *ptr_in = data_ptr;
-		char *ptr_out = utf8_buf;
-		memset(utf8_buf, 0x00, sizeof(utf8_buf));
-		iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
-		iconv_close(icd);
-
-		printf("%s", utf8_buf);
-	}
-#else
-	printf("%s", data_ptr);
-#endif
+		Write_conv( 1, data_ptr, (unsigned)len );
 #else
 		printf("DOSCALL:PRINT not implemented yet.\n");
 #endif
@@ -598,8 +585,13 @@ int dos_call( UChar code )
 			else
 			  rd [ 0 ] = 1;
 		}
-#else
+#elif defined(DOSX)
 		if ( fputc( srt, finfo [ fhdl ].fh ) == EOF )
+		  rd [ 0 ] = 0;
+		else
+		  rd [ 0 ] = 1;
+#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+		if ( Write_conv( fhdl, &srt, 1 ) == EOF )
 		  rd [ 0 ] = 0;
 		else
 		  rd [ 0 ] = 1;
@@ -622,31 +614,18 @@ int dos_call( UChar code )
 					  strlen(data_ptr), (LPDWORD)&len, NULL);
 		}
 		rd[0] = len;
-#else
-
-#if defined (USE_ICONV)
-			char utf8_buf[8192];
-			if (( finfo [ fhdl ].fh == stdout ) ||  ( finfo [ fhdl ].fh == stderr )) {
-				// SJIS to UTF-8
-				iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
-				size_t inbytes  = strlen(data_ptr);
-				size_t outbytes = sizeof(utf8_buf) - 1;
-				char *ptr_in = data_ptr;
-				char *ptr_out = utf8_buf;
-				memset(utf8_buf, 0x00, sizeof(utf8_buf));
-				iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
-				iconv_close(icd);
-
-				data_ptr = utf8_buf;
-			}
-#endif	// USE_ICONV
-
+#elif defined(DOSX)
 		if ( fprintf( finfo [ fhdl ].fh, "%s", data_ptr ) == -1 ) {
 		  rd [ 0 ] = 0;
 		 } else {
 		  rd [ 0 ] = strlen( data_ptr );
 		}
-
+#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+		if ( Write_conv( fhdl, data_ptr, strlen(data_ptr)) == -1 ) {
+		  rd [ 0 ] = 0;
+		 } else {
+		  rd [ 0 ] = strlen( data_ptr );
+		}
 #endif
 		break;
 	  case 0x1F:    /* ALLCLOSE */
@@ -1986,9 +1965,7 @@ static Long Write( short hdl, Long buf, Long len )
 	if (finfo [ hdl ].fh == stdout)
 	  fflush( stdout );
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-	write_len = fwrite( write_buf, 1, len, finfo [ hdl ].fh );
-	if (finfo [ hdl ].fh == stdout)
-	  fflush( stdout );
+	write_len = Write_conv( hdl, write_buf, len );
 #else
 	write_len = fwrite( write_buf, 1, len, finfo [ hdl ].fh );
 	if (finfo [ hdl ].fh == stdout)
@@ -1998,6 +1975,71 @@ static Long Write( short hdl, Long buf, Long len )
 
 	return( write_len );
 }
+
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+static Long Write_conv( short hdl, void *buf, size_t size )
+{
+	Long write_len;
+	FILE *fp = finfo[hdl].fh;
+
+	if ( fp == NULL )
+	  return( -6 );
+
+	if (!isatty(fileno(fp))) {
+		write_len = fwrite( buf, 1, size, fp );
+	} else {
+#if defined (USE_ICONV)
+		static char prev_char = 0;
+		iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+
+		write_len = 0;
+
+		while (size > 0) {
+			char sjis_buf[2048];
+			char utf8_buf[4096];
+			int sjis_buf_size;
+			char *sjis_buf_p;
+			size_t sjis_bytes;
+			char *utf8_buf_p = utf8_buf;
+			size_t utf8_bytes = sizeof(utf8_buf);
+			size_t utf8_bytes_prev = utf8_bytes;
+			int res;
+
+			if (prev_char) {
+				sjis_buf[0] = prev_char;
+				sjis_buf_p = sjis_buf + 1;
+				sjis_buf_size = sizeof(sjis_buf) - 1;
+				prev_char = 0;
+			} else {
+				sjis_buf_p = sjis_buf;
+				sjis_buf_size = sizeof(sjis_buf);
+			}
+
+			sjis_bytes = size > sjis_buf_size ? sjis_buf_size : size;
+			memcpy(sjis_buf_p, buf, sjis_bytes);
+			buf += sjis_bytes;
+			size -= sjis_bytes;
+			write_len += sjis_bytes;
+			sjis_bytes += sjis_buf_p - sjis_buf;
+			sjis_buf_p = sjis_buf;
+
+			res = iconv(icd, &sjis_buf_p, &sjis_bytes,
+							 &utf8_buf_p, &utf8_bytes);
+			if (res < 0 && errno == EINVAL) {
+					prev_char = *sjis_buf_p;
+			}
+			fwrite( utf8_buf, 1, utf8_bytes_prev - utf8_bytes, fp );
+		}
+		iconv_close(icd);
+
+		fflush( fp );
+#else
+		write_len = fwrite( buf, 1, size, fp );
+#endif
+	}
+	return write_len;
+}
+#endif
 
 /*
  　機能：DOSCALL DELETEを実行する
