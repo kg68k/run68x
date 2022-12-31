@@ -302,7 +302,7 @@ static	Long	xfile_cnv( Long *prog_size, Long read_top, int mes_flag )
 	}
 
 	memset( prog_ptr + read_top + code_size + data_size, 0, bss_size );
-	*prog_size += bss_size;
+	*prog_size = code_size + data_size + bss_size;
 
 	return( read_top + pc_begin );
 }
