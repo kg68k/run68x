@@ -34,7 +34,7 @@
 
 static	UChar	xhead [ XHEAD_SIZE ];
 
-static	Long	xfile_cnv( Long *, Long, int );
+static	Long	xfile_cnv( Long *, Long *, Long, int );
 static	int	xrelocate( Long, Long, Long );
 static	Long	xhead_getl( int );
 static	int	set_fname( char *, Long );
@@ -261,7 +261,7 @@ Long	prog_read( FILE *fp, char *fname, Long read_top,
 	/* Xファイルの処理 */
 	*prog_sz2 = *prog_sz;
 	if ( x_flag == TRUE ) {
-		if ( (pc_begin=xfile_cnv( prog_sz, read_top, mes_flag )) == 0 )
+		if ( (pc_begin=xfile_cnv( prog_sz, prog_sz2, read_top, mes_flag )) == 0 )
 			return( -11 );
 	}
 
@@ -273,7 +273,7 @@ Long	prog_read( FILE *fp, char *fname, Long read_top,
  戻り値： 0 = エラー
  　　　　!0 = プログラム開始アドレス
 */
-static	Long	xfile_cnv( Long *prog_size, Long read_top, int mes_flag )
+static	Long	xfile_cnv( Long *prog_size, Long *prog_sz2, Long read_top, int mes_flag )
 {
 	Long	pc_begin;
 	Long	code_size;
@@ -303,6 +303,7 @@ static	Long	xfile_cnv( Long *prog_size, Long read_top, int mes_flag )
 
 	memset( prog_ptr + read_top + code_size + data_size, 0, bss_size );
 	*prog_size = code_size + data_size + bss_size;
+	*prog_sz2 = code_size + data_size;
 
 	return( read_top + pc_begin );
 }
