@@ -32,8 +32,8 @@ static	void	put_fnckey1( int, char * );
 static	void	put_fnckey2( int, char * );
 
 /*
- @‹@”\Fƒtƒ@ƒ“ƒNƒVƒ‡ƒ“ƒL[‚ÉŠ„‚è“–‚Ä‚½•¶š—ñ‚ğ“¾‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã‚­ãƒ¼ã«å‰²ã‚Šå½“ã¦ãŸæ–‡å­—åˆ—ã‚’å¾—ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void get_fnckey( int no, char *p )
 {
@@ -48,8 +48,8 @@ void get_fnckey( int no, char *p )
 }
 
 /*
- @‹@”\Fƒtƒ@ƒ“ƒNƒVƒ‡ƒ“ƒL[‚É•¶š—ñ‚ğŠ„‚è“–‚Ä‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã‚­ãƒ¼ã«æ–‡å­—åˆ—ã‚’å‰²ã‚Šå½“ã¦ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void put_fnckey( int no, char *p )
 {
@@ -68,8 +68,8 @@ void put_fnckey( int no, char *p )
 }
 
 /*
- @‹@”\FŒÂX‚Ìƒtƒ@ƒ“ƒNƒVƒ‡ƒ“ƒL[‚É•¶š—ñ‚ğŠ„‚è“–‚Ä‚é(‚»‚Ì1)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šå€‹ã€…ã®ãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã‚­ãƒ¼ã«æ–‡å­—åˆ—ã‚’å‰²ã‚Šå½“ã¦ã‚‹(ãã®1)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void put_fnckey1( int no, char *p )
 {
@@ -99,8 +99,8 @@ void put_fnckey1( int no, char *p )
 }
 
 /*
- @‹@”\FŒÂX‚Ìƒtƒ@ƒ“ƒNƒVƒ‡ƒ“ƒL[‚É•¶š—ñ‚ğŠ„‚è“–‚Ä‚é(‚»‚Ì2)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šå€‹ã€…ã®ãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã‚­ãƒ¼ã«æ–‡å­—åˆ—ã‚’å‰²ã‚Šå½“ã¦ã‚‹(ãã®2)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void put_fnckey2( int no, char *p )
 {
@@ -121,16 +121,16 @@ void put_fnckey2( int no, char *p )
 		case 3:	/* DEL */
 			kno = 0x53;
 			break;
-		case 4:	/* ª */
+		case 4:	/* â†‘ */
 			kno = 0x48;
 			break;
-		case 5:	/* © */
+		case 5:	/* â† */
 			kno = 0x4B;
 			break;
-		case 6:	/* ¨ */
+		case 6:	/* â†’ */
 			kno = 0x4D;
 			break;
-		case 7:	/* « */
+		case 7:	/* â†“ */
 			kno = 0x50;
 			break;
 		case 8:	/* CLR */
@@ -158,19 +158,19 @@ void put_fnckey2( int no, char *p )
 }
 
 /*
- @‹@”\FƒL[ƒR[ƒh‚ğ•ÏŠ·‚·‚é
- –ß‚è’lF•ÏŠ·Œã‚ÌƒL[ƒR[ƒh
+ ã€€æ©Ÿèƒ½ï¼šã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã‚’å¤‰æ›ã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šå¤‰æ›å¾Œã®ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰
 */
 UChar cnv_key98( UChar c )
 {
 	switch( c ) {
-		case 0x0A:	/* « */
+		case 0x0A:	/* â†“ */
 			c = 0x1F;
 			break;
-		case 0x0B:	/* ª */
+		case 0x0B:	/* â†‘ */
 			c = 0x1E;
 			break;
-		case 0x0C:	/* ¨ */
+		case 0x0C:	/* â†’ */
 			c = 0x1C;
 			break;
 		case 0x1A:	/* CLR */

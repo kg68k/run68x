@@ -34,27 +34,27 @@
 
 static	UChar	xhead [ XHEAD_SIZE ];
 
-static	long	xfile_cnv( long *, long, int );
-static	int	xrelocate( long, long, long );
-static	long	xhead_getl( int );
-static	int	set_fname( char *, long );
+static	Long	xfile_cnv( Long *, Long *, Long, int );
+static	int	xrelocate( Long, Long, Long );
+static	Long	xhead_getl( int );
+static	int	set_fname( char *, Long );
 
 /* doscall.c */
-long Getenv_common(const char *name_p, char *buf_p);
+Long Getenv_common(const char *name_p, char *buf_p);
 
 static char *GetAPath(char **path_p, char *buf);
 
 /*
-  ‹@”\F
-    Àsƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚·‚éBŠÂ‹«•Ï”‚ÌPATH‚©‚çæ“¾‚µ‚½ƒpƒX‚ğ
-    ‡”Ô‚É’Tõ‚µ‚ÄÅ‰‚ÉŒ©•t‚©‚Á‚½ƒtƒ@ƒCƒ‹‚ğƒI[ƒvƒ“‚·‚éB
-    Å‰‚ÉƒJƒŒƒ“ƒgƒfƒBƒŒƒNƒgƒŠ‚ğŒŸõ‚·‚éB
-  ˆø”F
-    char *fname     -- ƒtƒ@ƒCƒ‹–¼•¶š—ñ
-    int  msg_flag   -- 0‚Å‚È‚¢ƒƒbƒZ[ƒW‚ğ•W€ƒGƒ‰[o—Í‚Éo—Í
-  –ß‚è’lF
-    NULL = ƒI[ƒvƒ“‚Å‚«‚È‚¢
-    !NULL = Àsƒtƒ@ƒCƒ‹‚Ìƒtƒ@ƒCƒ‹ƒ|ƒCƒ“ƒ^
+  æ©Ÿèƒ½ï¼š
+    å®Ÿè¡Œãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã™ã‚‹ã€‚ç’°å¢ƒå¤‰æ•°ã®PATHã‹ã‚‰å–å¾—ã—ãŸãƒ‘ã‚¹ã‚’
+    é †ç•ªã«æ¢ç´¢ã—ã¦æœ€åˆã«è¦‹ä»˜ã‹ã£ãŸãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚ªãƒ¼ãƒ—ãƒ³ã™ã‚‹ã€‚
+    æœ€åˆã«ã‚«ãƒ¬ãƒ³ãƒˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’æ¤œç´¢ã™ã‚‹ã€‚
+  å¼•æ•°ï¼š
+    char *fname     -- ãƒ•ã‚¡ã‚¤ãƒ«åæ–‡å­—åˆ—
+    int  msg_flag   -- 0ã§ãªã„æ™‚ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’æ¨™æº–ã‚¨ãƒ©ãƒ¼å‡ºåŠ›ã«å‡ºåŠ›
+  æˆ»ã‚Šå€¤ï¼š
+    NULL = ã‚ªãƒ¼ãƒ—ãƒ³ã§ããªã„
+    !NULL = å®Ÿè¡Œãƒ•ã‚¡ã‚¤ãƒ«ã®ãƒ•ã‚¡ã‚¤ãƒ«ãƒã‚¤ãƒ³ã‚¿
 */
 FILE    *prog_open(char *fname, int mes_flag)
 {
@@ -75,7 +75,7 @@ FILE    *prog_open(char *fname, int mes_flag)
         strcpy(fullname, fname);
         if ((fp=fopen(fullname, "rb")) != NULL)
             goto EndOfFunc;
-        // ‚±‚±‚©‚ç’Ç‰Á(by Yokko)
+        // ã“ã“ã‹ã‚‰è¿½åŠ (by Yokkoæ°)
         strcat(fullname, ".r");
         if ((fp=fopen(fullname, "rb")) != NULL)
             goto EndOfFunc;
@@ -83,17 +83,17 @@ FILE    *prog_open(char *fname, int mes_flag)
         strcat(fullname, ".x");
         if ((fp=fopen(fullname, "rb")) != NULL)
             goto EndOfFunc;
-        // ‚±‚±‚Ü‚Å’Ç‰Á(by Yokko)
+        // ã“ã“ã¾ã§è¿½åŠ (by Yokkoæ°)
         goto ErrorRet;
     }
     if (exp != NULL && !_stricmp(exp, ".x") && !_stricmp(exp, ".r"))
-        goto ErrorRet; /* Šg’£q‚ªˆá‚¤ */
+        goto ErrorRet; /* æ‹¡å¼µå­ãŒé•ã† */
 #if defined(WIN32)
     GetCurrentDirectory(sizeof(cwd), cwd);
 #else
     getcwd(cwd, sizeof(cwd));
 #endif
-    /* PATHŠÂ‹«•Ï”‚ğæ“¾‚·‚é */
+    /* PATHç’°å¢ƒå¤‰æ•°ã‚’å–å¾—ã™ã‚‹ */
 #if defined(WIN32)
     Getenv_common("PATH", env_p);
     p = env_p;
@@ -133,9 +133,15 @@ EndOfFunc:
     return fp;
 ErrorRet:
     if (mes_flag == TRUE)
-        fprintf(stderr, "ƒtƒ@ƒCƒ‹‚ªƒI[ƒvƒ“‚Å‚«‚Ü‚¹‚ñ\n");
+        fprintf(stderr, "ãƒ•ã‚¡ã‚¤ãƒ«ãŒã‚ªãƒ¼ãƒ—ãƒ³ã§ãã¾ã›ã‚“\n");
     return NULL;
 }
+
+#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+  #define PATH_DELIMITER ':'
+#else
+  #define PATH_DELIMITER ';'
+#endif
 
 static char *GetAPath(char **path_p, char *buf)
 {
@@ -146,9 +152,9 @@ static char *GetAPath(char **path_p, char *buf)
         *buf = '\0';
         goto ErrorReturn;
     }
-    for (i = 0; i < strlen(*path_p) && (*path_p)[i] != ';'; i ++)
+	for (i = 0; i < strlen(*path_p) && (*path_p)[i] != PATH_DELIMITER; i ++)
     {
-        /* 2ƒoƒCƒgƒR[ƒh‚ÌƒXƒLƒbƒv */
+        /* 2ãƒã‚¤ãƒˆã‚³ãƒ¼ãƒ‰ã®ã‚¹ã‚­ãƒƒãƒ— */
        ;
     }
     strncpy(buf, *path_p, i);
@@ -166,17 +172,17 @@ ErrorReturn:
 }
 
 /*
- @‹@”\FƒvƒƒOƒ‰ƒ€‚ğƒƒ‚ƒŠ‚É“Ç‚İ‚Ş(fp‚ÍƒNƒ[ƒY‚³‚ê‚é)
- –ß‚è’lF³ = ÀsŠJnƒAƒhƒŒƒX
- @@@@•‰ = ƒGƒ‰[ƒR[ƒh
+ ã€€æ©Ÿèƒ½ï¼šãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’ãƒ¡ãƒ¢ãƒªã«èª­ã¿è¾¼ã‚€(fpã¯ã‚¯ãƒ­ãƒ¼ã‚ºã•ã‚Œã‚‹)
+ æˆ»ã‚Šå€¤ï¼šæ­£ = å®Ÿè¡Œé–‹å§‹ã‚¢ãƒ‰ãƒ¬ã‚¹
+ ã€€ã€€ã€€ã€€è²  = ã‚¨ãƒ©ãƒ¼ã‚³ãƒ¼ãƒ‰
 */
-long	prog_read( FILE *fp, char *fname, long read_top,
-		   long *prog_sz, long *prog_sz2, int mes_flag )
-		/* prog_sz2‚Íƒ[ƒhƒ‚[ƒh{ƒŠƒ~ƒbƒgƒAƒhƒŒƒX‚Ì–ğŠ„‚à‰Ê‚½‚· */
+Long	prog_read( FILE *fp, char *fname, Long read_top,
+		   Long *prog_sz, Long *prog_sz2, int mes_flag )
+		/* prog_sz2ã¯ãƒ­ãƒ¼ãƒ‰ãƒ¢ãƒ¼ãƒ‰ï¼‹ãƒªãƒŸãƒƒãƒˆã‚¢ãƒ‰ãƒ¬ã‚¹ã®å½¹å‰²ã‚‚æœãŸã™ */
 {
 	char	*read_ptr;
-	long	read_sz;
-	long	pc_begin;
+	Long	read_sz;
+	Long	pc_begin;
 	int	x_flag = FALSE;
 	int	loadmode;
 	int	i;
@@ -187,25 +193,25 @@ long	prog_read( FILE *fp, char *fname, long read_top,
 	if ( fseek( fp, 0, SEEK_END ) != 0 ) {
 		fclose( fp );
 		if ( mes_flag == TRUE )
-			fprintf(stderr, "ƒtƒ@ƒCƒ‹‚ÌƒV[ƒN‚É¸”s‚µ‚Ü‚µ‚½\n");
+			fprintf(stderr, "ãƒ•ã‚¡ã‚¤ãƒ«ã®ã‚·ãƒ¼ã‚¯ã«å¤±æ•—ã—ã¾ã—ãŸ\n");
 		return( -11 );
 	}
 	if ( (*prog_sz=ftell( fp )) <= 0 ) {
 		fclose( fp );
 		if ( mes_flag == TRUE )
-			fprintf(stderr, "ƒtƒ@ƒCƒ‹ƒTƒCƒY‚ª‚O‚Å‚·\n");
+			fprintf(stderr, "ãƒ•ã‚¡ã‚¤ãƒ«ã‚µã‚¤ã‚ºãŒï¼ã§ã™\n");
 		return( -11 );
 	}
 	if ( fseek( fp, 0, SEEK_SET ) != 0 ) {
 		fclose( fp );
 		if ( mes_flag == TRUE )
-			fprintf(stderr, "ƒtƒ@ƒCƒ‹‚ÌƒV[ƒN‚É¸”s‚µ‚Ü‚µ‚½\n");
+			fprintf(stderr, "ãƒ•ã‚¡ã‚¤ãƒ«ã®ã‚·ãƒ¼ã‚¯ã«å¤±æ•—ã—ã¾ã—ãŸ\n");
 		return( -11 );
 	}
 	if ( read_top + *prog_sz > *prog_sz2 ) {
 		fclose( fp );
 		if ( mes_flag == TRUE )
-			fprintf(stderr, "ƒtƒ@ƒCƒ‹ƒTƒCƒY‚ª‘å‚«‚·‚¬‚Ü‚·\n");
+			fprintf(stderr, "ãƒ•ã‚¡ã‚¤ãƒ«ã‚µã‚¤ã‚ºãŒå¤§ãã™ãã¾ã™\n");
 		return( -8 );
 	}
 
@@ -213,19 +219,19 @@ long	prog_read( FILE *fp, char *fname, long read_top,
 	read_ptr = prog_ptr + read_top;
 	pc_begin = read_top;
 
-	/* XHEAD_SIZEƒoƒCƒg“Ç‚İ‚Ş */
+	/* XHEAD_SIZEãƒã‚¤ãƒˆèª­ã¿è¾¼ã‚€ */
 	if ( *prog_sz >= XHEAD_SIZE ) {
 		if ( fread( read_ptr, 1, XHEAD_SIZE, fp ) != XHEAD_SIZE ) {
 			fclose( fp );
 			if ( mes_flag == TRUE )
-				fprintf(stderr, "ƒtƒ@ƒCƒ‹‚Ì“Ç‚İ‚İ‚É¸”s‚µ‚Ü‚µ‚½\n");
+				fprintf(stderr, "ãƒ•ã‚¡ã‚¤ãƒ«ã®èª­ã¿è¾¼ã¿ã«å¤±æ•—ã—ã¾ã—ãŸ\n");
 			return( -11 );
 		}
 		read_sz -= XHEAD_SIZE;
 		if ( loadmode == 1 )
-			i = 0;		/* Rƒtƒ@ƒCƒ‹ */
+			i = 0;		/* Rãƒ•ã‚¡ã‚¤ãƒ« */
 		else if ( loadmode == 3 )
-			i = 1;		/* Xƒtƒ@ƒCƒ‹ */
+			i = 1;		/* Xãƒ•ã‚¡ã‚¤ãƒ« */
 		else
 			i = strlen( fname ) - 2;
 		if ( mem_get( read_top, S_WORD ) == 0x4855 && i > 0 )
@@ -245,17 +251,17 @@ long	prog_read( FILE *fp, char *fname, long read_top,
 	if ( fread( read_ptr, 1, read_sz, fp ) != (size_t)read_sz ) {
 		fclose( fp );
 		if ( mes_flag == TRUE )
-			fprintf(stderr, "ƒtƒ@ƒCƒ‹‚Ì“Ç‚İ‚İ‚É¸”s‚µ‚Ü‚µ‚½\n");
+			fprintf(stderr, "ãƒ•ã‚¡ã‚¤ãƒ«ã®èª­ã¿è¾¼ã¿ã«å¤±æ•—ã—ã¾ã—ãŸ\n");
 		return( -11 );
 	}
 
-	/* Àsƒtƒ@ƒCƒ‹‚ÌƒNƒ[ƒY */
+	/* å®Ÿè¡Œãƒ•ã‚¡ã‚¤ãƒ«ã®ã‚¯ãƒ­ãƒ¼ã‚º */
 	fclose( fp );
 
-	/* Xƒtƒ@ƒCƒ‹‚Ìˆ— */
+	/* Xãƒ•ã‚¡ã‚¤ãƒ«ã®å‡¦ç† */
 	*prog_sz2 = *prog_sz;
 	if ( x_flag == TRUE ) {
-		if ( (pc_begin=xfile_cnv( prog_sz, read_top, mes_flag )) == 0 )
+		if ( (pc_begin=xfile_cnv( prog_sz, prog_sz2, read_top, mes_flag )) == 0 )
 			return( -11 );
 	}
 
@@ -263,21 +269,21 @@ long	prog_read( FILE *fp, char *fname, long read_top,
 }
 
 /*
- @‹@”\FXƒtƒ@ƒCƒ‹‚ğƒRƒ“ƒo[ƒg‚·‚é
- –ß‚è’lF 0 = ƒGƒ‰[
- @@@@!0 = ƒvƒƒOƒ‰ƒ€ŠJnƒAƒhƒŒƒX
+ ã€€æ©Ÿèƒ½ï¼šXãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚³ãƒ³ãƒãƒ¼ãƒˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š 0 = ã‚¨ãƒ©ãƒ¼
+ ã€€ã€€ã€€ã€€!0 = ãƒ—ãƒ­ã‚°ãƒ©ãƒ é–‹å§‹ã‚¢ãƒ‰ãƒ¬ã‚¹
 */
-static	long	xfile_cnv( long *prog_size, long read_top, int mes_flag )
+static	Long	xfile_cnv( Long *prog_size, Long *prog_sz2, Long read_top, int mes_flag )
 {
-	long	pc_begin;
-	long	code_size;
-	long	data_size;
-	long	bss_size;
-	long	reloc_size;
+	Long	pc_begin;
+	Long	code_size;
+	Long	data_size;
+	Long	bss_size;
+	Long	reloc_size;
 
 	if ( xhead_getl( 0x3C ) != 0 ) {
 		if ( mes_flag == TRUE )
-			fprintf(stderr, "BIND‚³‚ê‚Ä‚¢‚éƒtƒ@ƒCƒ‹‚Å‚·\n");
+			fprintf(stderr, "BINDã•ã‚Œã¦ã„ã‚‹ãƒ•ã‚¡ã‚¤ãƒ«ã§ã™\n");
 		return( 0 );
 	}
 	pc_begin   = xhead_getl( 0x08 );
@@ -290,26 +296,27 @@ static	long	xfile_cnv( long *prog_size, long read_top, int mes_flag )
 		if ( xrelocate( code_size + data_size, reloc_size, read_top )
 		     == FALSE ) {
 			if ( mes_flag == TRUE )
-				fprintf(stderr, "–¢‘Î‰‚ÌƒŠƒƒP[ƒgî•ñ‚ª‚ ‚è‚Ü‚·\n");
+				fprintf(stderr, "æœªå¯¾å¿œã®ãƒªãƒ­ã‚±ãƒ¼ãƒˆæƒ…å ±ãŒã‚ã‚Šã¾ã™\n");
 			return( 0 );
 		}
 	}
 
 	memset( prog_ptr + read_top + code_size + data_size, 0, bss_size );
-	*prog_size += bss_size;
+	*prog_size = code_size + data_size + bss_size;
+	*prog_sz2 = code_size + data_size;
 
 	return( read_top + pc_begin );
 }
 
 /*
- @‹@”\FXƒtƒ@ƒCƒ‹‚ğƒŠƒƒP[ƒg‚·‚é
- –ß‚è’lF TRUE = ³íI—¹
- @@@@FALSE = ˆÙíI—¹
+ ã€€æ©Ÿèƒ½ï¼šXãƒ•ã‚¡ã‚¤ãƒ«ã‚’ãƒªãƒ­ã‚±ãƒ¼ãƒˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = æ­£å¸¸çµ‚äº†
+ ã€€ã€€ã€€ã€€FALSE = ç•°å¸¸çµ‚äº†
 */
-static	int	xrelocate( long reloc_adr, long reloc_size, long read_top )
+static	int	xrelocate( Long reloc_adr, Long reloc_size, Long read_top )
 {
-	long	prog_adr;
-	long	data;
+	Long	prog_adr;
+	Long	data;
 	UShort	disp;
 
 	prog_adr = read_top;
@@ -326,13 +333,13 @@ static	int	xrelocate( long reloc_adr, long reloc_size, long read_top )
 }
 
 /*
- @‹@”\Fxhead‚©‚çƒƒ“ƒOƒf[ƒ^‚ğƒQƒbƒg‚·‚é
- –ß‚è’lFƒf[ƒ^‚Ì’l
+ ã€€æ©Ÿèƒ½ï¼šxheadã‹ã‚‰ãƒ­ãƒ³ã‚°ãƒ‡ãƒ¼ã‚¿ã‚’ã‚²ãƒƒãƒˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãƒ‡ãƒ¼ã‚¿ã®å€¤
 */
-static	long	xhead_getl( int adr )
+static	Long	xhead_getl( int adr )
 {
 	UChar	*p;
-	long	d;
+	Long	d;
 
 	p = &( xhead [ adr ] );
 
@@ -344,29 +351,29 @@ static	long	xhead_getl( int adr )
 }
 
 /*
- @‹@”\FƒvƒƒZƒXŠÇ—ƒe[ƒuƒ‹‚ğì¬‚·‚é
- –ß‚è’lF TRUE = ³íI—¹
- @@@@FALSE = ˆÙíI—¹
+ ã€€æ©Ÿèƒ½ï¼šãƒ—ãƒ­ã‚»ã‚¹ç®¡ç†ãƒ†ãƒ¼ãƒ–ãƒ«ã‚’ä½œæˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = æ­£å¸¸çµ‚äº†
+ ã€€ã€€ã€€ã€€FALSE = ç•°å¸¸çµ‚äº†
 */
-int	make_psp( char *fname, long prev_adr, long end_adr, long process_id,
-		  long prog_size2 )
+int	make_psp( char *fname, Long prev_adr, Long end_adr, Long process_id,
+		  Long prog_size2 )
 {
 	char	*mem_ptr;
 
 	mem_ptr = prog_ptr + ra [ 0 ];
 	memset( mem_ptr, 0, PSP_SIZE );
-	mem_set( ra [ 0 ],        prev_adr,   S_LONG );		/* ‘O */
-	mem_set( ra [ 0 ] + 0x04, process_id, S_LONG );		/* Šm•ÛƒvƒƒZƒX */
-	mem_set( ra [ 0 ] + 0x08, end_adr,    S_LONG );		/* I‚í‚è+1 */
-	mem_set( ra [ 0 ] + 0x0c, 0,          S_LONG );		/* Ÿ */
+	mem_set( ra [ 0 ],        prev_adr,   S_LONG );		/* å‰ */
+	mem_set( ra [ 0 ] + 0x04, process_id, S_LONG );		/* ç¢ºä¿ãƒ—ãƒ­ã‚»ã‚¹ */
+	mem_set( ra [ 0 ] + 0x08, end_adr,    S_LONG );		/* çµ‚ã‚ã‚Š+1 */
+	mem_set( ra [ 0 ] + 0x0c, 0,          S_LONG );		/* æ¬¡ */
 
 	mem_set( ra [ 0 ] + 0x10, ra [ 3 ], S_LONG );
 	mem_set( ra [ 0 ] + 0x20, ra [ 2 ], S_LONG );
 	mem_set( ra [ 0 ] + 0x30, ra [ 0 ] + PSP_SIZE + prog_size2, S_LONG );
 	mem_set( ra [ 0 ] + 0x34, ra [ 0 ] + PSP_SIZE + prog_size2, S_LONG );
 	mem_set( ra [ 0 ] + 0x38, ra [ 1 ], S_LONG );
-	mem_set( ra [ 0 ] + 0x44, sr, S_WORD );	/* e‚ÌSR‚Ì’l */
-	mem_set( ra [ 0 ] + 0x60, 0, S_LONG );		/* e‚ ‚è */
+	mem_set( ra [ 0 ] + 0x44, sr, S_WORD );	/* è¦ªã®SRã®å€¤ */
+	mem_set( ra [ 0 ] + 0x60, 0, S_LONG );		/* è¦ªã‚ã‚Š */
 	if ( set_fname( fname, ra [ 0 ] ) == FALSE )
 		return( FALSE );
 
@@ -375,11 +382,11 @@ int	make_psp( char *fname, long prev_adr, long end_adr, long process_id,
 }
 
 /*
- @‹@”\FƒvƒƒZƒXŠÇ—ƒe[ƒuƒ‹‚Éƒtƒ@ƒCƒ‹–¼‚ğƒZƒbƒg‚·‚é
- –ß‚è’lF TRUE = ³íI—¹
- @@@@FALSE = ˆÙíI—¹
+ ã€€æ©Ÿèƒ½ï¼šãƒ—ãƒ­ã‚»ã‚¹ç®¡ç†ãƒ†ãƒ¼ãƒ–ãƒ«ã«ãƒ•ã‚¡ã‚¤ãƒ«åã‚’ã‚»ãƒƒãƒˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = æ­£å¸¸çµ‚äº†
+ ã€€ã€€ã€€ã€€FALSE = ç•°å¸¸çµ‚äº†
 */
-static	int	set_fname( char *p, long psp_adr )
+static	int	set_fname( char *p, Long psp_adr )
 {
 	char	 cud [ 67 ];
 	char	 *mem_ptr;
@@ -397,7 +404,7 @@ static	int	set_fname( char *p, long psp_adr )
 
 	mem_ptr = prog_ptr + psp_adr + 0x82;
 	if ( i == 0 ) {
-		/* ƒJƒŒƒ“ƒgƒfƒBƒŒƒNƒgƒŠ‚ğƒZƒbƒg */
+		/* ã‚«ãƒ¬ãƒ³ãƒˆãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’ã‚»ãƒƒãƒˆ */
 #if defined(WIN32)
         {
         BOOL b;
@@ -430,7 +437,7 @@ static	int	set_fname( char *p, long psp_adr )
 
 	mem_ptr = prog_ptr + psp_adr + 0x80;
 	if ( i == 0 ) {
-		/* ƒJƒŒƒ“ƒgƒhƒ‰ƒCƒu‚ğƒZƒbƒg */
+		/* ã‚«ãƒ¬ãƒ³ãƒˆãƒ‰ãƒ©ã‚¤ãƒ–ã‚’ã‚»ãƒƒãƒˆ */
 #if defined(WIN32)
         {
         char cpath[MAX_PATH];

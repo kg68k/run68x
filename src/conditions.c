@@ -24,12 +24,12 @@
 
 // /* conditions.c */
 
-// void general_conditions(long result, int size);
-// void add_conditions(long src , long dest, long result, int size, BOOL zero_flag);
-// void cmp_conditions(long src , long dest, long result, int size);
-// void sub_conditions(long src , long dest, long result, int size, BOOL zero_flag);
-// void neg_conditions(long dest, long result, int size, BOOL zero_flag);
-// void check(char *mode, long src, long dest, long result, int size, short before);
+// void general_conditions(Long result, int size);
+// void add_conditions(Long src , Long dest, Long result, int size, BOOL zero_flag);
+// void cmp_conditions(Long src , Long dest, Long result, int size);
+// void sub_conditions(Long src , Long dest, Long result, int size, BOOL zero_flag);
+// void neg_conditions(Long dest, Long result, int size, BOOL zero_flag);
+// void check(char *mode, Long src, Long dest, Long result, int size, short before);
 
 #include "run68.h"
 
@@ -51,7 +51,7 @@ static void ccr2bitmap(short ccr, char *bitmap) {
 	bitmap[j] = '\0';
 }
 
-void check(char *mode, long src, long dest, long result, int size, short before) {
+void check(char *mode, Long src, Long dest, Long result, int size, short before) {
 	char  befstr[9];
 	char  aftstr[9];
 
@@ -61,9 +61,9 @@ void check(char *mode, long src, long dest, long result, int size, short before)
 	printf("%s: 0x%08x 0x%08x 0x%08x %1d %8s %8s\n", mode, src, dest, result, size, befstr, aftstr);
 }
 
-long getMSB(long num, int size) {
+Long getMSB(Long num, int size) {
 
-	long ret;
+	Long ret;
 
 	switch (size) {
 		case S_BYTE:
@@ -76,14 +76,14 @@ long getMSB(long num, int size) {
 			ret = ((num >> 31) & 1);
 			break;
 		default:
-			err68a("•s³‚Èƒf[ƒ^ƒTƒCƒY‚Å‚·B", __FILE__, __LINE__);
+			err68a("ä¸æ­£ãªãƒ‡ãƒ¼ã‚¿ã‚µã‚¤ã‚ºã§ã™ã€‚", __FILE__, __LINE__);
 	}
 
 	return(ret);
 }
 
-long getBitsByDataSize(long num, int size) {
-	long ret;
+Long getBitsByDataSize(Long num, int size) {
+	Long ret;
 	switch (size) {
 		case S_BYTE:
 			ret = num & 0xff;
@@ -95,7 +95,7 @@ long getBitsByDataSize(long num, int size) {
 			ret = num;
 			break;
 		default:
-			err68a("•s³‚Èƒf[ƒ^ƒTƒCƒY‚Å‚·B", __FILE__, __LINE__);
+			err68a("ä¸æ­£ãªãƒ‡ãƒ¼ã‚¿ã‚µã‚¤ã‚ºã§ã™ã€‚", __FILE__, __LINE__);
 	}
 	return(ret);
 }
@@ -103,33 +103,33 @@ long getBitsByDataSize(long num, int size) {
 
 
 /*
- * yà–¾z
- *   ˆê”ÊŒnƒRƒ“ƒfƒBƒVƒ‡ƒ“ƒtƒ‰ƒO‚Ìİ’è
+ * ã€èª¬æ˜ã€‘
+ *   ä¸€èˆ¬ç³»ã‚³ãƒ³ãƒ‡ã‚£ã‚·ãƒ§ãƒ³ãƒ•ãƒ©ã‚°ã®è¨­å®š
  *
- * yƒŒƒWƒXƒ^‚Ì•Ï‰»z
- *   X: •Ï‰»‚È‚µ
- *   N: •‰”‚Ì‚Æ‚«ONA—ë‚Ü‚½‚Í³”‚Ì‚Æ‚«OFF
- *   Z: —ë‚Ì‚Æ‚«ONA—ëˆÈŠO‚Ì‚Æ‚«OFF
- *   V: í‚É0
- *   C: í‚É0
+ * ã€ãƒ¬ã‚¸ã‚¹ã‚¿ã®å¤‰åŒ–ã€‘
+ *   X: å¤‰åŒ–ãªã—
+ *   N: è² æ•°ã®ã¨ãONã€é›¶ã¾ãŸã¯æ­£æ•°ã®ã¨ãOFF
+ *   Z: é›¶ã®ã¨ãONã€é›¶ä»¥å¤–ã®ã¨ãOFF
+ *   V: å¸¸ã«0
+ *   C: å¸¸ã«0
  *
- * yŠÖ”‘®z
+ * ã€é–¢æ•°æ›¸å¼ã€‘
  *   general_conditions(result, size);
  *
- * yˆø”z
- *   long result;    <in>  Result’l
- *   int  size;      <in>  ƒAƒNƒZƒXƒTƒCƒY
+ * ã€å¼•æ•°ã€‘
+ *   Long result;    <in>  Resultå€¤
+ *   int  size;      <in>  ã‚¢ã‚¯ã‚»ã‚¹ã‚µã‚¤ã‚º
  *
- * y•Ô’lz
- *   ‚È‚µ
+ * ã€è¿”å€¤ã€‘
+ *   ãªã—
  *
  */
 
-void general_conditions(long result, int size) {
+void general_conditions(Long result, int size) {
 
 	int 	Rm;
 
-	Rm = (getMSB(result, size) != (long)0);
+	Rm = (getMSB(result, size) != (Long)0);
 
 	/* Overflow Flag */
 	CCR_V_OFF();
@@ -154,32 +154,32 @@ void general_conditions(long result, int size) {
 }
 
 /*
- * yà–¾z
- *   addŒnƒRƒ“ƒfƒBƒVƒ‡ƒ“ƒtƒ‰ƒO‚Ìİ’è
+ * ã€èª¬æ˜ã€‘
+ *   addç³»ã‚³ãƒ³ãƒ‡ã‚£ã‚·ãƒ§ãƒ³ãƒ•ãƒ©ã‚°ã®è¨­å®š
  *
- * yŠÖ”‘®z
+ * ã€é–¢æ•°æ›¸å¼ã€‘
  *   add_conditions(src, dest, result, size, zero_flag);
  *
- * yˆø”z
- *   long src;       <in>  Source’l
- *   long dest;      <in>  Destination’l
- *   long result;    <in>  Result’l
- *   int  size;      <in>  ƒAƒNƒZƒXƒTƒCƒY
- *   BOOL zero_flag; <in>  addx—p‰‰Z‘O zero flag ’lB
- *                         ‚»‚Ì‘¼‚Ìê‡‚Íí‚É 1 ‚ğw’è‚Ì‚±‚ÆB
+ * ã€å¼•æ•°ã€‘
+ *   Long src;       <in>  Sourceå€¤
+ *   Long dest;      <in>  Destinationå€¤
+ *   Long result;    <in>  Resultå€¤
+ *   int  size;      <in>  ã‚¢ã‚¯ã‚»ã‚¹ã‚µã‚¤ã‚º
+ *   BOOL zero_flag; <in>  addxç”¨æ¼”ç®—å‰ zero flag å€¤ã€‚
+ *                         ãã®ä»–ã®å ´åˆã¯å¸¸ã« 1 ã‚’æŒ‡å®šã®ã“ã¨ã€‚
  *
- * y•Ô’lz
- *   ‚È‚µ
+ * ã€è¿”å€¤ã€‘
+ *   ãªã—
  *
  */
 
-void add_conditions(long src, long dest, long result, int size, BOOL zero_flag) {
+void add_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag) {
 
 	int 	Sm, Dm, Rm;
 
-	Sm = (getMSB(src,    size) != (long)0);
-	Dm = (getMSB(dest,   size) != (long)0);
-	Rm = (getMSB(result, size) != (long)0);
+	Sm = (getMSB(src,    size) != (Long)0);
+	Dm = (getMSB(dest,   size) != (Long)0);
+	Rm = (getMSB(result, size) != (Long)0);
 
 	/* Overflow Flag */
 	if ((Sm && Dm && !Rm) || (!Sm && !Dm && Rm)) {
@@ -214,32 +214,32 @@ void add_conditions(long src, long dest, long result, int size, BOOL zero_flag) 
 
 
 /*
- * yà–¾z
- *   cmpŒnƒRƒ“ƒfƒBƒVƒ‡ƒ“ƒtƒ‰ƒO‚Ìİ’è
+ * ã€èª¬æ˜ã€‘
+ *   cmpç³»ã‚³ãƒ³ãƒ‡ã‚£ã‚·ãƒ§ãƒ³ãƒ•ãƒ©ã‚°ã®è¨­å®š
  *
- * yŠÖ”‘®z
+ * ã€é–¢æ•°æ›¸å¼ã€‘
  *   cmp_conditions(src, dest, result, size, zero_flag);
  *
- * yˆø”z
- *   long src;       <in>  Source’l
- *   long dest;      <in>  Destination’l
- *   long result;    <in>  Result’l
- *   int  size;      <in>  ƒAƒNƒZƒXƒTƒCƒY
- *   BOOL zero_flag; <in>  subx—p‰‰Z‘O zero flag ’lB
- *                         ‚»‚Ì‘¼‚Ìê‡‚Íí‚É 1 ‚ğw’è‚Ì‚±‚ÆB
+ * ã€å¼•æ•°ã€‘
+ *   Long src;       <in>  Sourceå€¤
+ *   Long dest;      <in>  Destinationå€¤
+ *   Long result;    <in>  Resultå€¤
+ *   int  size;      <in>  ã‚¢ã‚¯ã‚»ã‚¹ã‚µã‚¤ã‚º
+ *   BOOL zero_flag; <in>  subxç”¨æ¼”ç®—å‰ zero flag å€¤ã€‚
+ *                         ãã®ä»–ã®å ´åˆã¯å¸¸ã« 1 ã‚’æŒ‡å®šã®ã“ã¨ã€‚
  *
- * y•Ô’lz
- *   ‚È‚µ
+ * ã€è¿”å€¤ã€‘
+ *   ãªã—
  *
  */
 
-void cmp_conditions(long src, long dest, long result, int size) {
+void cmp_conditions(Long src, Long dest, Long result, int size) {
 
 	int 	Sm, Dm, Rm;
 
-	Sm = (getMSB(src,    size) != (long)0);
-	Dm = (getMSB(dest,   size) != (long)0);
-	Rm = (getMSB(result, size) != (long)0);
+	Sm = (getMSB(src,    size) != (Long)0);
+	Dm = (getMSB(dest,   size) != (Long)0);
+	Rm = (getMSB(result, size) != (Long)0);
 
 	/* Overflow Flag */
 	if ((!Sm && Dm && !Rm) || (Sm && !Dm && Rm)) {
@@ -272,26 +272,26 @@ void cmp_conditions(long src, long dest, long result, int size) {
 
 
 /*
- * yà–¾z
- *   subŒnƒRƒ“ƒfƒBƒVƒ‡ƒ“ƒtƒ‰ƒO‚Ìİ’è
+ * ã€èª¬æ˜ã€‘
+ *   subç³»ã‚³ãƒ³ãƒ‡ã‚£ã‚·ãƒ§ãƒ³ãƒ•ãƒ©ã‚°ã®è¨­å®š
  *
- * yŠÖ”‘®z
+ * ã€é–¢æ•°æ›¸å¼ã€‘
  *   sub_conditions(src, dest, result, size, zero_flag);
  *
- * yˆø”z
- *   long src;       <in>  Source’l
- *   long dest;      <in>  Destination’l
- *   long result;    <in>  Result’l
- *   int  size;      <in>  ƒAƒNƒZƒXƒTƒCƒY
- *   BOOL zero_flag; <in>  subx—p‰‰Z‘O zero flag ’lB
- *                         ‚»‚Ì‘¼‚Ìê‡‚Íí‚É 1 ‚ğw’è‚Ì‚±‚ÆB
+ * ã€å¼•æ•°ã€‘
+ *   Long src;       <in>  Sourceå€¤
+ *   Long dest;      <in>  Destinationå€¤
+ *   Long result;    <in>  Resultå€¤
+ *   int  size;      <in>  ã‚¢ã‚¯ã‚»ã‚¹ã‚µã‚¤ã‚º
+ *   BOOL zero_flag; <in>  subxç”¨æ¼”ç®—å‰ zero flag å€¤ã€‚
+ *                         ãã®ä»–ã®å ´åˆã¯å¸¸ã« 1 ã‚’æŒ‡å®šã®ã“ã¨ã€‚
  *
- * y•Ô’lz
- *   ‚È‚µ
+ * ã€è¿”å€¤ã€‘
+ *   ãªã—
  *
  */
 
-void sub_conditions(long src, long dest, long result, int size, BOOL zero_flag) {
+void sub_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag) {
 
 	cmp_conditions(src, dest, result, size);
 
@@ -311,30 +311,30 @@ void sub_conditions(long src, long dest, long result, int size, BOOL zero_flag) 
 }
 
 /*
- * yà–¾z
- *   negŒnƒRƒ“ƒfƒBƒVƒ‡ƒ“ƒtƒ‰ƒO‚Ìİ’è
+ * ã€èª¬æ˜ã€‘
+ *   negç³»ã‚³ãƒ³ãƒ‡ã‚£ã‚·ãƒ§ãƒ³ãƒ•ãƒ©ã‚°ã®è¨­å®š
  *
- * yŠÖ”‘®z
+ * ã€é–¢æ•°æ›¸å¼ã€‘
  *   neg_conditions(dest, result, size, zero_flag);
  *
- * yˆø”z
- *   long dest;      <in>  Destination’l
- *   long result;    <in>  Result’l
- *   int  size;      <in>  ƒAƒNƒZƒXƒTƒCƒY
- *   BOOL zero_flag; <in>  negx—p‰‰Z‘O zero flag ’lB
- *                         ‚»‚Ì‘¼‚Ìê‡‚Íí‚É 1 ‚ğw’è‚Ì‚±‚ÆB
+ * ã€å¼•æ•°ã€‘
+ *   Long dest;      <in>  Destinationå€¤
+ *   Long result;    <in>  Resultå€¤
+ *   int  size;      <in>  ã‚¢ã‚¯ã‚»ã‚¹ã‚µã‚¤ã‚º
+ *   BOOL zero_flag; <in>  negxç”¨æ¼”ç®—å‰ zero flag å€¤ã€‚
+ *                         ãã®ä»–ã®å ´åˆã¯å¸¸ã« 1 ã‚’æŒ‡å®šã®ã“ã¨ã€‚
  *
- * y•Ô’lz 
- *   ‚È‚µ
+ * ã€è¿”å€¤ã€‘ 
+ *   ãªã—
  *
  */
 
-void neg_conditions(long dest, long result, int size, BOOL zero_flag) {
+void neg_conditions(Long dest, Long result, int size, BOOL zero_flag) {
 
 	int 	Dm, Rm;
 
-	Dm = (getMSB(dest,   size) != (long)0);
-	Rm = (getMSB(result, size) != (long)0);
+	Dm = (getMSB(dest,   size) != (Long)0);
+	Rm = (getMSB(result, size) != (Long)0);
 
 	/* Overflow Flag */
 	if (Dm && Rm) {

@@ -27,31 +27,31 @@
 
 #include "run68.h"
 
-/* ƒfƒoƒbƒOƒ‚[ƒh‚Ìƒvƒƒ“ƒvƒg */
+/* ãƒ‡ãƒãƒƒã‚°ãƒ¢ãƒ¼ãƒ‰ã®ãƒ—ãƒ­ãƒ³ãƒ—ãƒˆ */
 #define PROMPT "(run68)"
-/* ƒRƒ}ƒ“ƒhƒ‰ƒCƒ“‚ÌÅ‘å•¶š—ñ’· */
+/* ã‚³ãƒãƒ³ãƒ‰ãƒ©ã‚¤ãƒ³ã®æœ€å¤§æ–‡å­—åˆ—é•· */
 #define MAX_LINE 256
 
 static char *command_name[] = {
-    "BREAK",  /* ƒuƒŒ[ƒNƒ|ƒCƒ“ƒg‚Ìİ’è */
-    "CLEAR",  /* ƒuƒŒ[ƒNƒ|ƒCƒ“ƒg‚Ì‰ğœ */
-    "CONT",   /* Às‚ÌŒp‘± */
-    "DUMP",   /* ƒƒ‚ƒŠ‚ğƒ_ƒ“ƒv‚·‚é */
-    "HELP",   /* –½—ß‚ÌÀs—š—ğ */
-    "HISTORY", /* –½—ß‚ÌÀs—š—ğ */
-    "LIST",   /* ƒfƒBƒXƒAƒZƒ“ƒuƒ‹ */
-    "NEXT",   /* STEP‚Æ“¯‚¶B‚½‚¾‚µAƒTƒuƒ‹[ƒ`ƒ“ŒÄo‚µ‚ÍƒXƒLƒbƒv */
-    "QUIT",   /* run68‚ğI—¹‚·‚é */
-    "REG",    /* ƒŒƒWƒXƒ^‚Ì“à—e‚ğ•\¦‚·‚é */
-    "RUN",    /* ŠÂ‹«‚ğ‰Šú‰»‚µ‚ÄƒvƒƒOƒ‰ƒ€Às */
-    "SET",    /* ƒƒ‚ƒŠ‚É’l‚ğƒZƒbƒg‚·‚é */
-    "STEP",   /* ˆê–½—ß•ªƒXƒeƒbƒvÀs */
-    "WATCHC"  /* –½—ßƒEƒHƒbƒ` */
+    "BREAK",  /* ãƒ–ãƒ¬ãƒ¼ã‚¯ãƒã‚¤ãƒ³ãƒˆã®è¨­å®š */
+    "CLEAR",  /* ãƒ–ãƒ¬ãƒ¼ã‚¯ãƒã‚¤ãƒ³ãƒˆã®è§£é™¤ */
+    "CONT",   /* å®Ÿè¡Œã®ç¶™ç¶š */
+    "DUMP",   /* ãƒ¡ãƒ¢ãƒªã‚’ãƒ€ãƒ³ãƒ—ã™ã‚‹ */
+    "HELP",   /* å‘½ä»¤ã®å®Ÿè¡Œå±¥æ­´ */
+    "HISTORY", /* å‘½ä»¤ã®å®Ÿè¡Œå±¥æ­´ */
+    "LIST",   /* ãƒ‡ã‚£ã‚¹ã‚¢ã‚»ãƒ³ãƒ–ãƒ« */
+    "NEXT",   /* STEPã¨åŒã˜ã€‚ãŸã ã—ã€ã‚µãƒ–ãƒ«ãƒ¼ãƒãƒ³å‘¼å‡ºã—ã¯ã‚¹ã‚­ãƒƒãƒ— */
+    "QUIT",   /* run68ã‚’çµ‚äº†ã™ã‚‹ */
+    "REG",    /* ãƒ¬ã‚¸ã‚¹ã‚¿ã®å†…å®¹ã‚’è¡¨ç¤ºã™ã‚‹ */
+    "RUN",    /* ç’°å¢ƒã‚’åˆæœŸåŒ–ã—ã¦ãƒ—ãƒ­ã‚°ãƒ©ãƒ å®Ÿè¡Œ */
+    "SET",    /* ãƒ¡ãƒ¢ãƒªã«å€¤ã‚’ã‚»ãƒƒãƒˆã™ã‚‹ */
+    "STEP",   /* ä¸€å‘½ä»¤åˆ†ã‚¹ãƒ†ãƒƒãƒ—å®Ÿè¡Œ */
+    "WATCHC"  /* å‘½ä»¤ã‚¦ã‚©ãƒƒãƒ */
 };
 
-/* prog_ptr_u‚Í•„†•t‚«char‚Å•s•Ö‚È‚Ì‚ÅA•„†‚È‚µchar‚É•ÏŠ·‚µ‚Ä‚¨‚­B*/
+/* prog_ptr_uã¯ç¬¦å·ä»˜ãcharã§ä¸ä¾¿ãªã®ã§ã€ç¬¦å·ãªã—charã«å¤‰æ›ã—ã¦ãŠãã€‚*/
 #define prog_ptr_u ((unsigned char *)prog_ptr)
-unsigned long stepcount;
+ULong stepcount;
 
 static RUN68_COMMAND analyze(const char *line, int *argc, char** argv);
 static short determine_string(const char *str);
@@ -62,19 +62,19 @@ static void run68_dump(int argc, char **argv);
 static void display_registers();
 static void set_breakpoint(int argc, char **argv);
 static void clear_breakpoint();
-static unsigned long get_stepcount(int argc, char **argv);
-extern char *disassemble(long addr, long* next_addr);
+static ULong get_stepcount(int argc, char **argv);
+extern char *disassemble(Long addr, Long* next_addr);
 static unsigned short watchcode(int argc, char **argv);
 
 
 /*
-   ‹@”\F
-     run68‚ğƒfƒoƒbƒOƒ‚[ƒh‚Å‹N“®‚·‚é‚ÆA‚±‚ÌŠÖ”‚ªŒÄo‚³‚ê‚éB
-   ƒpƒ‰ƒ[ƒ^F
-     BOOL running  - ƒAƒvƒŠƒP[ƒVƒ‡ƒ“ƒvƒƒOƒ‰ƒ€‚ÌÀs’†‚ÍTRUE‚Å
-                     ŒÄo‚³‚ê‚éB
-   –ß‚è’lF
-     COMMAND - ŒÄ‚Ñ‘¤‚ÌƒR[ƒh‚ÅÀs‚·‚×‚«ƒRƒ}ƒ“ƒh‚ğ•\‚µ‚Ä‚¢‚éB
+   æ©Ÿèƒ½ï¼š
+     run68ã‚’ãƒ‡ãƒãƒƒã‚°ãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹•ã™ã‚‹ã¨ã€ã“ã®é–¢æ•°ãŒå‘¼å‡ºã•ã‚Œã‚‹ã€‚
+   ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼š
+     BOOL running  - ã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã®å®Ÿè¡Œä¸­ã¯TRUEã§
+                     å‘¼å‡ºã•ã‚Œã‚‹ã€‚
+   æˆ»ã‚Šå€¤ï¼š
+     COMMAND - å‘¼ã³å´ã®ã‚³ãƒ¼ãƒ‰ã§å®Ÿè¡Œã™ã¹ãã‚³ãƒãƒ³ãƒ‰ã‚’è¡¨ã—ã¦ã„ã‚‹ã€‚
 */
 RUN68_COMMAND debugger(BOOL running)
 {
@@ -82,19 +82,19 @@ RUN68_COMMAND debugger(BOOL running)
 
     if (running)
     {
-        long naddr, addr = pc;
+        Long naddr, addr = pc;
         char hex[64];
         char *s = disassemble(addr, &naddr);
         unsigned short code;
         int j;
 
-        /* ‚Ü‚¸‘SƒŒƒWƒXƒ^‚ğ•\¦‚µA*/
+        /* ã¾ãšå…¨ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’è¡¨ç¤ºã—ã€*/
         display_registers();
-        /* 1–½—ß•ªA‹tƒAƒZƒ“ƒuƒ‹‚µ‚Ä•\¦‚·‚éB*/
+        /* 1å‘½ä»¤åˆ†ã€é€†ã‚¢ã‚»ãƒ³ãƒ–ãƒ«ã—ã¦è¡¨ç¤ºã™ã‚‹ã€‚*/
         sprintf(hex, "$%06X ", addr);
         if (addr == naddr)
         {
-            /* ƒfƒBƒXƒAƒZƒ“ƒuƒ‹‚Å‚«‚È‚©‚Á‚½ */
+            /* ãƒ‡ã‚£ã‚¹ã‚¢ã‚»ãƒ³ãƒ–ãƒ«ã§ããªã‹ã£ãŸ */
             naddr += 2;
         }
         while (addr < naddr)
@@ -126,7 +126,7 @@ RUN68_COMMAND debugger(BOOL running)
         cmd = RUN68_COMMAND_STEP;
         goto EndOfLoop;
     }
-    /* ƒRƒ}ƒ“ƒhƒ‹[ƒv */
+    /* ã‚³ãƒãƒ³ãƒ‰ãƒ«ãƒ¼ãƒ— */
     while(TRUE)
     {
         char line[MAX_LINE];
@@ -140,13 +140,13 @@ RUN68_COMMAND debugger(BOOL running)
             continue;
         }
         switch(cmd) {
-        case RUN68_COMMAND_BREAK:  /* ƒuƒŒ[ƒNƒ|ƒCƒ“ƒg‚Ìİ’è */
+        case RUN68_COMMAND_BREAK:  /* ãƒ–ãƒ¬ãƒ¼ã‚¯ãƒã‚¤ãƒ³ãƒˆã®è¨­å®š */
             set_breakpoint(argc, argv);
             break;
-        case RUN68_COMMAND_CLEAR:  /* ƒuƒŒ[ƒNƒ|ƒCƒ“ƒg‚Ì‰ğœ */
+        case RUN68_COMMAND_CLEAR:  /* ãƒ–ãƒ¬ãƒ¼ã‚¯ãƒã‚¤ãƒ³ãƒˆã®è§£é™¤ */
             clear_breakpoint();
             break;
-        case RUN68_COMMAND_CONT:   /* Às‚ÌŒp‘± */
+        case RUN68_COMMAND_CONT:   /* å®Ÿè¡Œã®ç¶™ç¶š */
             if (!running)
             {
                 fprintf(stderr, "Program is not running!\n");
@@ -154,36 +154,36 @@ RUN68_COMMAND debugger(BOOL running)
             }
             stepcount = get_stepcount(argc, argv);
             goto EndOfLoop;
-        case RUN68_COMMAND_DUMP:   /* ƒƒ‚ƒŠ‚ğƒ_ƒ“ƒv‚·‚é */
+        case RUN68_COMMAND_DUMP:   /* ãƒ¡ãƒ¢ãƒªã‚’ãƒ€ãƒ³ãƒ—ã™ã‚‹ */
             run68_dump(argc, argv);
             break;
-        case RUN68_COMMAND_HELP:   /* ƒfƒoƒbƒK‚Ìƒwƒ‹ƒv */
+        case RUN68_COMMAND_HELP:   /* ãƒ‡ãƒãƒƒã‚¬ã®ãƒ˜ãƒ«ãƒ— */
             display_help();
             break;
-        case RUN68_COMMAND_HISTORY: /* –½—ß‚ÌÀs—š—ğ */
+        case RUN68_COMMAND_HISTORY: /* å‘½ä»¤ã®å®Ÿè¡Œå±¥æ­´ */
             display_history(argc, argv);
             break;
-        case RUN68_COMMAND_LIST:   /* ƒfƒBƒXƒAƒZƒ“ƒuƒ‹ */
+        case RUN68_COMMAND_LIST:   /* ãƒ‡ã‚£ã‚¹ã‚¢ã‚»ãƒ³ãƒ–ãƒ« */
             display_list(argc, argv);
             break;
-        case RUN68_COMMAND_NEXT:   /* STEP‚Æ“¯‚¶B‚½‚¾‚µAƒTƒuƒ‹[ƒ`ƒ“ŒÄo‚µ‚ÍƒXƒLƒbƒv */
+        case RUN68_COMMAND_NEXT:   /* STEPã¨åŒã˜ã€‚ãŸã ã—ã€ã‚µãƒ–ãƒ«ãƒ¼ãƒãƒ³å‘¼å‡ºã—ã¯ã‚¹ã‚­ãƒƒãƒ— */
             if (!running)
             {
                 fprintf(stderr, "Program is not running!\n");
                 break;
             }
             goto EndOfLoop;
-        case RUN68_COMMAND_QUIT:   /* run68‚ğI—¹‚·‚é */
+        case RUN68_COMMAND_QUIT:   /* run68ã‚’çµ‚äº†ã™ã‚‹ */
             goto EndOfLoop;
-        case RUN68_COMMAND_REG:    /* ƒŒƒWƒXƒ^‚Ì’l‚ğ•\¦‚·‚é */
+        case RUN68_COMMAND_REG:    /* ãƒ¬ã‚¸ã‚¹ã‚¿ã®å€¤ã‚’è¡¨ç¤ºã™ã‚‹ */
             display_registers();
             break;
-        case RUN68_COMMAND_RUN:    /* ŠÂ‹«‚ğ‰Šú‰»‚µ‚ÄƒvƒƒOƒ‰ƒ€Às */
+        case RUN68_COMMAND_RUN:    /* ç’°å¢ƒã‚’åˆæœŸåŒ–ã—ã¦ãƒ—ãƒ­ã‚°ãƒ©ãƒ å®Ÿè¡Œ */
             goto EndOfLoop;
-        case RUN68_COMMAND_SET:    /* ƒƒ‚ƒŠ‚É’l‚ğƒZƒbƒg‚·‚é */
+        case RUN68_COMMAND_SET:    /* ãƒ¡ãƒ¢ãƒªã«å€¤ã‚’ã‚»ãƒƒãƒˆã™ã‚‹ */
             fprintf(stderr, "cmd:%s is not implemented yet.\n", argv[0]);
             break;
-        case RUN68_COMMAND_STEP:   /* ˆê–½—ß•ªƒXƒeƒbƒvÀs */
+        case RUN68_COMMAND_STEP:   /* ä¸€å‘½ä»¤åˆ†ã‚¹ãƒ†ãƒƒãƒ—å®Ÿè¡Œ */
             if (!running)
             {
                 fprintf(stderr, "Program is not running!\n");
@@ -191,13 +191,13 @@ RUN68_COMMAND debugger(BOOL running)
             }
             stepcount = get_stepcount(argc, argv);
             goto EndOfLoop;
-        case RUN68_COMMAND_WATCHC: /* –½—ßƒEƒHƒbƒ` */
+        case RUN68_COMMAND_WATCHC: /* å‘½ä»¤ã‚¦ã‚©ãƒƒãƒ */
             cwatchpoint = watchcode(argc, argv);
             break;
-        case RUN68_COMMAND_NULL:   /* ƒRƒ}ƒ“ƒh‚Å‚Í‚È‚¢(ˆÚ“®‹Ö~) */
+        case RUN68_COMMAND_NULL:   /* ã‚³ãƒãƒ³ãƒ‰ã§ã¯ãªã„(ç§»å‹•ç¦æ­¢) */
             fprintf(stderr, "cmd:%s is not a command.\n", argv[0]);
             break;
-        case RUN68_COMMAND_ERROR:  /* ƒRƒ}ƒ“ƒhƒGƒ‰[(ˆÚ“®‹Ö~) */
+        case RUN68_COMMAND_ERROR:  /* ã‚³ãƒãƒ³ãƒ‰ã‚¨ãƒ©ãƒ¼(ç§»å‹•ç¦æ­¢) */
             fprintf(stderr, "Command line error:\"%s\"\n", argv[0]);
             break;
         }
@@ -207,14 +207,14 @@ EndOfLoop:
 }
 
 /*
-   ‹@”\F
-     ƒRƒ}ƒ“ƒhƒ‰ƒCƒ“•¶š—ñ‚ğ‰ğÍ‚µAƒRƒ}ƒ“ƒh‚Æ‚»‚Ìˆø‚«”‚ğæ‚èo‚·B
-   ƒpƒ‰ƒ[ƒ^F
-     const char* line  <in>  ƒRƒ}ƒ“ƒhƒ‰ƒCƒ“•¶š—ñ
-     int*        argc  <out> ƒRƒ}ƒ“ƒhƒ‰ƒCƒ“‚ÉŠÜ‚Ü‚ê‚éƒg[ƒNƒ“”
-     char**      argv  <out> ƒg[ƒNƒ“‚É•ª‰ğ‚³‚ê‚½•¶š—ñ‚Ì”z—ñ
-   –ß‚è’lF
-     COMMAND ƒRƒ}ƒ“ƒh‚Ì—ñ‹“’l
+   æ©Ÿèƒ½ï¼š
+     ã‚³ãƒãƒ³ãƒ‰ãƒ©ã‚¤ãƒ³æ–‡å­—åˆ—ã‚’è§£æã—ã€ã‚³ãƒãƒ³ãƒ‰ã¨ãã®å¼•ãæ•°ã‚’å–ã‚Šå‡ºã™ã€‚
+   ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼š
+     const char* line  <in>  ã‚³ãƒãƒ³ãƒ‰ãƒ©ã‚¤ãƒ³æ–‡å­—åˆ—
+     int*        argc  <out> ã‚³ãƒãƒ³ãƒ‰ãƒ©ã‚¤ãƒ³ã«å«ã¾ã‚Œã‚‹ãƒˆãƒ¼ã‚¯ãƒ³æ•°
+     char**      argv  <out> ãƒˆãƒ¼ã‚¯ãƒ³ã«åˆ†è§£ã•ã‚ŒãŸæ–‡å­—åˆ—ã®é…åˆ—
+   æˆ»ã‚Šå€¤ï¼š
+     COMMAND ã‚³ãƒãƒ³ãƒ‰ã®åˆ—æŒ™å€¤
  */
 static RUN68_COMMAND analyze(const char *line, int *argc, char** argv)
 {
@@ -225,7 +225,7 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char** argv)
     *argc = 0;
     for (i = 0; i < strlen(line); i ++)
     {
-        /* ‹ó”’•¶š‚ğ“Ç‚İ”ò‚Î‚·B*/
+        /* ç©ºç™½æ–‡å­—ã‚’èª­ã¿é£›ã°ã™ã€‚*/
         const char *p = &line[i];
         char c = toupper(*p++);
         if (c == ' ' || c == '\t')
@@ -233,7 +233,7 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char** argv)
             continue;
         } else if ('A' <= c && c <= 'Z')
         {
-            /* ƒRƒ}ƒ“ƒh“™‚Ì–¼‘O */
+            /* ã‚³ãƒãƒ³ãƒ‰ç­‰ã®åå‰ */
             argv[(*argc)++] = q;
             do {
                 *q++ = c;
@@ -243,7 +243,7 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char** argv)
             i += strlen(argv[*argc - 1]);
         } else if ('0' <= c && c <= '9')
         {
-            /* 10i” */
+            /* 10é€²æ•° */
             argv[(*argc)++] = q;
             do {
                 *(q++) = c;
@@ -253,7 +253,7 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char** argv)
             i += strlen(argv[*argc - 1]);
         } else if (c == '$' && 'A' <= toupper(*p) && toupper(*p) <= 'F' || '0' <= *p && *p <= '9')
         {
-            /* 16i”‚Í$‹L†‚ğ•t‚¯‚éB*/
+            /* 16é€²æ•°ã¯$è¨˜å·ã‚’ä»˜ã‘ã‚‹ã€‚*/
             argv[(*argc)++] = q;
             *q++ = c;
             c = toupper(*p++);
@@ -285,21 +285,21 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char** argv)
     }
 }
 
-/* •¶š—ñ‚ª–¼‘O‚©A10i”’l‚©A16i”‚©A‚ ‚é‚¢‚Í‹L†‚©‚ğ”»’è‚·‚éB*/
+/* æ–‡å­—åˆ—ãŒåå‰ã‹ã€10é€²æ•°å€¤ã‹ã€16é€²æ•°ã‹ã€ã‚ã‚‹ã„ã¯è¨˜å·ã‹ã‚’åˆ¤å®šã™ã‚‹ã€‚*/
 static short determine_string(const char *str)
 {
-    /* ‚Æ‚è‚ ‚¦‚¸‚¢‚¢‰ÁŒ¸‚ÈÀ‘•‚ğ‚·‚éB*/
+    /* ã¨ã‚Šã‚ãˆãšã„ã„åŠ æ¸›ãªå®Ÿè£…ã‚’ã™ã‚‹ã€‚*/
     if ('A' <= str[0] && str[0] <= 'Z')
     {
-        return 0; /* –¼‘O */
+        return 0; /* åå‰ */
     } else if ('0' <= str[0] && str[0] <= '9')
     {
-        return 1; /* 10i” */
+        return 1; /* 10é€²æ•° */
     } else if (str[0] == '$')
     {
-        return 2; /* 16i” */
+        return 2; /* 16é€²æ•° */
     }
-    return 3; /* ‹L† */
+    return 3; /* è¨˜å· */
 }
 
 static void display_help()
@@ -325,9 +325,9 @@ static void display_help()
 
 static void run68_dump(int argc, char **argv)
 {
-    static long dump_addr = -1;
-    static long size = 32;
-    long sadr;
+    static Long dump_addr = -1;
+    static Long size = 32;
+    Long sadr;
     int i, j;
 
     if (dump_addr == -1)
@@ -368,7 +368,7 @@ static void run68_dump(int argc, char **argv)
     }
     for (i = 0; i < size; i ++)
     {
-        unsigned long d;
+        ULong d;
         d = (unsigned char)prog_ptr_u[sadr+i];
         if (i % 16 == 0)
         {
@@ -405,17 +405,17 @@ static void run68_dump(int argc, char **argv)
 static void display_registers()
 {
     int i;
-	fprintf(stderr, "D0-D7=%08lX" , rd [ 0 ] );
+	fprintf(stderr, "D0-D7=%08X" , rd [ 0 ] );
 	for ( i = 1; i < 8; i++ ) {
-		fprintf(stderr, ",%08lX" , rd [ i ] );
+		fprintf(stderr, ",%08X" , rd [ i ] );
 	}
 	fprintf(stderr,"\n");
-	fprintf(stderr, "A0-A7=%08lX" , ra [ 0 ] );
+	fprintf(stderr, "A0-A7=%08X" , ra [ 0 ] );
 	for ( i = 1; i < 8; i++ ) {
-		fprintf(stderr, ",%08lX" , ra [ i ] );
+		fprintf(stderr, ",%08X" , ra [ i ] );
 	}
 	fprintf(stderr,"\n");
-	fprintf(stderr, "  PC=%08lX    SR=%04X\n" , pc, sr );
+	fprintf(stderr, "  PC=%08X    SR=%04X\n" , pc, sr );
 }
 
 static void set_breakpoint(int argc, char **argv)
@@ -461,9 +461,9 @@ static void display_history(int argc, char **argv)
 
 static void display_list(int argc, char **argv)
 {
-    static long list_addr = 0;
-    static long old_pc = 0;
-    long addr, naddr;
+    static Long list_addr = 0;
+    static Long old_pc = 0;
+    Long addr, naddr;
     int  i, j, n;
 
     n = 10;
@@ -505,7 +505,7 @@ static void display_list(int argc, char **argv)
         sprintf(hex, "$%06X ", addr);
         if (addr == naddr)
         {
-            /* ƒfƒBƒXƒAƒZƒ“ƒuƒ‹‚Å‚«‚È‚©‚Á‚½ */
+            /* ãƒ‡ã‚£ã‚¹ã‚¢ã‚»ãƒ³ãƒ–ãƒ«ã§ããªã‹ã£ãŸ */
             naddr += 2;
         }
         while (addr < naddr)
@@ -531,9 +531,9 @@ static void display_list(int argc, char **argv)
     list_addr = naddr;
 }
 
-static unsigned long get_stepcount(int argc, char **argv)
+static ULong get_stepcount(int argc, char **argv)
 {
-    unsigned long count = 0;
+    ULong count = 0;
     if (argc == 1)
     {
         return 0;

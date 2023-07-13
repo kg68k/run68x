@@ -21,16 +21,16 @@
 #include <stdio.h>
 #include "run68.h"
 
-// long add_long(long src, long dest, int size);
-// long sub_long(long src, long dest, int size);
+// Long add_Long(Long src, Long dest, int size);
+// Long sub_Long(Long src, Long dest, int size);
 
 /*
- @‹@”\Fdest‚Ésrc‚ğsizeƒTƒCƒY‚Å‰ÁZ‚·‚é
- –ß‚è’lF“š‚¦
+ ã€€æ©Ÿèƒ½ï¼šdestã«srcã‚’sizeã‚µã‚¤ã‚ºã§åŠ ç®—ã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šç­”ãˆ
 */
-long add_long(long src, long dest, int size) {
+Long add_long(Long src, Long dest, int size) {
 
-	long result;
+	Long result;
 
 	switch(size) {
 		case S_BYTE:
@@ -48,12 +48,12 @@ long add_long(long src, long dest, int size) {
 }
 
 /*
- @‹@”\Fdest‚©‚çsrc‚ğsizeƒTƒCƒY‚ÅŒ¸Z‚·‚é
- –ß‚è’lF“š‚¦
+ ã€€æ©Ÿèƒ½ï¼šdestã‹ã‚‰srcã‚’sizeã‚µã‚¤ã‚ºã§æ¸›ç®—ã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šç­”ãˆ
 */
-long sub_long(long src, long dest, int size) {
+Long sub_long(Long src, Long dest, int size) {
 
-	long result;
+	Long result;
 
 	switch(size) {
 		case S_BYTE:

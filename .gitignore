@@ -8,3 +8,7 @@
 *.suo
 *.aps
 *.*~
+build
+.DS_Store
+*.check_cache
+build2

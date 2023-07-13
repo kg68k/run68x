@@ -43,23 +43,23 @@
 #include <dos.h>
 #endif
 
-/* prog_ptr_u‚Í•„†•t‚«char‚Å•s•Ö‚È‚Ì‚ÅA•„†‚È‚µchar‚É•ÏŠ·‚µ‚Ä‚¨‚­B*/
+/* prog_ptr_uã¯ç¬¦å·ä»˜ãcharã§ä¸ä¾¿ãªã®ã§ã€ç¬¦å·ãªã—charã«å¤‰æ›ã—ã¦ãŠãã€‚*/
 #define prog_ptr_u ((unsigned char *)prog_ptr)
-void	run68_abort( long );
-extern char *disassemble(long addr, long* next_addr);
+void	run68_abort( Long );
+extern char *disassemble(Long addr, Long* next_addr);
 
 /*
- @‹@”\F1–½—ßÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼š1å‘½ä»¤å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 int prog_exec()
 {
 	char	*pc_ptr;
-	long	adr;
+	Long	adr;
 	short	save_s;
 
-	/* ãˆÊ4ƒrƒbƒg‚Å–½—ß‚ğU‚è•ª‚¯‚é */
+	/* ä¸Šä½4ãƒ“ãƒƒãƒˆã§å‘½ä»¤ã‚’æŒ¯ã‚Šåˆ†ã‘ã‚‹ */
 	pc_ptr = prog_ptr + pc;
 	switch( *pc_ptr & 0xF0 ) {
 		case 0x00:
@@ -105,19 +105,19 @@ int prog_exec()
 			if ( save_s == 0 )
 				SR_S_OFF();
 			pc += 2;
-			err68( "AŒn—ñŠ„‚è‚İ‚ğÀs‚µ‚Ü‚µ‚½" );
+			err68( "Aç³»åˆ—å‰²ã‚Šè¾¼ã¿ã‚’å®Ÿè¡Œã—ã¾ã—ãŸ" );
 			return( TRUE );
 		default:
 			pc += 2;
-			err68( "‚¨‚©‚µ‚È–½—ß‚ğÀs‚µ‚Ü‚µ‚½" );
+			err68( "ãŠã‹ã—ãªå‘½ä»¤ã‚’å®Ÿè¡Œã—ã¾ã—ãŸ" );
 			return( TRUE );
 	}
 }
 
 /*
- @‹@”\FƒRƒ“ƒfƒBƒVƒ‡ƒ“‚ª¬—§‚µ‚Ä‚¢‚é‚©‚Ç‚¤‚©’²‚×‚é
- –ß‚è’lF TRUE = ¬—§
- @@@@FALSE = •s¬—§
+ ã€€æ©Ÿèƒ½ï¼šã‚³ãƒ³ãƒ‡ã‚£ã‚·ãƒ§ãƒ³ãŒæˆç«‹ã—ã¦ã„ã‚‹ã‹ã©ã†ã‹èª¿ã¹ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = æˆç«‹
+ ã€€ã€€ã€€ã€€FALSE = ä¸æˆç«‹
 */
 int get_cond( char cond )
 {
@@ -192,61 +192,61 @@ int get_cond( char cond )
 }
 
 /*
- @‹@”\FÀsƒGƒ‰[ƒƒbƒZ[ƒW‚ğ•\¦‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šå®Ÿè¡Œæ™‚ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’è¡¨ç¤ºã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void	err68( char *mes )
 {
     OPBuf_insert(&OP_info);
 	fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
-	if ( memcmp( mes, "–¢’è‹`", 6 ) == 0 )
+	if ( memcmp( mes, "æœªå®šç¾©", 6 ) == 0 )
 		fprintf(stderr, "code = %08X\n",mem_get( pc - 4, S_LONG ));
     OPBuf_display(10);
     run68_abort(pc);
 }
 
 /*
- @‹@”\FÀsƒGƒ‰[ƒƒbƒZ[ƒW‚ğ•\¦‚·‚é(‚»‚Ì2)
-   ˆø”F
-	char*	mes	<in>	ƒƒbƒZ[ƒW
-	char*	file	<in>	ƒtƒ@ƒCƒ‹–¼
-	int	line	<in>	s”Ô†
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šå®Ÿè¡Œæ™‚ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’è¡¨ç¤ºã™ã‚‹(ãã®2)
+   å¼•æ•°ï¼š
+	char*	mes	<in>	ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
+	char*	file	<in>	ãƒ•ã‚¡ã‚¤ãƒ«å
+	int	line	<in>	è¡Œç•ªå·
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void err68a( char *mes, char *file, int line )
 {
     OPBuf_insert(&OP_info);
 	fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
 	fprintf(stderr, "\tAt %s:%d\n", file, line);
-	if ( memcmp( mes, "–¢’è‹`", 6 ) == 0 )
+	if ( memcmp( mes, "æœªå®šç¾©", 6 ) == 0 )
 		fprintf(stderr, "code = %08X\n",mem_get( pc - 4, S_LONG ));
     OPBuf_display(10);
     run68_abort(pc);
 }
 
 /*
-   ‹@”\FÀsƒGƒ‰[ƒƒbƒZ[ƒW‚ğ•\¦‚·‚é(‚»‚Ì3)
-   ˆø”F
-    char*  mes	<in>    ƒƒbƒZ[ƒW
-    long   pc   <in>    ƒvƒƒOƒ‰ƒ€ƒJƒEƒ“ƒ^
-    long   ppc  <in>    ˆê‚Â‘O‚ÉÀs‚µ‚½–½—ß‚ÌƒvƒƒOƒ‰ƒ€ƒJƒEƒ“ƒ^
-   –ß‚è’lF
-    ‚È‚µ
+   æ©Ÿèƒ½ï¼šå®Ÿè¡Œæ™‚ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’è¡¨ç¤ºã™ã‚‹(ãã®3)
+   å¼•æ•°ï¼š
+    char*  mes	<in>    ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸
+    Long   pc   <in>    ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚«ã‚¦ãƒ³ã‚¿
+    Long   ppc  <in>    ä¸€ã¤å‰ã«å®Ÿè¡Œã—ãŸå‘½ä»¤ã®ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚«ã‚¦ãƒ³ã‚¿
+   æˆ»ã‚Šå€¤ï¼š
+    ãªã—
 */
-void err68b(char *mes, long pc, long ppc)
+void err68b(char *mes, Long pc, Long ppc)
 {
     OPBuf_insert(&OP_info);
 	fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
 	fprintf(stderr, "PC of previous op code: PC=%06X\n", ppc);
-	if ( memcmp( mes, "–¢’è‹`", 6 ) == 0 )
+	if ( memcmp( mes, "æœªå®šç¾©", 6 ) == 0 )
 		fprintf(stderr, "code = %08X\n",mem_get( pc - 4, S_LONG ));
     OPBuf_display(10);
     run68_abort(pc);
 }
 
 /*
- @‹@”\FƒAƒhƒŒƒXƒŒƒWƒXƒ^‚ğƒCƒ“ƒNƒŠƒƒ“ƒg‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’ã‚¤ãƒ³ã‚¯ãƒªãƒ¡ãƒ³ãƒˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void inc_ra( char reg, char size )
 {
@@ -268,8 +268,8 @@ void inc_ra( char reg, char size )
 }
 
 /*
- @‹@”\FƒAƒhƒŒƒXƒŒƒWƒXƒ^‚ğƒfƒNƒŠƒƒ“ƒg‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šã‚¢ãƒ‰ãƒ¬ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’ãƒ‡ã‚¯ãƒªãƒ¡ãƒ³ãƒˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void dec_ra( char reg, char size )
 {
@@ -291,8 +291,8 @@ void dec_ra( char reg, char size )
 }
 
 /*
- @‹@”\FƒeƒLƒXƒgƒJƒ‰[‚ğİ’è‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šãƒ†ã‚­ã‚¹ãƒˆã‚«ãƒ©ãƒ¼ã‚’è¨­å®šã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 void text_color( short c )
 {
@@ -349,10 +349,10 @@ void text_color( short c )
 }
 
 /*
-   ‹@”\FƒJ[ƒ\ƒ‹ˆÊ’u‚ğ“¾‚é
- –ß‚è’lFƒJ[ƒ\ƒ‹ˆÊ’u
+   æ©Ÿèƒ½ï¼šã‚«ãƒ¼ã‚½ãƒ«ä½ç½®ã‚’å¾—ã‚‹
+ æˆ»ã‚Šå€¤ï¼šã‚«ãƒ¼ã‚½ãƒ«ä½ç½®
 */
-long get_locate()
+Long get_locate()
 {
 	UShort x = 0, y = 0;
 
@@ -380,19 +380,19 @@ long get_locate()
 }
 
 /*
-   –½—ßî•ñƒŠƒ“ƒOƒoƒbƒtƒ@‚Ìì‹Æ—Ìˆæ
+   å‘½ä»¤æƒ…å ±ãƒªãƒ³ã‚°ãƒãƒƒãƒ•ã‚¡ã®ä½œæ¥­é ˜åŸŸ
 */
 #define MAX_OPBUF 200
 static int num_entries;
 static int current_p;
 static EXEC_INSTRUCTION_INFO entry[MAX_OPBUF];
 /*
-   ‹@”\F
-     Às‚µ‚½–½—ß‚Ìî•ñ‚ğƒŠƒ“ƒOƒoƒbƒtƒ@‚É•Û‘¶‚·‚éB
-   ƒpƒ‰ƒ[ƒ^F
-     EXEC_INSTRUCTION_INFO  op <in>  –½—ßî•ñ
-   –ß‚è’lF
-     ‚È‚µB
+   æ©Ÿèƒ½ï¼š
+     å®Ÿè¡Œã—ãŸå‘½ä»¤ã®æƒ…å ±ã‚’ãƒªãƒ³ã‚°ãƒãƒƒãƒ•ã‚¡ã«ä¿å­˜ã™ã‚‹ã€‚
+   ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼š
+     EXEC_INSTRUCTION_INFO  op <in>  å‘½ä»¤æƒ…å ±
+   æˆ»ã‚Šå€¤ï¼š
+     ãªã—ã€‚
 */
 void OPBuf_insert(const EXEC_INSTRUCTION_INFO *op)
 {
@@ -408,12 +408,12 @@ void OPBuf_insert(const EXEC_INSTRUCTION_INFO *op)
 }
 
 /*
-   ‹@”\F
-     –½—ßî•ñƒŠƒ“ƒOƒoƒbƒtƒ@‚ğƒNƒŠƒA‚·‚éB
-   ƒpƒ‰ƒ[ƒ^G
-     ‚È‚µB
-   –ß‚è’lF
-     ‚È‚µB
+   æ©Ÿèƒ½ï¼š
+     å‘½ä»¤æƒ…å ±ãƒªãƒ³ã‚°ãƒãƒƒãƒ•ã‚¡ã‚’ã‚¯ãƒªã‚¢ã™ã‚‹ã€‚
+   ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼›
+     ãªã—ã€‚
+   æˆ»ã‚Šå€¤ï¼š
+     ãªã—ã€‚
 */
 void OPBuf_clear()
 {
@@ -422,12 +422,12 @@ void OPBuf_clear()
 }
 
 /*
-   ‹@”\F
-     –½—ßî•ñƒŠƒ“ƒOƒoƒbƒtƒ@‚ÌƒTƒCƒY‚ğæ“¾‚·‚éB
-     ƒpƒ‰ƒ[ƒ^F
-   ‚È‚µB
-     –ß‚è’lF
-   int  ƒoƒbƒtƒ@‚ÌƒGƒ“ƒgƒŠ”
+   æ©Ÿèƒ½ï¼š
+     å‘½ä»¤æƒ…å ±ãƒªãƒ³ã‚°ãƒãƒƒãƒ•ã‚¡ã®ã‚µã‚¤ã‚ºã‚’å–å¾—ã™ã‚‹ã€‚
+     ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼š
+   ãªã—ã€‚
+     æˆ»ã‚Šå€¤ï¼š
+   int  ãƒãƒƒãƒ•ã‚¡ã®ã‚¨ãƒ³ãƒˆãƒªæ•°
 */
 int OPBuf_numentries()
 {
@@ -435,12 +435,12 @@ int OPBuf_numentries()
 }
 
 /*
-    ‹@”\F
-      –½—ßî•ñƒŠƒ“ƒOƒoƒbƒtƒ@‚Ìno”Ô–Ú‚ÌƒGƒ“ƒgƒŠ‚ğæ“¾‚·‚éB
-    ƒpƒ‰ƒ[ƒ^F
-      int   no  <in>   æ‚èo‚µ‚½‚¢ƒGƒ“ƒgƒŠ”Ô†(0‚ªÅ‹ß‚Ì‚à‚Ì)
-    –ß‚è’lF
-      EXEC_INSTRUCTION_INFO*  –½—ßî•ñ‚Ö‚Ìƒ|ƒCƒ“ƒ^
+    æ©Ÿèƒ½ï¼š
+      å‘½ä»¤æƒ…å ±ãƒªãƒ³ã‚°ãƒãƒƒãƒ•ã‚¡ã®noç•ªç›®ã®ã‚¨ãƒ³ãƒˆãƒªã‚’å–å¾—ã™ã‚‹ã€‚
+    ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼š
+      int   no  <in>   å–ã‚Šå‡ºã—ãŸã„ã‚¨ãƒ³ãƒˆãƒªç•ªå·(0ãŒæœ€è¿‘ã®ã‚‚ã®)
+    æˆ»ã‚Šå€¤ï¼š
+      EXEC_INSTRUCTION_INFO*  å‘½ä»¤æƒ…å ±ã¸ã®ãƒã‚¤ãƒ³ã‚¿
 */
 const EXEC_INSTRUCTION_INFO *OPBuf_getentry(int no)
 {
@@ -456,12 +456,12 @@ const EXEC_INSTRUCTION_INFO *OPBuf_getentry(int no)
 }
 
 /*
-    ‹@”\F
-      –½—ßî•ñƒŠƒ“ƒOƒoƒbƒtƒ@‚Ì“à—e‚ğo—Í‚·‚éB
-    ƒpƒ‰ƒ[ƒ^F
-      int  n   <in>  •\¦‚·‚éƒoƒbƒtƒ@‚ÌƒGƒ“ƒgƒŠ”
-    –ß‚è’lF
-      ‚È‚µB
+    æ©Ÿèƒ½ï¼š
+      å‘½ä»¤æƒ…å ±ãƒªãƒ³ã‚°ãƒãƒƒãƒ•ã‚¡ã®å†…å®¹ã‚’å‡ºåŠ›ã™ã‚‹ã€‚
+    ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼š
+      int  n   <in>  è¡¨ç¤ºã™ã‚‹ãƒãƒƒãƒ•ã‚¡ã®ã‚¨ãƒ³ãƒˆãƒªæ•°
+    æˆ»ã‚Šå€¤ï¼š
+      ãªã—ã€‚
 */
 void OPBuf_display(n)
 {
@@ -475,7 +475,7 @@ void OPBuf_display(n)
     for (i = n-1; 0 <= i; i --)
     {
         const EXEC_INSTRUCTION_INFO *op;
-        long addr, naddr;
+        Long addr, naddr;
         char *s, hex[64];
         unsigned short code;
         int j;
@@ -507,9 +507,9 @@ void OPBuf_display(n)
 }
 
 /*
- @‹@”\FPC‚Ìw‚·ƒƒ‚ƒŠ‚©‚çƒCƒ“ƒfƒbƒNƒXƒŒƒWƒXƒ^{8ƒrƒbƒgƒfƒBƒXƒvƒŒ[ƒXƒƒ“ƒg
- @@@@‚Ì’l‚ğ“¾‚é
- –ß‚è’lF‚»‚Ì’l
+ ã€€æ©Ÿèƒ½ï¼šPCã®æŒ‡ã™ãƒ¡ãƒ¢ãƒªã‹ã‚‰ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ï¼‹8ãƒ“ãƒƒãƒˆãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ¡ãƒ³ãƒˆ
+ ã€€ã€€ã€€ã€€ã®å€¤ã‚’å¾—ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãã®å€¤
 */
 int get_idx(int *pc, char *regstr)
 {
@@ -537,14 +537,14 @@ int get_idx(int *pc, char *regstr)
 }
 
 /*
- @‹@”\FPC‚Ìw‚·ƒƒ‚ƒŠ‚©‚çw’è‚³‚ê‚½ƒTƒCƒY‚ÌƒCƒ~ƒfƒBƒGƒCƒgƒf[ƒ^‚ğƒQƒbƒg‚µA
- @@@@ƒTƒCƒY‚É‰‚¶‚ÄPC‚ği‚ß‚é
- –ß‚è’lFƒf[ƒ^‚Ì’l
+ ã€€æ©Ÿèƒ½ï¼šPCã®æŒ‡ã™ãƒ¡ãƒ¢ãƒªã‹ã‚‰æŒ‡å®šã•ã‚ŒãŸã‚µã‚¤ã‚ºã®ã‚¤ãƒŸãƒ‡ã‚£ã‚¨ã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ã‚’ã‚²ãƒƒãƒˆã—ã€
+ ã€€ã€€ã€€ã€€ã‚µã‚¤ã‚ºã«å¿œã˜ã¦PCã‚’é€²ã‚ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãƒ‡ãƒ¼ã‚¿ã®å€¤
 */
-long get_imi(int *pc, char size )
+Long get_imi(int *pc, char size )
 {
 	UChar	*mem;
-	long	d;
+	Long	d;
 
 	mem = (UChar *)prog_ptr + (*pc);
 
@@ -569,15 +569,15 @@ long get_imi(int *pc, char size )
 }
 
 /*
-    ‹@”\F
-      ƒIƒyƒ‰ƒ“ƒh•¶š—ñ‚ğ¶¬‚·‚éB
-    ƒpƒ‰ƒ[ƒ^F
-      char *buf           <out>    ¶¬‚µ‚½•¶š—ñ‚ğŠi”[‚·‚éB
-      int  AddressingMode <in>     ƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh
-      int  RegisterNumber <in>     ƒŒƒWƒXƒ^”Ô†i‚Ü‚½‚ÍƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒhj
-      char *pc            <in/out> Šg’£•”æ“¾—pƒvƒƒOƒ‰ƒ€ƒJƒEƒ“ƒ^
-    –ß‚è’lF
-      ‚È‚µB
+    æ©Ÿèƒ½ï¼š
+      ã‚ªãƒšãƒ©ãƒ³ãƒ‰æ–‡å­—åˆ—ã‚’ç”Ÿæˆã™ã‚‹ã€‚
+    ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼š
+      char *buf           <out>    ç”Ÿæˆã—ãŸæ–‡å­—åˆ—ã‚’æ ¼ç´ã™ã‚‹ã€‚
+      int  AddressingMode <in>     ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰
+      int  RegisterNumber <in>     ãƒ¬ã‚¸ã‚¹ã‚¿ç•ªå·ï¼ˆã¾ãŸã¯ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ï¼‰
+      char *pc            <in/out> æ‹¡å¼µéƒ¨å–å¾—ç”¨ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚«ã‚¦ãƒ³ã‚¿
+    æˆ»ã‚Šå€¤ï¼š
+      ãªã—ã€‚
 */
 
 void get_operand(char *buf, int *pc, int AddressingMode, int RegisterNumber, int size)

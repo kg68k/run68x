@@ -24,21 +24,21 @@
 #include <stdio.h>
 #include "run68.h"
 
-static	int	mem_red_chk( long );
-static	int	mem_wrt_chk( long );
-void	run68_abort( long );
+static	int	mem_red_chk( Long );
+static	int	mem_wrt_chk( Long );
+void	run68_abort( Long );
 
 /*
- @‹@”\FPC‚Ìw‚·ƒƒ‚ƒŠ‚©‚çƒCƒ“ƒfƒbƒNƒXƒŒƒWƒXƒ^{8ƒrƒbƒgƒfƒBƒXƒvƒŒ[ƒXƒƒ“ƒg
- @@@@‚Ì’l‚ğ“¾‚é
- –ß‚è’lF‚»‚Ì’l
+ ã€€æ©Ÿèƒ½ï¼šPCã®æŒ‡ã™ãƒ¡ãƒ¢ãƒªã‹ã‚‰ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ï¼‹8ãƒ“ãƒƒãƒˆãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ãƒ¼ã‚¹ãƒ¡ãƒ³ãƒˆ
+ ã€€ã€€ã€€ã€€ã®å€¤ã‚’å¾—ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãã®å€¤
 */
-long idx_get()
+Long idx_get()
 {
 	char	*mem;
 	char	idx2;
 	char	idx_reg;
-	long	idx;
+	Long	idx;
 
 	mem = prog_ptr + pc;
 	idx2 = *(mem++);
@@ -59,14 +59,14 @@ long idx_get()
 }
 
 /*
- @‹@”\FPC‚Ìw‚·ƒƒ‚ƒŠ‚©‚çw’è‚³‚ê‚½ƒTƒCƒY‚ÌƒCƒ~ƒfƒBƒGƒCƒgƒf[ƒ^‚ğƒQƒbƒg‚µA
- @@@@ƒTƒCƒY‚É‰‚¶‚ÄPC‚ği‚ß‚é
- –ß‚è’lFƒf[ƒ^‚Ì’l
+ ã€€æ©Ÿèƒ½ï¼šPCã®æŒ‡ã™ãƒ¡ãƒ¢ãƒªã‹ã‚‰æŒ‡å®šã•ã‚ŒãŸã‚µã‚¤ã‚ºã®ã‚¤ãƒŸãƒ‡ã‚£ã‚¨ã‚¤ãƒˆãƒ‡ãƒ¼ã‚¿ã‚’ã‚²ãƒƒãƒˆã—ã€
+ ã€€ã€€ã€€ã€€ã‚µã‚¤ã‚ºã«å¿œã˜ã¦PCã‚’é€²ã‚ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãƒ‡ãƒ¼ã‚¿ã®å€¤
 */
-long imi_get( char size )
+Long imi_get( char size )
 {
 	UChar	*mem;
-	long	d;
+	Long	d;
 
 	mem = (UChar *)prog_ptr + pc;
 
@@ -90,13 +90,13 @@ long imi_get( char size )
 }
 
 /*
- @‹@”\Fƒƒ‚ƒŠ‚©‚çw’è‚³‚ê‚½ƒTƒCƒY‚Ìƒf[ƒ^‚ğƒQƒbƒg‚·‚é
- –ß‚è’lFƒf[ƒ^‚Ì’l
+ ã€€æ©Ÿèƒ½ï¼šãƒ¡ãƒ¢ãƒªã‹ã‚‰æŒ‡å®šã•ã‚ŒãŸã‚µã‚¤ã‚ºã®ãƒ‡ãƒ¼ã‚¿ã‚’ã‚²ãƒƒãƒˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãƒ‡ãƒ¼ã‚¿ã®å€¤
 */
-long mem_get( long adr, char size )
+Long mem_get( Long adr, char size )
 {
 	UChar   *mem;
-	long	d;
+	Long	d;
 
 	if ( adr < ENV_TOP || adr >= mem_aloc ) {
 		if ( mem_red_chk( adr ) == FALSE )
@@ -121,10 +121,10 @@ long mem_get( long adr, char size )
 }
 
 /*
- @‹@”\Fƒƒ‚ƒŠ‚Éw’è‚³‚ê‚½ƒTƒCƒY‚Ìƒf[ƒ^‚ğƒZƒbƒg‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šãƒ¡ãƒ¢ãƒªã«æŒ‡å®šã•ã‚ŒãŸã‚µã‚¤ã‚ºã®ãƒ‡ãƒ¼ã‚¿ã‚’ã‚»ãƒƒãƒˆã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-void mem_set( long adr, long d, char size )
+void mem_set( Long adr, Long d, char size )
 {
 	UChar   *mem;
 
@@ -152,11 +152,11 @@ void mem_set( long adr, long d, char size )
 }
 
 /*
- @‹@”\F“Ç‚İ‚İƒAƒhƒŒƒX‚Ìƒ`ƒFƒbƒN
- –ß‚è’lF TRUE = OK
-         FALSE = NG‚¾‚ªA0‚ğ“Ç‚İ‚ñ‚¾‚Æ‚İ‚È‚·
+ ã€€æ©Ÿèƒ½ï¼šèª­ã¿è¾¼ã¿ã‚¢ãƒ‰ãƒ¬ã‚¹ã®ãƒã‚§ãƒƒã‚¯
+ æˆ»ã‚Šå€¤ï¼š TRUE = OK
+         FALSE = NGã ãŒã€0ã‚’èª­ã¿è¾¼ã‚“ã ã¨ã¿ãªã™
 */
-static int mem_red_chk( long adr )
+static int mem_red_chk( Long adr )
 {
 	char message[256];
 
@@ -164,12 +164,12 @@ static int mem_red_chk( long adr )
 	if ( adr >= 0xC00000 ) {
 		if ( ini_info.io_through == TRUE )
 			return( FALSE );
-		sprintf(message, "I/Oƒ|[ƒgorROM($%06X)‚©‚ç“Ç‚İ‚à‚¤‚Æ‚µ‚Ü‚µ‚½B", adr);
+		sprintf(message, "I/Oãƒãƒ¼ãƒˆorROM($%06X)ã‹ã‚‰èª­ã¿è¾¼ã‚‚ã†ã¨ã—ã¾ã—ãŸã€‚", adr);
 		err68(message);
 		run68_abort( adr );
 	}
 	if ( SR_S_REF() == 0 || adr >= mem_aloc ) {
-		sprintf(message, "•s³ƒAƒhƒŒƒX($%06X)‚©‚ç‚Ì“Ç‚İ‚İ‚Å‚·B", adr);
+		sprintf(message, "ä¸æ­£ã‚¢ãƒ‰ãƒ¬ã‚¹($%06X)ã‹ã‚‰ã®èª­ã¿è¾¼ã¿ã§ã™ã€‚", adr);
 		err68(message);
 		run68_abort( adr );
 	}
@@ -177,11 +177,11 @@ static int mem_red_chk( long adr )
 }
 
 /*
- @‹@”\F‘‚«‚İƒAƒhƒŒƒX‚Ìƒ`ƒFƒbƒN
- –ß‚è’lF TRUE = OK
-         FALSE = NG‚¾‚ªA‰½‚à‘‚«‚Ü‚¸‚ÉOK‚Æ‚İ‚È‚·
+ ã€€æ©Ÿèƒ½ï¼šæ›¸ãè¾¼ã¿ã‚¢ãƒ‰ãƒ¬ã‚¹ã®ãƒã‚§ãƒƒã‚¯
+ æˆ»ã‚Šå€¤ï¼š TRUE = OK
+         FALSE = NGã ãŒã€ä½•ã‚‚æ›¸ãè¾¼ã¾ãšã«OKã¨ã¿ãªã™
 */
-static int mem_wrt_chk( long adr )
+static int mem_wrt_chk( Long adr )
 {
 	char message[256];
 
@@ -193,12 +193,12 @@ static int mem_wrt_chk( long adr )
 		if ( adr == 0xE8A01F )	/# RESET CONTROLLER #/
 			return( FALSE );
 */
-		sprintf(message, "I/Oƒ|[ƒgorROM($%06X)‚É‘‚«‚à‚¤‚Æ‚µ‚Ü‚µ‚½B", adr);
+		sprintf(message, "I/Oãƒãƒ¼ãƒˆorROM($%06X)ã«æ›¸ãè¾¼ã‚‚ã†ã¨ã—ã¾ã—ãŸã€‚", adr);
 		err68(message);
 		run68_abort(adr);
 	}
 	if ( SR_S_REF() == 0 || adr >= mem_aloc ) {
-		sprintf(message, "•s³ƒAƒhƒŒƒX‚Ö‚Ì‘‚«‚İ‚Å‚·($%06X)", adr);
+		sprintf(message, "ä¸æ­£ã‚¢ãƒ‰ãƒ¬ã‚¹ã¸ã®æ›¸ãè¾¼ã¿ã§ã™($%06X)", adr);
 		err68(message);
 		run68_abort( adr );
 	}
@@ -206,13 +206,13 @@ static int mem_wrt_chk( long adr )
 }
 
 /*
- ‹@”\FˆÙíI—¹‚·‚é
+ æ©Ÿèƒ½ï¼šç•°å¸¸çµ‚äº†ã™ã‚‹
 */
-void run68_abort( long adr )
+void run68_abort( Long adr )
 {
 	int	i;
 
-	fprintf( stderr, "ƒAƒhƒŒƒXF%08X\n", adr );
+	fprintf( stderr, "ã‚¢ãƒ‰ãƒ¬ã‚¹ï¼š%08X\n", adr );
 
 	for ( i = 5; i < FILE_MAX; i ++ ) {
 		if ( finfo [ i ].fh != NULL )

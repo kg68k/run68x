@@ -21,34 +21,40 @@
 #include <stdio.h>
 #include <string.h>
 #include "run68.h"
-#if !defined(WIN32)
-#if defined(DOSX)
-#include <dos.h>
+
+#if defined(WIN32)
+  #include <windows.h>
+#elif defined(DOSX)
+  #include <dos.h>
+#elif defined(__APPLE__)
 #else
-#include <sys/sysinfo.h>
-#endif
-#include <time.h>
-#elif defined(WIN32)
-#include <windows.h>
+  #include <sys/sysinfo.h>
 #endif
 
-static long	Putc( UShort );
-static long	Color( short );
+#if defined (USE_ICONV)
+  #include<iconv.h>
+#endif
+
+#include <time.h>
+#include <sys/time.h>
+
+static Long	Putc( UShort );
+static Long	Color( short );
 static void	Putmes( void );
-static long	Dateget( void );
-static long	Timeget( void );
-static long	Datebin( long );
-static long	Timebin( long );
-static long	Dateasc( long, long );
-static long	Timeasc( long, long );
-static void	Dayasc( long, long );
-static long	Intvcs( long, long );
-static void	Dmamove( long, long, long, long );
+static Long	Dateget( void );
+static Long	Timeget( void );
+static Long	Datebin( Long );
+static Long	Timebin( Long );
+static Long	Dateasc( Long, Long );
+static Long	Timeasc( Long, Long );
+static void	Dayasc( Long, Long );
+static Long	Intvcs( Long, Long );
+static void	Dmamove( Long, Long, Long, Long );
 
 /*
- @‹@”\FIOCSCALL‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šIOCSCALLã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 int iocs_call()
 {
@@ -62,7 +68,7 @@ int iocs_call()
 
     if (func_trace_f)
     {
-        printf( "IOCS(%02X): PC=%06lX\n", no, pc );
+        printf( "IOCS(%02X): PC=%06X\n", no, pc );
     }
 	switch( no ) {
 		case 0x20:	/* B_PUTC */
@@ -70,7 +76,25 @@ int iocs_call()
 			break;
 		case 0x21:	/* B_PRINT */
 			data_ptr = (UChar *)prog_ptr + ra [ 1 ];
+#if defined (USE_ICONV)
+			{
+				// SJIS to UTF-8
+				char utf8_buf[8192];
+				iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+				size_t inbytes  = strlen(data_ptr);
+				size_t outbytes = sizeof(utf8_buf) - 1;
+				char *ptr_in = data_ptr;
+				char *ptr_out = utf8_buf;
+				memset(utf8_buf, 0x00, sizeof(utf8_buf));
+				iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
+				iconv_close(icd);
+
+				printf("%s", utf8_buf);
+			}
+#else
 			printf( "%s", data_ptr );
+#endif
+
 			ra [ 1 ] += strlen((char *)data_ptr);
 			rd [ 0 ] = get_locate();
 			break;
@@ -88,7 +112,7 @@ int iocs_call()
 		case 0x24:	/* B_DOWN_S */
 			printf( "%c[s\n%c[u%c[1B", 0x1B, 0x1B, 0x1B );
 			break;
-		case 0x25:	/* B_UP_S *//* (ƒXƒNƒ[ƒ‹–¢ƒTƒ|[ƒg) */
+		case 0x25:	/* B_UP_S *//* (ã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«æœªã‚µãƒãƒ¼ãƒˆ) */
 			printf( "%c[1A", 0x1B );
 			break;
 		case 0x2F:	/* B_PUTMES */
@@ -142,7 +166,7 @@ int iocs_call()
 				SR_S_OFF();
 			break;
 		case 0x6E:	/* HSYNCST */
-			err68( "…•½“¯ŠúŠ„‚è‚İ‚ğİ’è‚µ‚æ‚¤‚Æ‚µ‚Ü‚µ‚½" );
+			err68( "æ°´å¹³åŒæœŸå‰²ã‚Šè¾¼ã¿ã‚’è¨­å®šã—ã‚ˆã†ã¨ã—ã¾ã—ãŸ" );
 			return( TRUE );
 		case 0x7F:	/* ONTIME */
 #if defined(WIN32)
@@ -150,6 +174,10 @@ int iocs_call()
 			rd [ 0 ] = (ul % (60 * 60 * 24)) * 100;
 			rd [ 1 ] = ((ul / (60 * 60 * 24)) & 0xFFFF);
 #elif defined(DOSX)
+			ul = time( NULL );
+			rd [ 0 ] = (ul % (60 * 60 * 24)) * 100;
+			rd [ 1 ] = ((ul / (60 * 60 * 24)) & 0xFFFF);
+#elif defined(__APPLE__) || defined(__EMSCRIPTEN__)
 			ul = time( NULL );
 			rd [ 0 ] = (ul % (60 * 60 * 24)) * 100;
 			rd [ 1 ] = ((ul / (60 * 60 * 24)) & 0xFFFF);
@@ -170,7 +198,7 @@ int iocs_call()
 			if ( ra [ 1 ] == 0 ) {
 				/* user -> super */
 				if ( SR_S_REF() != 0 ) {
-					rd [ 0 ] = -1;	/* ƒGƒ‰[ */
+					rd [ 0 ] = -1;	/* ã‚¨ãƒ©ãƒ¼ */
 				} else {
 					rd [ 0 ] = ra [ 7 ];
 					SR_S_ON();
@@ -229,13 +257,13 @@ int iocs_call()
 }
 
 /*
- @‹@”\F•¶š‚ğ•\¦‚·‚é
- –ß‚è’lFƒJ[ƒ\ƒ‹ˆÊ’u
+ ã€€æ©Ÿèƒ½ï¼šæ–‡å­—ã‚’è¡¨ç¤ºã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šã‚«ãƒ¼ã‚½ãƒ«ä½ç½®
 */
-static long Putc( UShort code )
+static Long Putc( UShort code )
 {
 	if ( code == 0x1A ) {
-		printf( "%c[0J", 0x1B ); /* ÅIs¶’[‚Ü‚ÅÁ‹ */
+		printf( "%c[0J", 0x1B ); /* æœ€çµ‚è¡Œå·¦ç«¯ã¾ã§æ¶ˆå» */
 	} else {
 		if ( code >= 0x0100 )
 			putchar( code >> 8 );
@@ -245,12 +273,12 @@ static long Putc( UShort code )
 }
 
 /*
- @‹@”\F•¶š‚ÌƒJƒ‰[‘®«‚ğw’è‚·‚é
- –ß‚è’lF•ÏX‘O‚ÌƒJƒ‰[‚Ü‚½‚ÍŒ»İ‚ÌƒJƒ‰[
+ ã€€æ©Ÿèƒ½ï¼šæ–‡å­—ã®ã‚«ãƒ©ãƒ¼å±æ€§ã‚’æŒ‡å®šã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šå¤‰æ›´å‰ã®ã‚«ãƒ©ãƒ¼ã¾ãŸã¯ç¾åœ¨ã®ã‚«ãƒ©ãƒ¼
 */
-static long Color( short arg )
+static Long Color( short arg )
 {
-	if ( arg == -1 )	/* Œ»İ‚ÌƒJƒ‰[‚ğ’²‚×‚é(–¢ƒTƒ|[ƒg) */
+	if ( arg == -1 )	/* ç¾åœ¨ã®ã‚«ãƒ©ãƒ¼ã‚’èª¿ã¹ã‚‹(æœªã‚µãƒãƒ¼ãƒˆ) */
 		return( 3 );
 
 	text_color( arg );
@@ -259,8 +287,8 @@ static long Color( short arg )
 }
 
 /*
- @‹@”\F•¶š—ñ‚ğ•\¦‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šæ–‡å­—åˆ—ã‚’è¡¨ç¤ºã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static void Putmes()
 {
@@ -289,12 +317,12 @@ static void Putmes()
 }
 
 /*
- @‹@”\F“ú•t‚ğ“¾‚é
- –ß‚è’lFBCD‚Ì“ú•tƒf[ƒ^
+ ã€€æ©Ÿèƒ½ï¼šæ—¥ä»˜ã‚’å¾—ã‚‹
+ æˆ»ã‚Šå€¤ï¼šBCDã®æ—¥ä»˜ãƒ‡ãƒ¼ã‚¿
 */
-static long Dateget()
+static Long Dateget()
 {
-	long	ret;
+	Long	ret;
 #if defined(WIN32)
     SYSTEMTIME st;
     GetSystemTime(&st);
@@ -330,12 +358,12 @@ static long Dateget()
 }
 
 /*
- @‹@”\F‚ğ“¾‚é
- –ß‚è’lFBCD‚Ìƒf[ƒ^
+ ã€€æ©Ÿèƒ½ï¼šæ™‚åˆ»ã‚’å¾—ã‚‹
+ æˆ»ã‚Šå€¤ï¼šBCDã®æ™‚åˆ»ãƒ‡ãƒ¼ã‚¿
 */
-static long Timeget()
+static Long Timeget()
 {
-	long	ret;
+	Long	ret;
 #if defined(WIN32)
     SYSTEMTIME st;
     GetSystemTime(&st);
@@ -368,10 +396,10 @@ static long Timeget()
 }
 
 /*
- @‹@”\FBCD•\Œ»‚Ì“ú•tƒf[ƒ^‚ğƒoƒCƒiƒŠ•\Œ»‚É’¼‚·
- –ß‚è’lFƒoƒCƒiƒŠ‚Ì“ú•tƒf[ƒ^
+ ã€€æ©Ÿèƒ½ï¼šBCDè¡¨ç¾ã®æ—¥ä»˜ãƒ‡ãƒ¼ã‚¿ã‚’ãƒã‚¤ãƒŠãƒªè¡¨ç¾ã«ç›´ã™
+ æˆ»ã‚Šå€¤ï¼šãƒã‚¤ãƒŠãƒªã®æ—¥ä»˜ãƒ‡ãƒ¼ã‚¿
 */
-static long Datebin( long bcd )
+static Long Datebin( Long bcd )
 {
 	UShort	youbi;
 	UShort	year;
@@ -387,10 +415,10 @@ static long Datebin( long bcd )
 }
 
 /*
- @‹@”\FBCD•\Œ»‚Ìƒf[ƒ^‚ğƒoƒCƒiƒŠ•\Œ»‚É’¼‚·
- –ß‚è’lFƒoƒCƒiƒŠ‚Ìƒf[ƒ^
+ ã€€æ©Ÿèƒ½ï¼šBCDè¡¨ç¾ã®æ™‚åˆ»ãƒ‡ãƒ¼ã‚¿ã‚’ãƒã‚¤ãƒŠãƒªè¡¨ç¾ã«ç›´ã™
+ æˆ»ã‚Šå€¤ï¼šãƒã‚¤ãƒŠãƒªã®æ™‚åˆ»ãƒ‡ãƒ¼ã‚¿
 */
-static long Timebin( long bcd )
+static Long Timebin( Long bcd )
 {
 	UShort	hh;
 	UShort	mm;
@@ -404,10 +432,10 @@ static long Timebin( long bcd )
 }
 
 /*
- @‹@”\FƒoƒCƒiƒŠ•\Œ»‚Ì“ú•tƒf[ƒ^‚ğ•¶š—ñ‚É’¼‚·
- –ß‚è’lF-1‚Ì‚Æ‚«ƒGƒ‰[
+ ã€€æ©Ÿèƒ½ï¼šãƒã‚¤ãƒŠãƒªè¡¨ç¾ã®æ—¥ä»˜ãƒ‡ãƒ¼ã‚¿ã‚’æ–‡å­—åˆ—ã«ç›´ã™
+ æˆ»ã‚Šå€¤ï¼š-1ã®ã¨ãã‚¨ãƒ©ãƒ¼
 */
-static long Dateasc( long data, long adr )
+static Long Dateasc( Long data, Long adr )
 {
 	char	*data_ptr;
 	UShort	year;
@@ -453,10 +481,10 @@ static long Dateasc( long data, long adr )
 }
 
 /*
- @‹@”\FƒoƒCƒiƒŠ•\Œ»‚Ìƒf[ƒ^‚ğ•¶š—ñ‚É’¼‚·
- –ß‚è’lF-1‚Ì‚Æ‚«ƒGƒ‰[
+ ã€€æ©Ÿèƒ½ï¼šãƒã‚¤ãƒŠãƒªè¡¨ç¾ã®æ™‚åˆ»ãƒ‡ãƒ¼ã‚¿ã‚’æ–‡å­—åˆ—ã«ç›´ã™
+ æˆ»ã‚Šå€¤ï¼š-1ã®ã¨ãã‚¨ãƒ©ãƒ¼
 */
-static long Timeasc( long data, long adr )
+static Long Timeasc( Long data, Long adr )
 {
 	char	*data_ptr;
 	UShort	hh;
@@ -482,10 +510,10 @@ static long Timeasc( long data, long adr )
 }
 
 /*
- @‹@”\F—j“ú”Ô†‚©‚ç•¶š—ñ‚ğ“¾‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šæ›œæ—¥ç•ªå·ã‹ã‚‰æ–‡å­—åˆ—ã‚’å¾—ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static void Dayasc( long data, long adr )
+static void Dayasc( Long data, Long adr )
 {
 	char	*data_ptr;
 
@@ -493,25 +521,25 @@ static void Dayasc( long data, long adr )
 
 	switch( data ) {
 		case 0:
-			strcpy( data_ptr, "“ú" );
+			strcpy( data_ptr, "æ—¥" );
 			break;
 		case 1:
-			strcpy( data_ptr, "Œ" );
+			strcpy( data_ptr, "æœˆ" );
 			break;
 		case 2:
-			strcpy( data_ptr, "‰Î" );
+			strcpy( data_ptr, "ç«" );
 			break;
 		case 3:
-			strcpy( data_ptr, "…" );
+			strcpy( data_ptr, "æ°´" );
 			break;
 		case 4:
-			strcpy( data_ptr, "–Ø" );
+			strcpy( data_ptr, "æœ¨" );
 			break;
 		case 5:
-			strcpy( data_ptr, "‹à" );
+			strcpy( data_ptr, "é‡‘" );
 			break;
 		case 6:
-			strcpy( data_ptr, "“y" );
+			strcpy( data_ptr, "åœŸ" );
 			break;
 		default:
 			ra [ 1 ] -= 2;
@@ -521,13 +549,13 @@ static void Dayasc( long data, long adr )
 }
 
 /*
- @‹@”\FƒxƒNƒ^Eƒe[ƒuƒ‹‚ğ‘‚«Š·‚¦‚é
- –ß‚è’lFİ’è‘O‚Ìˆ—ƒAƒhƒŒƒX
+ ã€€æ©Ÿèƒ½ï¼šãƒ™ã‚¯ã‚¿ãƒ»ãƒ†ãƒ¼ãƒ–ãƒ«ã‚’æ›¸ãæ›ãˆã‚‹
+ æˆ»ã‚Šå€¤ï¼šè¨­å®šå‰ã®å‡¦ç†ã‚¢ãƒ‰ãƒ¬ã‚¹
 */
-static long Intvcs( long no, long adr )
+static Long Intvcs( Long no, Long adr )
 {
-	long	adr2;
-	long	mae = 0;
+	Long	adr2;
+	Long	mae = 0;
 	short	save_s;
 
 	no &= 0xFFFF;
@@ -543,23 +571,23 @@ static long Intvcs( long no, long adr )
 }
 
 /*
- @‹@”\FDMA“]‘—‚ğ‚·‚é
- –ß‚è’lFİ’è‘O‚Ìˆ—ƒAƒhƒŒƒX
+ ã€€æ©Ÿèƒ½ï¼šDMAè»¢é€ã‚’ã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šè¨­å®šå‰ã®å‡¦ç†ã‚¢ãƒ‰ãƒ¬ã‚¹
 */
-static void Dmamove( long md, long size, long adr1, long adr2 )
+static void Dmamove( Long md, Long size, Long adr1, Long adr2 )
 {
 	char	*p1;
 	char	*p2;
-	long	tmp;
+	Long	tmp;
 
 	if ( (md & 0x80) != 0 ) {
-		/* adr1 -> adr2“]‘—‚É‚·‚é */
+		/* adr1 -> adr2è»¢é€ã«ã™ã‚‹ */
 		tmp = adr1;
 		adr1 = adr2;
 		adr2 = tmp;
 	}
 
-	/* adr1,adr2‹¤‚ÉƒCƒ“ƒNƒŠƒƒ“ƒgƒ‚[ƒh‚Å‚È‚¢ê‡‚Í–¢ƒTƒ|[ƒg */
+	/* adr1,adr2å…±ã«ã‚¤ãƒ³ã‚¯ãƒªãƒ¡ãƒ³ãƒˆãƒ¢ãƒ¼ãƒ‰ã§ãªã„å ´åˆã¯æœªã‚µãƒãƒ¼ãƒˆ */
 	if ( (md & 0x0F) != 5 )
 		return;
 

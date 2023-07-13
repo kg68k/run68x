@@ -45,9 +45,9 @@ static	int	Mulu( char, char );
 static	int	Muls( char, char );
 
 /*
- @‹@”\FCƒ‰ƒCƒ“–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šCãƒ©ã‚¤ãƒ³å‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 int	linec( char *pc_ptr )
 {
@@ -67,13 +67,13 @@ int	linec( char *pc_ptr )
 			/* abcd */
 			char	src_reg = (code2 & 0x7);
 			char	dst_reg = ((code1 & 0xE) >> 1);
-			char	size = 0;	/* S_BYTE ŒÅ’è */
-			long	src_data;
-			long	dst_data;
-			long	low;
-			long	high;
-			long	kekka;
-			long	X;
+			char	size = 0;	/* S_BYTE å›ºå®š */
+			Long	src_data;
+			Long	dst_data;
+			Long	low;
+			Long	high;
+			Long	kekka;
+			Long	X;
 
 			if ( (code2 & 0x8) != 0 ) {
 				/* -(am),-(an); */
@@ -115,19 +115,19 @@ int	linec( char *pc_ptr )
 
 			kekka = (high & 0xf0) | (low & 0x0f);
 
-			/* 0 ˆÈŠO‚Ì’l‚É‚È‚Á‚½‚Ì‚İAZ ƒtƒ‰ƒO‚ğƒŠƒZƒbƒg‚·‚é */
+			/* 0 ä»¥å¤–ã®å€¤ã«ãªã£ãŸæ™‚ã®ã¿ã€Z ãƒ•ãƒ©ã‚°ã‚’ãƒªã‚»ãƒƒãƒˆã™ã‚‹ */
 			if ( kekka != 0 ) {
 				CCR_Z_OFF();
 			}
 
-			/* Nƒtƒ‰ƒO‚ÍŒ‹‰Ê‚É‰‚¶‚Ä—§‚Ä‚é */
+			/* Nãƒ•ãƒ©ã‚°ã¯çµæœã«å¿œã˜ã¦ç«‹ã¦ã‚‹ */
 			if ( kekka & 0x80 ) {
 				CCR_N_ON();
 			}else{
 				CCR_N_OFF();
 			}
 
-			/* Vƒtƒ‰ƒO */
+			/* Vãƒ•ãƒ©ã‚° */
 			if ( dst_data < 0x80 ) {
 				if ( 5 <= (dst_data & 0x0f) ) {
 					if ( (0x80 <= kekka) && (kekka <= 0x85) ) {
@@ -166,7 +166,7 @@ int	linec( char *pc_ptr )
 
 			return( FALSE );
 /*
-			err68a( "–¢’è‹`–½—ß(abcd)‚ğÀs‚µ‚Ü‚µ‚½", __FILE__, __LINE__ );
+			err68a( "æœªå®šç¾©å‘½ä»¤(abcd)ã‚’å®Ÿè¡Œã—ã¾ã—ãŸ", __FILE__, __LINE__ );
 			return( TRUE );	 abcd 
 */
 		}
@@ -178,9 +178,9 @@ int	linec( char *pc_ptr )
 }
 
 /*
- @‹@”\Fand Dn,<ea>–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šand Dn,<ea>å‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	And1( char code1, char code2 )
 {
@@ -189,10 +189,10 @@ static	int	And1( char code1, char code2 )
 	char	src_reg;
 	char	dst_reg;
 	short	disp = 0;
-	long	data;
-	long	save_pc;
+	Long	data;
+	Long	save_pc;
 	int	work_mode;
-	long	src_data;
+	Long	src_data;
 
 	save_pc = pc;
 	size = ((code2 >> 6) & 0x03);
@@ -200,12 +200,12 @@ static	int	And1( char code1, char code2 )
 	src_reg = ((code1 & 0x0E) >> 1);
 	dst_reg = (code2 & 0x07);
 
-	/* ƒ\[ƒX‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ã‚½ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
 		return(TRUE);
 	}
 
-	/* ƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚ªƒ|ƒXƒgƒCƒ“ƒNƒŠƒƒ“ƒgŠÔÚ‚Ìê‡‚ÍŠÔÚ‚Åƒf[ƒ^‚Ìæ“¾ */
+	/* ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ãŒãƒã‚¹ãƒˆã‚¤ãƒ³ã‚¯ãƒªãƒ¡ãƒ³ãƒˆé–“æ¥ã®å ´åˆã¯é–“æ¥ã§ãƒ‡ãƒ¼ã‚¿ã®å–å¾— */
 	if (mode == EA_AIPI) {
 		work_mode = EA_AI;
 	} else {
@@ -216,10 +216,10 @@ static	int	And1( char code1, char code2 )
 		return(TRUE);
 	}
 
-	/* AND‰‰Z */
+	/* ANDæ¼”ç®— */
 	data &= src_data;
 
-	/* ƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚ªƒvƒŒƒfƒNƒŠƒƒ“ƒgŠÔÚ‚Ìê‡‚ÍŠÔÚ‚Åƒf[ƒ^‚Ìİ’è */
+	/* ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ãŒãƒ—ãƒ¬ãƒ‡ã‚¯ãƒªãƒ¡ãƒ³ãƒˆé–“æ¥ã®å ´åˆã¯é–“æ¥ã§ãƒ‡ãƒ¼ã‚¿ã®è¨­å®š */
 	if (mode == EA_AIPD) {
 		work_mode = EA_AI;
 	} else {
@@ -230,7 +230,7 @@ static	int	And1( char code1, char code2 )
 		return(TRUE);
 	}
 
-	/* ƒtƒ‰ƒO‚Ì•Ï‰» */
+	/* ãƒ•ãƒ©ã‚°ã®å¤‰åŒ– */
 	general_conditions(data, size);
 
 #ifdef	TRACE
@@ -253,9 +253,9 @@ static	int	And1( char code1, char code2 )
 }
 
 /*
- @‹@”\Fand <ea>,Dn–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šand <ea>,Dnå‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	And2( char code1, char code2 )
 {
@@ -263,10 +263,10 @@ static	int	And2( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	src_data;
-	long	save_pc;
+	Long	src_data;
+	Long	save_pc;
     int     work_pc;
-	long	data;
+	Long	data;
 
 	save_pc = pc;
 	work_pc = pc;
@@ -276,40 +276,40 @@ static	int	And2( char code1, char code2 )
 	size = ((code2 >> 6) & 0x03);
 
 
-	/* ƒ\[ƒX‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ã‚½ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_Data, mode, src_reg, size, &src_data)) {
 		return(TRUE);
 	}
 
-	/* ƒfƒXƒeƒBƒl[ƒVƒ‡ƒ“‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ãƒ‡ã‚¹ãƒ†ã‚£ãƒãƒ¼ã‚·ãƒ§ãƒ³ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &data)) {
 		return(TRUE);
 	}
 
-	/* AND‰‰Z */
+	/* ANDæ¼”ç®— */
 	data &= src_data;
 
 	if (set_data_at_ea(EA_All, EA_DD, dst_reg, size, data)) {
 		return(TRUE);
 	}
 
-	/* ƒtƒ‰ƒO‚Ì•Ï‰» */
+	/* ãƒ•ãƒ©ã‚°ã®å¤‰åŒ– */
 	general_conditions(data, size);
 
 	return( FALSE );
 }
 
 /*
- @‹@”\Fexg–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šexgå‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	Exg( char code1, char code2 )
 {
 	char	src_reg;
 	char	dst_reg;
 	char	mode;
-	long	tmp;
+	Long	tmp;
 
 	mode = ((code2 & 0xF8) >> 3);
 	src_reg = ((code1 & 0x0E) >> 1);
@@ -332,7 +332,7 @@ static	int	Exg( char code1, char code2 )
 			ra [ dst_reg ] = tmp;
 			break;
 		default:
-			err68a( "EXG: •s³‚ÈOPƒ‚[ƒh‚Å‚·B", __FILE__, __LINE__ );
+			err68a( "EXG: ä¸æ­£ãªOPãƒ¢ãƒ¼ãƒ‰ã§ã™ã€‚", __FILE__, __LINE__ );
 			return( TRUE );
 	}
 
@@ -344,9 +344,9 @@ static	int	Exg( char code1, char code2 )
 }
 
 /*
- @‹@”\Fmulu–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šmuluå‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	Mulu( char code1, char code2 )
 {
@@ -356,8 +356,8 @@ static	int	Mulu( char code1, char code2 )
 	UShort	src_data;
 	UShort	dst_data;
 	ULong	ans;
-	long	save_pc;
-	long	src_data_l;
+	Long	save_pc;
+	Long	src_data_l;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -366,7 +366,7 @@ static	int	Mulu( char code1, char code2 )
 
 	dst_data = (rd [ dst_reg ] & 0xFFFF);
 
-	/* ƒ\[ƒX‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ã‚½ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &src_data_l)) {
 		return(TRUE);
 	}
@@ -378,16 +378,16 @@ static	int	Mulu( char code1, char code2 )
 	printf( "trace: mulu     src=%u PC=%06lX\n", src_data, save_pc );
 #endif
 
-	/* ƒtƒ‰ƒO‚Ì•Ï‰» */
+	/* ãƒ•ãƒ©ã‚°ã®å¤‰åŒ– */
 	general_conditions(ans, S_LONG);
 
 	return( FALSE );
 }
 
 /*
- @‹@”\Fmuls–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šmulså‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	Muls( char code1, char code2 )
 {
@@ -396,9 +396,9 @@ static	int	Muls( char code1, char code2 )
 	char	mode;
 	short	src_data;
 	short	dst_data;
-	long	ans;
-	long	save_pc;
-	long	src_data_l;
+	Long	ans;
+	Long	save_pc;
+	Long	src_data_l;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -407,7 +407,7 @@ static	int	Muls( char code1, char code2 )
 
 	dst_data = (rd [ dst_reg ] & 0xFFFF);
 
-	/* ƒ\[ƒX‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ã‚½ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &src_data_l)) {
 		return(TRUE);
 	}
@@ -420,7 +420,7 @@ static	int	Muls( char code1, char code2 )
 	printf( "trace: muls     src=%d PC=%06lX\n", src_data, save_pc );
 #endif
 
-	/* ƒtƒ‰ƒO‚Ì•Ï‰» */
+	/* ãƒ•ãƒ©ã‚°ã®å¤‰åŒ– */
 	general_conditions(ans, S_LONG);
 
 	return( FALSE );

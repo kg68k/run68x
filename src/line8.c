@@ -41,9 +41,9 @@ static	int	Or1( char, char );
 static	int	Or2( char, char );
 
 /*
- @‹@”\F8ƒ‰ƒCƒ“–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼š8ãƒ©ã‚¤ãƒ³å‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 int	line8( char *pc_ptr )
 {
@@ -63,11 +63,11 @@ int	line8( char *pc_ptr )
 		/* sbcd */
 		char	src_reg = (code2 & 0x7);
 		char	dst_reg = ((code1 & 0xE) >> 1);
-		char	size = 0;	/* S_BYTE ŒÅ’è */
-		long	src_data;
-		long	dst_data;
-		long	kekka;
-		long	X;
+		char	size = 0;	/* S_BYTE å›ºå®š */
+		Long	src_data;
+		Long	dst_data;
+		Long	kekka;
+		Long	X;
 
 		if ( (code2 & 0x8) != 0 ) {
 			/* -(am),-(an); */
@@ -107,19 +107,19 @@ int	line8( char *pc_ptr )
 
 		kekka &= 0xff;
 
-		/* 0 ˆÈŠO‚Ì’l‚É‚È‚Á‚½‚Ì‚İAZ ƒtƒ‰ƒO‚ğƒŠƒZƒbƒg‚·‚é */
+		/* 0 ä»¥å¤–ã®å€¤ã«ãªã£ãŸæ™‚ã®ã¿ã€Z ãƒ•ãƒ©ã‚°ã‚’ãƒªã‚»ãƒƒãƒˆã™ã‚‹ */
 		if ( kekka != 0 ) {
 			CCR_Z_OFF();
 		}
 
-		/* Nƒtƒ‰ƒO‚ÍŒ‹‰Ê‚É‰‚¶‚Ä—§‚Ä‚é */
+		/* Nãƒ•ãƒ©ã‚°ã¯çµæœã«å¿œã˜ã¦ç«‹ã¦ã‚‹ */
 		if ( kekka & 0x80 ) {
 			CCR_N_ON();
 		}else{
 			CCR_N_OFF();
 		}
 
-		/* Vƒtƒ‰ƒO */
+		/* Vãƒ•ãƒ©ã‚° */
 		if ( (dst_data <= kekka) && (0x20 <= kekka) && (kekka < 0x80) ) {
 			CCR_V_ON();
 		}else{
@@ -143,7 +143,7 @@ int	line8( char *pc_ptr )
 		return( FALSE );
 
 /*
-		err68a( "–¢’è‹`–½—ß‚ğÀs‚µ‚Ü‚µ‚½", __FILE__, __LINE__ );
+		err68a( "æœªå®šç¾©å‘½ä»¤ã‚’å®Ÿè¡Œã—ã¾ã—ãŸ", __FILE__, __LINE__ );
 		return( TRUE );
 */
 	}
@@ -155,9 +155,9 @@ int	line8( char *pc_ptr )
 }
 
 /*
- @‹@”\Fdivu–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šdivuå‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	Divu( char code1, char code2 )
 {
@@ -168,8 +168,8 @@ static	int	Divu( char code1, char code2 )
 	ULong	data;
 	ULong	ans;
 	UShort	mod;
-	long	save_pc;
-	long	waru_l;
+	Long	save_pc;
+	Long	waru_l;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -177,14 +177,14 @@ static	int	Divu( char code1, char code2 )
 	dst_reg = ((code1 & 0x0E) >> 1);
 	data = rd [ dst_reg ];
 
-	/* ƒ\[ƒX‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ã‚½ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &waru_l)) {
 		return(TRUE);
 	}
 	waru = (UShort)waru_l;
 
 	if ( waru == 0 ) {
-		err68a( "‚O‚ÅœZ‚µ‚Ü‚µ‚½", __FILE__, __LINE__ );
+		err68a( "ï¼ã§é™¤ç®—ã—ã¾ã—ãŸ", __FILE__, __LINE__ );
 		return( TRUE );
 	}
 
@@ -212,9 +212,9 @@ static	int	Divu( char code1, char code2 )
 }
 
 /*
- @‹@”\Fdivs–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šdivså‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	Divs( char code1, char code2 )
 {
@@ -222,11 +222,11 @@ static	int	Divs( char code1, char code2 )
 	char	src_reg;
 	char	dst_reg;
 	short	waru;
-	long	data;
-	long	ans;
+	Long	data;
+	Long	ans;
 	short	mod;
-	long	save_pc;
-	long	waru_l;
+	Long	save_pc;
+	Long	waru_l;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -234,7 +234,7 @@ static	int	Divs( char code1, char code2 )
 	dst_reg = ((code1 & 0x0E) >> 1);
 	data = rd [ dst_reg ];
 
-	/* ƒ\[ƒX‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ã‚½ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &waru_l)) {
 		return(TRUE);
 	}
@@ -242,7 +242,7 @@ static	int	Divs( char code1, char code2 )
 	waru = (UShort)waru_l;
 
 	if ( waru == 0 ) {
-		err68a( "‚O‚ÅœZ‚µ‚Ü‚µ‚½", __FILE__, __LINE__ );
+		err68a( "ï¼ã§é™¤ç®—ã—ã¾ã—ãŸ", __FILE__, __LINE__ );
 		return( TRUE );
 	}
 
@@ -270,9 +270,9 @@ static	int	Divs( char code1, char code2 )
 }
 
 /*
- @‹@”\For Dn,<ea>–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šor Dn,<ea>å‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	Or1( char code1, char code2 )
 {
@@ -280,10 +280,10 @@ static	int	Or1( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	data;
-	long	save_pc;
-	long	src_data;
-	long	work_mode;
+	Long	data;
+	Long	save_pc;
+	Long	src_data;
+	Long	work_mode;
 
 	save_pc = pc;
 	size = ((code2 >> 6) & 0x03);
@@ -291,12 +291,12 @@ static	int	Or1( char code1, char code2 )
 	src_reg = ((code1 & 0x0E) >> 1);
 	dst_reg = (code2 & 0x07);
 	
-	/* ƒ\[ƒX‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ã‚½ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
 		return(TRUE);
 	}
 
-	/* ƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚ªƒ|ƒXƒgƒCƒ“ƒNƒŠƒƒ“ƒgŠÔÚ‚Ìê‡‚ÍŠÔÚ‚Åƒf[ƒ^‚Ìæ“¾ */
+	/* ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ãŒãƒã‚¹ãƒˆã‚¤ãƒ³ã‚¯ãƒªãƒ¡ãƒ³ãƒˆé–“æ¥ã®å ´åˆã¯é–“æ¥ã§ãƒ‡ãƒ¼ã‚¿ã®å–å¾— */
 	if (mode == EA_AIPI) {
 		work_mode = EA_AI;
 	} else {
@@ -307,10 +307,10 @@ static	int	Or1( char code1, char code2 )
 		return(TRUE);
 	}
 
-	/* OR‰‰Z */
+	/* ORæ¼”ç®— */
 	data |= src_data;
 
-	/* ƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚ªƒvƒŒƒfƒNƒŠƒƒ“ƒgŠÔÚ‚Ìê‡‚ÍŠÔÚ‚Åƒf[ƒ^‚Ìİ’è */
+	/* ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ãŒãƒ—ãƒ¬ãƒ‡ã‚¯ãƒªãƒ¡ãƒ³ãƒˆé–“æ¥ã®å ´åˆã¯é–“æ¥ã§ãƒ‡ãƒ¼ã‚¿ã®è¨­å®š */
 	if (mode == EA_AIPD) {
 		work_mode = EA_AI;
 	} else {
@@ -321,16 +321,16 @@ static	int	Or1( char code1, char code2 )
 		return(TRUE);
 	}
 
-	/* ƒtƒ‰ƒO‚Ì•Ï‰» */
+	/* ãƒ•ãƒ©ã‚°ã®å¤‰åŒ– */
 	general_conditions(data, size);
 
 	return( FALSE );
 }
 
 /*
- @‹@”\For <ea>,Dn–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šor <ea>,Dnå‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	Or2( char code1, char code2 )
 {
@@ -338,9 +338,9 @@ static	int	Or2( char code1, char code2 )
 	char	mode;
 	char	src_reg;
 	char	dst_reg;
-	long	src_data;
-	long	save_pc;
-	long	data;
+	Long	src_data;
+	Long	save_pc;
+	Long	data;
 
 	save_pc = pc;
 	mode = ((code2 & 0x38) >> 3);
@@ -348,24 +348,24 @@ static	int	Or2( char code1, char code2 )
 	dst_reg = ((code1 & 0x0E) >> 1);
 	size = ((code2 >> 6) & 0x03);
 
-	/* ƒ\[ƒX‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ã‚½ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_Data, mode, src_reg, size, &src_data)) {
 		return(TRUE);
 	}
 
-	/* ƒfƒXƒeƒBƒl[ƒVƒ‡ƒ“‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ãƒ‡ã‚¹ãƒ†ã‚£ãƒãƒ¼ã‚·ãƒ§ãƒ³ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &data)) {
 		return(TRUE);
 	}
 
 	data |= src_data;
 
-	/* ƒfƒXƒeƒBƒl[ƒVƒ‡ƒ“‚ÌƒAƒhƒŒƒbƒVƒ“ƒOƒ‚[ƒh‚É‰‚¶‚½ˆ— */
+	/* ãƒ‡ã‚¹ãƒ†ã‚£ãƒãƒ¼ã‚·ãƒ§ãƒ³ã®ã‚¢ãƒ‰ãƒ¬ãƒƒã‚·ãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸå‡¦ç† */
 	if (set_data_at_ea(EA_All, EA_DD, dst_reg, size, data)) {
 		return(TRUE);
 	}
 
-	/* ƒtƒ‰ƒO‚Ì•Ï‰» */
+	/* ãƒ•ãƒ©ã‚°ã®å¤‰åŒ– */
 	general_conditions(data, size);
 
 	return( FALSE );

@@ -46,71 +46,74 @@ typedef union {
 } FLT;
 
 static	int	fefunc( UChar );
-static	long	Lmul( long, long );
-static	long	Ldiv( long, long );
-static	long	Lmod( long, long );
-static	unsigned long	Umul( unsigned long, unsigned long );
-static	unsigned long	Udiv( unsigned long, unsigned long );
-static	unsigned long	Umod( unsigned long, unsigned long );
-static	long	Dtol( long, long );
-static	long	Ltof( long );
-static	long	Ftol( long );
-static	void	Ftod( long );
-static	long	Stol( long );
-static	void	Stod( long );
-static	void	Ltod( long );
-static	void	Dtos( long, long, long );
-static	void	Ltos( long, long );
-static	void	Htos( long, long );
-static	void	Otos( long, long );
-static	void	Btos( long, long );
-static	void	Val( long );
-static	void	Iusing( long, long, long );
-static	void	Using( long, long, long, long, long, long );
-static	void	Dtst( long, long );
-static	void	Dcmp( long, long, long, long );
-static	void	Dneg( long, long );
-static	void	Dadd( long, long, long, long );
-static	void	Dsub( long, long, long, long );
-static	void	Dmul( long, long, long, long );
-static	void	Ddiv( long, long, long, long );
-static	void	Dmod( long, long, long, long );
-static	void	Dabs( long, long );
-static	void	Dfloor( long, long );
-static	void	Fcvt( long, long, long, long );
-static	void	Sin( long, long );
-static	void	Cos( long, long );
-static	void	Tan( long, long );
-static	void	Atan( long, long );
-static	void	Log( long, long );
-static	void	Exp( long, long );
-static	void	Sqr( long, long );
-static	void	Ftst( long );
-static	long	Fmul( long, long );
-static	long	Fdiv( long, long );
-static	void	Clmul( long );
-static	void	Cldiv( long );
-static	void	Clmod( long );
-static	void	Cumul( unsigned long );
-static	void	Cudiv( unsigned long );
-static	void	Cumod( unsigned long );
-static	void	Cltod( long );
-static	void	Cdtol( long );
-static	void	Cftod( long );
-static	void	Cdtof( long );
-static	void	Cdadd( long );
-static	void	Cdcmp( long );
-static	void	Cdsub( long );
-static	void	Cdmul( long );
-static	void	Cddiv( long );
+static	Long	Lmul( Long, Long );
+static	Long	Ldiv( Long, Long );
+static	Long	Lmod( Long, Long );
+static	ULong	Umul( ULong, ULong );
+static	ULong	Udiv( ULong, ULong );
+static	ULong	Umod( ULong, ULong );
+static	Long	Dtol( Long, Long );
+static	Long	Ltof( Long );
+static	Long	Ftol( Long );
+static	void	Ftod( Long );
+static	Long	Stol( Long );
+static	void	Stod( Long );
+static	void	Ltod( Long );
+static	void	Dtos( Long, Long, Long );
+static	void	Ltos( Long, Long );
+static	void	Htos( Long, Long );
+static	void	Otos( Long, Long );
+static	void	Btos( Long, Long );
+static	void	Val( Long );
+static	void	Iusing( Long, Long, Long );
+static	void	Using( Long, Long, Long, Long, Long, Long );
+static	void	Dtst( Long, Long );
+static	void	Dcmp( Long, Long, Long, Long );
+static	void	Dneg( Long, Long );
+static	void	Dadd( Long, Long, Long, Long );
+static	void	Dsub( Long, Long, Long, Long );
+static	void	Dmul( Long, Long, Long, Long );
+static	void	Ddiv( Long, Long, Long, Long );
+static	void	Dmod( Long, Long, Long, Long );
+static	void	Dabs( Long, Long );
+static	void	Dfloor( Long, Long );
+static	void	Fcvt( Long, Long, Long, Long );
+static	void	Sin( Long, Long );
+static	void	Cos( Long, Long );
+static	void	Tan( Long, Long );
+static	void	Atan( Long, Long );
+static	void	Log( Long, Long );
+static	void	Exp( Long, Long );
+static	void	Sqr( Long, Long );
+static	void	Ftst( Long );
+static	Long	Fmul( Long, Long );
+static	Long	Fdiv( Long, Long );
+static	void	Clmul( Long );
+static	void	Cldiv( Long );
+static	void	Clmod( Long );
+static	void	Cumul( ULong );
+static	void	Cudiv( ULong );
+static	void	Cumod( ULong );
+static	void	Cltod( Long );
+static	void	Cdtol( Long );
+static	void	Cftod( Long );
+static	void	Cdtof( Long );
+static	void	Cdadd( Long );
+static	void	Cdcmp( Long );
+static	void	Cdsub( Long );
+static	void	Cdmul( Long );
+static	void	Cddiv( Long );
 static	int	Strl( char *, int );
 static	void	From_dbl( DBL *, int );
-static	void	To_dbl( DBL *, long, long );
+static	void	To_dbl( DBL *, Long, Long );
+
+static	void	Pow( Long, Long, Long, Long );
+
 
 /*
- @‹@”\FFƒ‰ƒCƒ“–½—ß‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šFãƒ©ã‚¤ãƒ³å‘½ä»¤ã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 int	linef( char *pc_ptr )
 {
@@ -119,33 +122,29 @@ int	linef( char *pc_ptr )
 	code = *(pc_ptr++);
 	pc += 2;
 
-	/* DOSƒR[ƒ‹‚Ìˆ— */
+	/* DOSã‚³ãƒ¼ãƒ«ã®å‡¦ç† */
 	if ( code == (char)0xFF )
-#if defined(WIN32)
 		return( dos_call( *pc_ptr ) );
-#else
-		{ printf( "DOS CALL: $%02x\n", *pc_ptr ); return -1; }
-#endif
 
-	/* FLOATƒR[ƒ‹‚Ìˆ— */
+	/* FLOATã‚³ãƒ¼ãƒ«ã®å‡¦ç† */
 	if ( code == (char)0xFE )
 		return( fefunc( *pc_ptr ) );
 
-	err68a( "–¢’è‹`‚Ì‚eƒ‰ƒCƒ“–½—ß‚ğÀs‚µ‚Ü‚µ‚½", __FILE__, __LINE__ );
+	err68a( "æœªå®šç¾©ã®ï¼¦ãƒ©ã‚¤ãƒ³å‘½ä»¤ã‚’å®Ÿè¡Œã—ã¾ã—ãŸ", __FILE__, __LINE__ );
 	return( TRUE );
 }
 
 /*
- @‹@”\FFLOAT CALL‚ğÀs‚·‚é
- –ß‚è’lF TRUE = ÀsI—¹
-         FALSE = ÀsŒp‘±
+ ã€€æ©Ÿèƒ½ï¼šFLOAT CALLã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼š TRUE = å®Ÿè¡Œçµ‚äº†
+         FALSE = å®Ÿè¡Œç¶™ç¶š
 */
 static	int	fefunc( UChar code )
 {
-	long	adr;
+	Long	adr;
 	short	save_s;
 
-	/* FŒn—ñ‚ÌƒxƒNƒ^‚ª‘‚«Š·‚¦‚ç‚ê‚Ä‚¢‚é‚©‚Ç‚¤‚©ŒŸ¸ */
+	/* Fç³»åˆ—ã®ãƒ™ã‚¯ã‚¿ãŒæ›¸ãæ›ãˆã‚‰ã‚Œã¦ã„ã‚‹ã‹ã©ã†ã‹æ¤œæŸ» */
 	save_s = SR_S_REF();
 	SR_S_ON();
 	adr = mem_get( 0x2C, S_LONG );
@@ -185,11 +184,11 @@ static	int	fefunc( UChar code )
 		case 0x08:	/* _IMUL */
 			rd [ 1 ] = (ULong)rd [ 0 ] * (ULong)rd [ 1 ];
 			if ( rd [ 1 ] < 0 )
-				rd [ 0 ] = -1;	/* –{“–‚ÍãˆÊ4ƒoƒCƒg‚ª“ü‚é */
+				rd [ 0 ] = -1;	/* æœ¬å½“ã¯ä¸Šä½4ãƒã‚¤ãƒˆãŒå…¥ã‚‹ */
 			else
-				rd [ 0 ] = 0;	/* –{“–‚ÍãˆÊ4ƒoƒCƒg‚ª“ü‚é */
+				rd [ 0 ] = 0;	/* æœ¬å½“ã¯ä¸Šä½4ãƒã‚¤ãƒˆãŒå…¥ã‚‹ */
 			break;
-		case 0x09:	/* _IDIV */ /* unsigned int œZ d0..d1 d0/d1 */
+		case 0x09:	/* _IDIV */ /* unsigned int é™¤ç®— d0..d1 d0/d1 */
 			{
 				ULong	d0;
 				ULong	d1;
@@ -312,6 +311,9 @@ static	int	fefunc( UChar code )
 		case 0x3C:
 			Sqr( rd [ 0 ], rd [ 1 ] );
 			break;
+		case 0x3F:
+			Pow( rd [ 0 ], rd [ 1 ], rd[ 2 ], rd[ 3 ] );
+			break; 
 		case 0x40:	/* _RND */
 			rd [ 0 ] = rand() * rand() * 4;
 			rd [ 1 ] = rand() * rand() * 4;
@@ -330,22 +332,22 @@ static	int	fefunc( UChar code )
 			rd [ 0 ] = Fsqr( rd [ 0 ] );
 			break;
 */
-		case 0xE0:		/* __CLMUL : signed int æZ */
+		case 0xE0:		/* __CLMUL : signed int ä¹—ç®— */
 			Clmul( ra [ 7 ] );
 			break;
-		case 0xE1:		/* __CLDIV : signed int œZ */
+		case 0xE1:		/* __CLDIV : signed int é™¤ç®— */
 			Cldiv( ra [ 7 ] );
 			break;
-		case 0xE2:		/* __CLMOD : signed int œZ‚Ìè—] */
+		case 0xE2:		/* __CLMOD : signed int é™¤ç®—ã®å‰°ä½™ */
 			Clmod( ra [ 7 ] );
 			break;
-		case 0xE3:		/* __CUMUL : unsigned int æZ */
+		case 0xE3:		/* __CUMUL : unsigned int ä¹—ç®— */
 			Cumul( ra [ 7 ] );
 			break;
-		case 0xE4:		/* __CUDIV : unsigned int œZ */
+		case 0xE4:		/* __CUDIV : unsigned int é™¤ç®— */
 			Cudiv( ra [ 7 ] );
 			break;
-		case 0xE5:		/* __CUMOD : unsigned int œZ‚Ìè—] */
+		case 0xE5:		/* __CUMOD : unsigned int é™¤ç®—ã®å‰°ä½™ */
 			Cumod( ra [ 7 ] );
 			break;
 		case 0xE6:
@@ -377,7 +379,7 @@ static	int	fefunc( UChar code )
 			break;
 		default:
 			printf( "0x%X\n", code );
-			err68a( "–¢“o˜^‚ÌFEƒtƒ@ƒ“ƒNƒVƒ‡ƒ“ƒR[ƒ‹‚ğÀs‚µ‚Ü‚µ‚½", __FILE__, __LINE__ );
+			err68a( "æœªç™»éŒ²ã®FEãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã‚³ãƒ¼ãƒ«ã‚’å®Ÿè¡Œã—ã¾ã—ãŸ", __FILE__, __LINE__ );
 			return( TRUE );
 	}
 
@@ -385,19 +387,19 @@ static	int	fefunc( UChar code )
 }
 
 /*
- @‹@”\FFEFUNC _LMUL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LMULã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
-static	long	Lmul( long d0, long d1 )
+static	Long	Lmul( Long d0, Long d1 )
 {
 	return( d0 * d1 );
 }
 
 /*
- @‹@”\FFEFUNC _LDIV‚ğÀs‚·‚é
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
-static	long	Ldiv( long d0, long d1 )
+static	Long	Ldiv( Long d0, Long d1 )
 {
 	if ( d1 == 0 ) {
 		CCR_C_ON();
@@ -409,10 +411,10 @@ static	long	Ldiv( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _LMOD‚ğÀs‚·‚é
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
-static	long	Lmod( long d0, long d1 )
+static	Long	Lmod( Long d0, Long d1 )
 {
 	if ( d1 == 0 ) {
 		CCR_C_ON();
@@ -424,19 +426,19 @@ static	long	Lmod( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _UMUL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _UMULã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
-static	unsigned long	Umul( unsigned long d0, unsigned long d1 )
+static	ULong	Umul( ULong d0, ULong d1 )
 {
 	return( d0 * d1 );
 }
 
 /*
- @‹@”\FFEFUNC _UDIV‚ğÀs‚·‚é
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _UDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
-static	unsigned long	Udiv( unsigned long d0, unsigned long d1 )
+static	ULong	Udiv( ULong d0, ULong d1 )
 {
 	if ( d1 == 0 ) {
 		CCR_C_ON();
@@ -448,10 +450,10 @@ static	unsigned long	Udiv( unsigned long d0, unsigned long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _UMOD‚ğÀs‚·‚é
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _UMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
-static	unsigned long	Umod( unsigned long d0, unsigned long d1 )
+static	ULong	Umod( ULong d0, ULong d1 )
 {
 	if ( d1 == 0 ) {
 		CCR_C_ON();
@@ -463,23 +465,23 @@ static	unsigned long	Umod( unsigned long d0, unsigned long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _DTOL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF•ÏŠ·‚³‚ê‚½®”
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DTOLã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šå¤‰æ›ã•ã‚ŒãŸæ•´æ•°
 */
-static	long	Dtol( long d0, long d1 )
+static	Long	Dtol( Long d0, Long d1 )
 {
 	DBL	arg1;
 
 	To_dbl( &arg1, d0, d1 );
 
-	return( (long)arg1.dbl );
+	return( (Long)arg1.dbl );
 }
 
 /*
- @‹@”\FFEFUNC _LTOF‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LTOFã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	long	Ltof( long d0 )
+static	Long	Ltof( Long d0 )
 {
 	FLT	fl;
 
@@ -494,10 +496,10 @@ static	long	Ltof( long d0 )
 }
 
 /*
- @‹@”\FFEFUNC _FTOL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF•ÏŠ·‚³‚ê‚½®”
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FTOLã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šå¤‰æ›ã•ã‚ŒãŸæ•´æ•°
 */
-static	long	Ftol( long d0 )
+static	Long	Ftol( Long d0 )
 {
 	FLT	fl;
 
@@ -506,14 +508,14 @@ static	long	Ftol( long d0 )
 	fl.c [ 2 ] = ( (d0 >> 16) & 0xFF );
 	fl.c [ 3 ] = ( (d0 >> 24) & 0xFF );
 
-	return( (long)fl.flt );
+	return( (Long)fl.flt );
 }
 
 /*
- @‹@”\FFEFUNC _FTOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FTODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Ftod( long d0 )
+static	void	Ftod( Long d0 )
 {
 	DBL	ret;
 	FLT	arg;
@@ -529,13 +531,13 @@ static	void	Ftod( long d0 )
 }
 
 /*
- @‹@”\FFEFUNC _STOL‚ğÀs‚·‚é
- –ß‚è’lF•ÏŠ·‚³‚ê‚½®”
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _STOLã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šå¤‰æ›ã•ã‚ŒãŸæ•´æ•°
 */
-static	long	Stol( long adr )
+static	Long	Stol( Long adr )
 {
 	char	*p;
-	long	ret;
+	Long	ret;
 
 	p = prog_ptr + adr;
 	errno = 0;
@@ -563,10 +565,10 @@ static	long	Stol( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _STOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _STODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Stod( long adr )
+static	void	Stod( Long adr )
 {
 	char	*p;
 	DBL	ret;
@@ -585,19 +587,19 @@ static	void	Stod( long adr )
 
 	From_dbl( &ret, 0 );
 
-	if ( ret.dbl == (long)ret.dbl ) {
+	if ( ret.dbl == (Long)ret.dbl ) {
 		rd [ 2 ] |= 0xFFFF;
-		rd [ 3 ] = (long)ret.dbl;
+		rd [ 3 ] = (Long)ret.dbl;
 	} else {
 		rd [ 2 ] &= 0xFFFF0000;
 	}
 }
 
 /*
- @‹@”\FFEFUNC _LTOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LTODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Ltod( long num )
+static	void	Ltod( Long num )
 {
 	DBL	arg1;
 
@@ -607,10 +609,10 @@ static	void	Ltod( long num )
 }
 
 /*
- @‹@”\FFEFUNC _DTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dtos( long d0, long d1, long a0 )
+static	void	Dtos( Long d0, Long d1, Long a0 )
 {
 	DBL	arg1;
 	char	*p;
@@ -627,52 +629,52 @@ static	void	Dtos( long d0, long d1, long a0 )
 }
 
 /*
- @‹@”\FFEFUNC _LTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Ltos( long num, long adr )
+static	void	Ltos( Long num, Long adr )
 {
 	char	*p;
 
 	p = prog_ptr + adr;
-	_ltoa( num, p, 10 );
-	/*sprintf( p, "%d", num );*/
+//	_ltoa( num, p, 10 );
+	sprintf( p, "%d", num );
 	ra [ 0 ] += strlen( p );
 }
 
 /*
- @‹@”\FFEFUNC _HTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _HTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Htos( long num, long adr )
+static	void	Htos( Long num, Long adr )
 {
 	char	*p;
 
 	p = prog_ptr + adr;
-	_ltoa( num, p, 16 );
-	/*sprintf( p, "%X", num );*/
+//	_ltoa( num, p, 16 );
+	sprintf( p, "%X", num );
 	ra [ 0 ] += strlen( p );
 }
 
 /*
- @‹@”\FFEFUNC _OTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _OTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Otos( long num, long adr )
+static	void	Otos( Long num, Long adr )
 {
 	char	*p;
 
 	p = prog_ptr + adr;
-	_ltoa( num, p, 8 );
-	/*sprintf( p, "%o", num );*/
+//	_ltoa( num, p, 8 );
+	sprintf( p, "%o", num );
 	ra [ 0 ] += strlen( p );
 }
 
 /*
- @‹@”\FFEFUNC _BTOS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _BTOSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Btos( long num, long adr )
+static	void	Btos( Long num, Long adr )
 {
 	char	*p;
 
@@ -682,15 +684,15 @@ static	void	Btos( long num, long adr )
 }
 
 /*
- @‹@”\FFEFUNC _VAL‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _VALã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Val( long str )
+static	void	Val( Long str )
 {
 	char	buf [ 128 ];
 	DBL	ret;
 	char	*p;
-	long	tmp;
+	Long	tmp;
 	int	base = 10;
 	char	c;
 
@@ -726,19 +728,19 @@ static	void	Val( long str )
 
 	From_dbl( &ret, 0 );
 
-	if ( base == 10 && ret.dbl == (long)ret.dbl ) {
+	if ( base == 10 && ret.dbl == (Long)ret.dbl ) {
 		rd [ 2 ] |= 0xFFFF;
-		rd [ 3 ] = (long)ret.dbl;
+		rd [ 3 ] = (Long)ret.dbl;
 	} else {
 		rd [ 2 ] &= 0xFFFF0000;
 	}
 }
 
 /*
- @‹@”\FFEFUNC _IUSING‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _IUSINGã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Iusing( long num, long keta, long adr )
+static	void	Iusing( Long num, Long keta, Long adr )
 {
 	char	form1 [] = { "%1d" };
 	char	form2 [] = { "%10d" };
@@ -761,10 +763,10 @@ static	void	Iusing( long num, long keta, long adr )
 }
 
 /*
- @‹@”\FFEFUNC _USING‚ğÀs‚·‚é(ƒAƒgƒŠƒrƒ…[ƒgˆê•”–¢‘Î‰)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _USINGã‚’å®Ÿè¡Œã™ã‚‹(ã‚¢ãƒˆãƒªãƒ“ãƒ¥ãƒ¼ãƒˆä¸€éƒ¨æœªå¯¾å¿œ)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Using( long d0, long d1, long isz, long dsz, long atr, long a0 )
+static	void	Using( Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0 )
 {
 	char	str [ 128 ];
 	DBL	arg1;
@@ -818,21 +820,21 @@ static	void	Using( long d0, long d1, long isz, long dsz, long atr, long a0 )
 		}
 	}
 
-	/* bit5or6‚ª—§‚Á‚Ä‚¢‚½‚ç'-'‚ğæ‚é */
+	/* bit5or6ãŒç«‹ã£ã¦ã„ãŸã‚‰'-'ã‚’å–ã‚‹ */
 	if ( (atr & 0x60) != 0 && arg1.dbl < 0 ) {
-		if ( *p == '-' && (long)strlen( p ) > isz ) {
+		if ( *p == '-' && (Long)strlen( p ) > isz ) {
 			strcpy( str, p + 1 );
 			strcpy( p, str );
 		} else {
 			p2 = p;
 			while( *p2 == ' ' )
 				p2 ++;
-			if ( *p2 == '-' )	/* ”O‚Ì‚½‚ß */
+			if ( *p2 == '-' )	/* å¿µã®ãŸã‚ */
 				*p2 = ' ';
 		}
 	}
 
-	/* '\'‚ğæ“ª‚É•t‰Á */
+	/* '\'ã‚’å…ˆé ­ã«ä»˜åŠ  */
 	if ( (atr & 0x02) != 0) {
 		p2 = p;
 		str [ 0 ] = '\0';
@@ -851,14 +853,14 @@ static	void	Using( long d0, long d1, long isz, long dsz, long atr, long a0 )
 		strcpy( p, str );
 	}
 
-	/* ³‚Ìê‡'+'‚ğæ“ª‚É•t‰Á */
+	/* æ­£ã®å ´åˆ'+'ã‚’å…ˆé ­ã«ä»˜åŠ  */
 	if ( (atr & 0x10) != 0 && arg1.dbl >= 0) {
 		strcpy( str, "+" );
 		strcat( str, p );
 		strcpy( p, str );
 	}
 
-	/* •„†‚ğ––”ö‚É•t‰Á */
+	/* ç¬¦å·ã‚’æœ«å°¾ã«ä»˜åŠ  */
 	if ( (atr & 0x20) != 0 ) {
 		if ( arg1.dbl < 0 )
 			strcat( p, "-" );
@@ -866,7 +868,7 @@ static	void	Using( long d0, long d1, long isz, long dsz, long atr, long a0 )
 			strcat( p, "+" );
 	}
 
-	/* •‰‚Ìê‡'-'‚ğA³‚Ìê‡ƒXƒy[ƒX‚ğ––”ö‚É•t‰Á */
+	/* è² ã®å ´åˆ'-'ã‚’ã€æ­£ã®å ´åˆã‚¹ãƒšãƒ¼ã‚¹ã‚’æœ«å°¾ã«ä»˜åŠ  */
 	if ( (atr & 0x40) != 0 ) {
 		if ( arg1.dbl < 0 )
 			strcat( p, "-" );
@@ -878,10 +880,10 @@ static	void	Using( long d0, long d1, long isz, long dsz, long atr, long a0 )
 }
 
 /*
- @‹@”\FFEFUNC _DTST‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DTSTã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dtst( long d0, long d1 )
+static	void	Dtst( Long d0, Long d1 )
 {
 	DBL	arg;
 
@@ -902,10 +904,10 @@ static	void	Dtst( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _DCMP‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DCMPã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dcmp( long d0, long d1, long d2, long d3 )
+static	void	Dcmp( Long d0, Long d1, Long d2, Long d3 )
 {
 	DBL	arg1;
 	DBL	arg2;
@@ -933,10 +935,10 @@ static	void	Dcmp( long d0, long d1, long d2, long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DNEG‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DNEGã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dneg( long d0, long d1 )
+static	void	Dneg( Long d0, Long d1 )
 {
 	DBL	arg1;
 
@@ -948,10 +950,10 @@ static	void	Dneg( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _DADD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DADDã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dadd( long d0, long d1, long d2, long d3 )
+static	void	Dadd( Long d0, Long d1, Long d2, Long d3 )
 {
 	DBL	arg1;
 	DBL	arg2;
@@ -966,10 +968,10 @@ static	void	Dadd( long d0, long d1, long d2, long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DSUB‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DSUBã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dsub( long d0, long d1, long d2, long d3 )
+static	void	Dsub( Long d0, Long d1, Long d2, Long d3 )
 {
 	DBL	arg1;
 	DBL	arg2;
@@ -984,10 +986,10 @@ static	void	Dsub( long d0, long d1, long d2, long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DMUL‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DMULã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dmul( long d0, long d1, long d2, long d3 )
+static	void	Dmul( Long d0, Long d1, Long d2, Long d3 )
 {
 	DBL	arg1;
 	DBL	arg2;
@@ -1002,10 +1004,10 @@ static	void	Dmul( long d0, long d1, long d2, long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Ddiv( long d0, long d1, long d2, long d3 )
+static	void	Ddiv( Long d0, Long d1, Long d2, Long d3 )
 {
 	DBL	arg1;
 	DBL	arg2;
@@ -1026,10 +1028,10 @@ static	void	Ddiv( long d0, long d1, long d2, long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DMOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dmod( long d0, long d1, long d2, long d3 )
+static	void	Dmod( Long d0, Long d1, Long d2, Long d3 )
 {
 	DBL	arg1;
 	DBL	arg2;
@@ -1050,10 +1052,10 @@ static	void	Dmod( long d0, long d1, long d2, long d3 )
 }
 
 /*
- @‹@”\FFEFUNC _DABS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DABSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dabs( long d0, long d1 )
+static	void	Dabs( Long d0, Long d1 )
 {
 	DBL	arg1;
 
@@ -1065,10 +1067,10 @@ static	void	Dabs( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _DFLOOR‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _DFLOORã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Dfloor( long d0, long d1 )
+static	void	Dfloor( Long d0, Long d1 )
 {
 	DBL	arg1;
 
@@ -1080,10 +1082,10 @@ static	void	Dfloor( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _FCVT‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FCVTã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Fcvt( long d0, long d1, long keta, long adr )
+static	void	Fcvt( Long d0, Long d1, Long keta, Long adr )
 {
 	DBL	arg;
 	char	*p;
@@ -1104,10 +1106,10 @@ static	void	Fcvt( long d0, long d1, long keta, long adr )
 }
 
 /*
- @‹@”\FFEFUNC _SIN‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _SINã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Sin( long d0, long d1 )
+static	void	Sin( Long d0, Long d1 )
 {
 	DBL	arg;
 	DBL	ans;
@@ -1120,10 +1122,10 @@ static	void	Sin( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _COS‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _COSã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cos( long d0, long d1 )
+static	void	Cos( Long d0, Long d1 )
 {
 	DBL	arg;
 	DBL	ans;
@@ -1136,10 +1138,10 @@ static	void	Cos( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _TAN‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _TANã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Tan( long d0, long d1 )
+static	void	Tan( Long d0, Long d1 )
 {
 	DBL	arg;
 	DBL	ans;
@@ -1153,10 +1155,10 @@ static	void	Tan( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _ATAN‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _ATANã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Atan( long d0, long d1 )
+static	void	Atan( Long d0, Long d1 )
 {
 	DBL	arg;
 	DBL	ans;
@@ -1169,10 +1171,10 @@ static	void	Atan( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _LOG‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _LOGã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Log( long d0, long d1 )
+static	void	Log( Long d0, Long d1 )
 {
 	DBL	arg;
 	DBL	ans;
@@ -1192,10 +1194,10 @@ static	void	Log( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _EXP‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _EXPã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Exp( long d0, long d1 )
+static	void	Exp( Long d0, Long d1 )
 {
 	DBL	arg;
 	DBL	ans;
@@ -1217,10 +1219,10 @@ static	void	Exp( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _SQR‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _SQRã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Sqr( long d0, long d1 )
+static	void	Sqr( Long d0, Long d1 )
 {
 	DBL	arg;
 	DBL	ans;
@@ -1238,10 +1240,10 @@ static	void	Sqr( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _FTST‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FTSTã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Ftst( long d0 )
+static	void	Ftst( Long d0 )
 {
 	FLT	arg;
 
@@ -1265,10 +1267,10 @@ static	void	Ftst( long d0 )
 }
 
 /*
- @‹@”\FFEFUNC _FMUL‚ğÀs‚·‚éƒƒGƒ‰[‚Í–¢ƒTƒ|[ƒg„
- –ß‚è’lF‰‰ZŒ‹‰Ê
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FMULã‚’å®Ÿè¡Œã™ã‚‹ï¼œã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆï¼
+ æˆ»ã‚Šå€¤ï¼šæ¼”ç®—çµæœ
 */
-static	long	Fmul( long d0, long d1 )
+static	Long	Fmul( Long d0, Long d1 )
 {
 	FLT	arg1;
 	FLT	arg2;
@@ -1295,10 +1297,10 @@ static	long	Fmul( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _FDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _FDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	long	Fdiv( long d0, long d1 )
+static	Long	Fdiv( Long d0, Long d1 )
 {
 	FLT	arg1;
 	FLT	arg2;
@@ -1331,13 +1333,13 @@ static	long	Fdiv( long d0, long d1 )
 }
 
 /*
- @‹@”\FFEFUNC _CLMUL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CLMULã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Clmul( long adr )
+static	void	Clmul( Long adr )
 {
-	long	a;
-	long	b;
+	Long	a;
+	Long	b;
 
 	a = mem_get( adr, S_LONG );
 	b = mem_get( adr + 4, S_LONG );
@@ -1349,13 +1351,13 @@ static	void	Clmul( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CLDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CLDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cldiv( long adr )
+static	void	Cldiv( Long adr )
 {
-	long	a;
-	long	b;
+	Long	a;
+	Long	b;
 
 	a = mem_get( adr, S_LONG );
 	b = mem_get( adr + 4, S_LONG );
@@ -1372,13 +1374,13 @@ static	void	Cldiv( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CLMOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CLMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Clmod( long adr )
+static	void	Clmod( Long adr )
 {
-	long	a;
-	long	b;
+	Long	a;
+	Long	b;
 
 	a = mem_get( adr, S_LONG );
 	b = mem_get( adr + 4, S_LONG );
@@ -1395,13 +1397,13 @@ static	void	Clmod( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CUMUL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CUMULã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cumul( unsigned long adr )
+static	void	Cumul( ULong adr )
 {
-	unsigned long	a;
-	unsigned long	b;
+	ULong	a;
+	ULong	b;
 
 	a = mem_get( adr, S_LONG );
 	b = mem_get( adr + 4, S_LONG );
@@ -1413,13 +1415,13 @@ static	void	Cumul( unsigned long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CUDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CUDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cudiv( unsigned long adr )
+static	void	Cudiv( ULong adr )
 {
-	unsigned long	a;
-	unsigned long	b;
+	ULong	a;
+	ULong	b;
 
 	a = mem_get( adr, S_LONG );
 	b = mem_get( adr + 4, S_LONG );
@@ -1436,13 +1438,13 @@ static	void	Cudiv( unsigned long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CUMOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CUMODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cumod( unsigned long adr )
+static	void	Cumod( ULong adr )
 {
-	unsigned long	a;
-	unsigned long	b;
+	ULong	a;
+	ULong	b;
 
 	a = mem_get( adr, S_LONG );
 	b = mem_get( adr + 4, S_LONG );
@@ -1459,15 +1461,15 @@ static	void	Cumod( unsigned long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CLTOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CLTODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cltod( long adr )
+static	void	Cltod( Long adr )
 {
 	DBL	arg1;
-	long	num;
-	long	d0;
-	long	d1;
+	Long	num;
+	Long	d0;
+	Long	d1;
 
 	num = mem_get( adr, S_LONG );
 	arg1.dbl = num;
@@ -1482,34 +1484,34 @@ static	void	Cltod( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDTOL‚ğÀs‚·‚é(ƒGƒ‰[‚Í–¢ƒTƒ|[ƒg)
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDTOLã‚’å®Ÿè¡Œã™ã‚‹(ã‚¨ãƒ©ãƒ¼ã¯æœªã‚µãƒãƒ¼ãƒˆ)
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cdtol( long adr )
+static	void	Cdtol( Long adr )
 {
 	DBL	arg1;
-	long	d0;
-	long	d1;
+	Long	d0;
+	Long	d1;
 
 	d0 = mem_get( adr, S_LONG );
 	d1 = mem_get( adr + 4, S_LONG );
 	To_dbl( &arg1, d0, d1 );
 
-	d0 = (long)arg1.dbl;
+	d0 = (Long)arg1.dbl;
 
 	mem_set( adr, d0, S_LONG );
 }
 
 /*
- @‹@”\FFEFUNC _CFTOD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CFTODã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cftod( long adr )
+static	void	Cftod( Long adr )
 {
 	DBL	db;
 	FLT	fl;
-	long	d0;
-	long	d1;
+	Long	d0;
+	Long	d1;
 
 	d0 = mem_get( adr, S_LONG );
 	fl.c [ 0 ] = ( d0 & 0xFF );
@@ -1529,15 +1531,15 @@ static	void	Cftod( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDTOF‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDTOFã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cdtof( long adr )
+static	void	Cdtof( Long adr )
 {
 	DBL	arg;
 	FLT	fl;
-	long	d0;
-	long	d1;
+	Long	d0;
+	Long	d1;
 
 	d0 = rd [ 0 ];
 	d1 = rd [ 1 ];
@@ -1558,15 +1560,15 @@ static	void	Cdtof( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDCMP‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDCMPã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cdcmp( long adr )
+static	void	Cdcmp( Long adr )
 {
 	DBL	arg1;
 	DBL	arg2;
-	long	d0;
-	long	d1;
+	Long	d0;
+	Long	d1;
 
 	d0 = rd [ 0 ];
 	d1 = rd [ 1 ];
@@ -1599,10 +1601,10 @@ static	void	Cdcmp( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDADD‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDADDã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cdadd( long adr )
+static	void	Cdadd( Long adr )
 {
 	DBL	a;
 	DBL	b;
@@ -1620,10 +1622,10 @@ static	void	Cdadd( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDSUB‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDSUBã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cdsub( long adr )
+static	void	Cdsub( Long adr )
 {
 	DBL	a;
 	DBL	b;
@@ -1641,10 +1643,10 @@ static	void	Cdsub( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDMUL‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDMULã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cdmul( long adr )
+static	void	Cdmul( Long adr )
 {
 	DBL	a;
 	DBL	b;
@@ -1662,10 +1664,10 @@ static	void	Cdmul( long adr )
 }
 
 /*
- @‹@”\FFEFUNC _CDDIV‚ğÀs‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šFEFUNC _CDDIVã‚’å®Ÿè¡Œã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	Cddiv( long adr )
+static	void	Cddiv( Long adr )
 {
 	DBL	a;
 	DBL	b;
@@ -1690,8 +1692,8 @@ static	void	Cddiv( long adr )
 }
 
 /*
- @‹@”\F”š•¶š—ñ‚Ì”šˆÈŠO‚Ì•”•ª‚Ü‚Å‚Ì’·‚³‚ğ‹‚ß‚é
- –ß‚è’lF’·‚³
+ ã€€æ©Ÿèƒ½ï¼šæ•°å­—æ–‡å­—åˆ—ã®æ•°å­—ä»¥å¤–ã®éƒ¨åˆ†ã¾ã§ã®é•·ã•ã‚’æ±‚ã‚ã‚‹
+ æˆ»ã‚Šå€¤ï¼šé•·ã•
 */
 static	int	Strl( char *p, int base )
 {
@@ -1735,8 +1737,8 @@ static	int	Strl( char *p, int base )
 }
 
 /*
- @‹@”\F”{¸“x•‚“®¬”“_”‚ğƒŒƒWƒXƒ^2‚Â‚ÉˆÚ“®‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼šå€ç²¾åº¦æµ®å‹•å°æ•°ç‚¹æ•°ã‚’ãƒ¬ã‚¸ã‚¹ã‚¿2ã¤ã«ç§»å‹•ã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
 static	void	From_dbl( DBL *p, int reg )
 {
@@ -1751,10 +1753,10 @@ static	void	From_dbl( DBL *p, int reg )
 }
 
 /*
- @‹@”\F4ƒoƒCƒg®”2‚Â‚É“ü‚Á‚½”{¸“x•‚“®¬”“_”‚ğƒGƒ“ƒfƒBƒAƒ“•ÏŠ·‚·‚é
- –ß‚è’lF‚È‚µ
+ ã€€æ©Ÿèƒ½ï¼š4ãƒã‚¤ãƒˆæ•´æ•°2ã¤ã«å…¥ã£ãŸå€ç²¾åº¦æµ®å‹•å°æ•°ç‚¹æ•°ã‚’ã‚¨ãƒ³ãƒ‡ã‚£ã‚¢ãƒ³å¤‰æ›ã™ã‚‹
+ æˆ»ã‚Šå€¤ï¼šãªã—
 */
-static	void	To_dbl( DBL *p, long d0, long d1 )
+static	void	To_dbl( DBL *p, Long d0, Long d1 )
 {
 	p -> c [ 0 ] = ( d1 & 0xFF );
 	p -> c [ 1 ] = ( (d1 >>  8) & 0xFF );
@@ -1764,4 +1766,18 @@ static	void	To_dbl( DBL *p, long d0, long d1 )
 	p -> c [ 5 ] = ( (d0 >>  8) & 0xFF );
 	p -> c [ 6 ] = ( (d0 >> 16) & 0xFF );
 	p -> c [ 7 ] = ( (d0 >> 24) & 0xFF );
+}
+
+static	void	Pow( Long d0, Long d1, Long d2, Long d3 )
+{
+	DBL	arg0, arg1;
+	DBL	ans;
+
+	To_dbl( &arg0, d0, d1 );
+	To_dbl( &arg1, d2, d3 );
+
+	ans.dbl = pow( arg0.dbl, arg1.dbl );
+	CCR_C_OFF();
+
+	From_dbl( &ans, 0 );
 }
