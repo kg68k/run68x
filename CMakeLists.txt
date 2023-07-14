@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
+execute_process(COMMAND uname OUTPUT_VARIABLE uname) # for detecting msys
 option(USE_ICONV "Use iconv for converting Shift-JIS to UTF-8." ON)
 
 project(run68 C)
@@ -9,7 +10,6 @@ add_definitions(-DENV_FROM_INI)
 if(USE_ICONV)
     find_package(Iconv REQUIRED)
     add_definitions(-DUSE_ICONV)
-else()
 endif()
 
 if (EMSCRIPTEN)
@@ -19,6 +19,10 @@ endif()
 
 set(CMAKE_C_FLAGS 
     "-O3 -Wno-int-conversion -Wno-return-type -Wno-switch -Wno-implicit-function-declaration -Wno-format -Wno-invalid-source-encoding -Wno-pointer-integer-compare -Wno-int-to-pointer-cast -Wno-pointer-sign -Wno-incompatible-pointer-types")
+
+if (uname MATCHES "^MSYS" OR uname MATCHES "^MINGW")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --exec-charset=cp932") # To support utf-8 (cp932 is not a mistake. it works fine.)
+endif()
 
 set(SRC 
     src/ansicolor-w32.c
