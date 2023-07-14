@@ -70,9 +70,6 @@
   #include <dos.h>
   #include <direct.h>
   #include <io.h>
-#elif defined(__APPLE__) || defined(__EMSCRIPTEN__)
-  #include <time.h>
-  #include <dirent.h>
 #else
   #include <time.h>
   #include <dirent.h>
@@ -142,7 +139,7 @@ static Long gets2( char *, int );
 
 Long Getenv_common(const char *name_p, char *buf_p);
 
-#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+#if !defined(WIN32) && !defined(DOSX)
 void CloseHandle( FILE* fp ) {
 	fclose( fp );
 }
@@ -1555,7 +1552,7 @@ static Long Create( char *p, short atr )
 	int    len;
 	
 	
-#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+#if !defined(WIN32) && !defined(DOSX)
 	char* name = p;
 	int namelen = strlen(name);
 	for (int i=0;i<namelen;++i) {
@@ -1701,7 +1698,7 @@ static Long Open( char *p, short mode )
 	Long ret;
 	Long i;
 
-#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+#if !defined(WIN32) && !defined(DOSX)
 	char* name = p;
 	int namelen = strlen(name);
 	for (int i=0;i<namelen;++i) {
@@ -1999,7 +1996,6 @@ static Long Write( short hdl, Long buf, Long len )
 	write_len = fwrite( write_buf, 1, len, finfo [ hdl ].fh );
 	if (finfo [ hdl ].fh == stdout)
 	  fflush( stdout );
-//	#error NOTIMPLEMENTED
 #endif
 
 	return( write_len );
@@ -2624,8 +2620,6 @@ static Long Nfiles( Long buf )
 	strncpy(&buf_ptr[30], f_data.cFileName, 22);
 	buf_ptr[30+22] = 0;
 
-#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
 #endif
@@ -2638,7 +2632,7 @@ static Long Nfiles( Long buf )
  */
 static Long Filedate( short hdl, Long dt )
 {
-#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+#if !defined(WIN32) && !defined(DOSX)
 	printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
 #else
 #if defined(WIN32)
