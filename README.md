@@ -7,11 +7,8 @@ run68の改造版です。
 
 ## Build
 ```
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
-$ make install
+$ cmake -B build
+$ cmake --build build
 ```
 
 

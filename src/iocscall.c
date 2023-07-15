@@ -35,7 +35,6 @@
 #endif
 
 #include <time.h>
-#include <sys/time.h>
 
 static Long	Putc( UShort );
 static Long	Color( short );

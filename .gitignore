@@ -1,14 +1,4 @@
-*.exe
-*.obj
-*.old
-*.pdb
-*.idb
-*.user
-*.ncb
-*.suo
-*.aps
-*.*~
-build
 .DS_Store
-*.check_cache
-build2
+.vs
+build
+*.*~

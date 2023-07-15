@@ -66,7 +66,7 @@
 #include <conio.h>
 #endif
 
-#if defined(DOSX)
+#if defined(DOSX) || defined(WIN32)
   #include <dos.h>
   #include <direct.h>
   #include <io.h>
