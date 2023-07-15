@@ -1,36 +1,36 @@
-run68áŠQî•ñ‹L˜^(ƒTƒ“ƒvƒ‹)
+run68éšœå®³æƒ…å ±è¨˜éŒ²(ã‚µãƒ³ãƒ—ãƒ«)
 
-áŠQNo.:*1
-•ñ”NŒŽ“ú:
+éšœå®³No.:*1
+å ±å‘Šå¹´æœˆæ—¥:
   1999/12/21
-áŠQ•ñŽÒŽ–¼:*2
+éšœå®³å ±å‘Šè€…æ°å:*2
   masamic
-˜A—æ:*3
+é€£çµ¡å…ˆ:*3
   masamic@masamic.net
-î•ñŒöŠJ:*4
-  ðŒ•t‚«ŒöŠJ‰Â
-  Ž–¼‚Æ˜A—æ‚ÍŒöŠJ‚µ‚È‚¢‚Å—~‚µ‚¢B
-run68ƒo[ƒWƒ‡ƒ“:
+æƒ…å ±å…¬é–‹:*4
+  æ¡ä»¶ä»˜ãå…¬é–‹å¯
+  æ°åã¨é€£çµ¡å…ˆã¯å…¬é–‹ã—ãªã„ã§æ¬²ã—ã„ã€‚
+run68ãƒãƒ¼ã‚¸ãƒ§ãƒ³:
   version 0.07
-X68KƒvƒƒOƒ‰ƒ€–¼‚Æ“üŽè•û–@:*5
+X68Kãƒ—ãƒ­ã‚°ãƒ©ãƒ åã¨å…¥æ‰‹æ–¹æ³•:*5
   gcc 1.30
-  www.vector.co.jp‚æ‚èƒ_ƒEƒ“ƒ[ƒh
-‹N“®A‘€ì•û–@:*6
+  www.vector.co.jpã‚ˆã‚Šãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰
+èµ·å‹•ã€æ“ä½œæ–¹æ³•:*6
   gcc -o hello.x hello.c
-ÄŒ»«:*7
-  ÄŒ»«—L‚è
-Çó:*8
-  Ž©ìƒvƒƒOƒ‰ƒ€‚ÌƒRƒ“ƒpƒCƒ‹AƒŠƒ“ƒN‚ðs‚¤‚ÆAUndefined SymbolsƒGƒ‰[‚Æ‚È‚éB
-  ƒIƒuƒWƒFƒNƒgƒtƒ@ƒCƒ‹‚ðƒoƒCƒiƒŠƒGƒfƒBƒ^‚Å’²‚×‚Ä‚àAƒVƒ“ƒ{ƒ‹‚Í‚¿‚á‚ñ‚Æ
-  ‘¶Ý‚µ‚Ä‚¢‚éB
-  ƒGƒ‰[ƒƒbƒZ[ƒW:
+å†ç¾æ€§:*7
+  å†ç¾æ€§æœ‰ã‚Š
+ç—‡çŠ¶:*8
+  è‡ªä½œãƒ—ãƒ­ã‚°ãƒ©ãƒ ã®ã‚³ãƒ³ãƒ‘ã‚¤ãƒ«ã€ãƒªãƒ³ã‚¯ã‚’è¡Œã†ã¨ã€Undefined Symbolsã‚¨ãƒ©ãƒ¼ã¨ãªã‚‹ã€‚
+  ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆãƒ•ã‚¡ã‚¤ãƒ«ã‚’ãƒã‚¤ãƒŠãƒªã‚¨ãƒ‡ã‚£ã‚¿ã§èª¿ã¹ã¦ã‚‚ã€ã‚·ãƒ³ãƒœãƒ«ã¯ã¡ã‚ƒã‚“ã¨
+  å­˜åœ¨ã—ã¦ã„ã‚‹ã€‚
+  ã‚¨ãƒ©ãƒ¼ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸:
     Undefined symbol(s) in hello.o
     _hello
 
     e:/x68000/gcc/gcc.x: Program lk.x exit status 65535.
     make: *** [hello.x] Error 1
-“Y•tƒtƒ@ƒCƒ‹Aƒf[ƒ^:*9
+æ·»ä»˜ãƒ•ã‚¡ã‚¤ãƒ«ã€ãƒ‡ãƒ¼ã‚¿:*9
   (1) hello.c
   (2) hello.o
-‘Îˆ“à—eA‘ÎˆŽÒŽ–¼:*10
-Šm”F•û–@AŠm”FŽÒŽ–¼:*11
+å¯¾å‡¦å†…å®¹ã€å¯¾å‡¦è€…æ°å:*10
+ç¢ºèªæ–¹æ³•ã€ç¢ºèªè€…æ°å:*11
