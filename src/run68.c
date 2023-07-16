@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: run68.c,v 1.5 2009-08-08 06:49:44 masamic Exp $ */
 
 /*
@@ -259,13 +276,13 @@ Restart:
 	ra [ 3 ] = ENV_TOP;			/* 環境のアドレス */
 
 	/* 環境の設定 */
+	mem_set(ra[3], ENV_SIZE, S_LONG);
+	mem_set(ra[3] + 4, 0, S_BYTE);
 #if defined(ENV_FROM_INI)
 	/* 環境変数はiniファイルに記述する。(getini.c参照) */
 	readenv_from_ini(ini_file_name);
 #else
 	/* Windowsの環境変数を複製する。*/
-	mem_set( ra [ 3 ], ENV_SIZE, S_LONG );
-	mem_set( ra [ 3 ] + 4, 0, S_BYTE );
 	for( i = 0; envp [ i ] != NULL; i++ ) {
 		if ( env_len + strlen( envp [ i ] ) < ENV_SIZE - 5 ) {
 			mem_ptr = prog_ptr + ra [ 3 ] + 4 + env_len;
