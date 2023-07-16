@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: doscall.c,v 1.3 2009/08/08 06:49:44 masamic Exp $ */
 
 /*
@@ -56,7 +73,6 @@
 
 #undef    MAIN
 
-#include "run68.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,11 +93,14 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "ansicolor-w32.h"
 
 #if defined(USE_ICONV)
 #include <iconv.h>
 #endif
+
+#include "run68.h"
+#include "ansicolor-w32.h"
+#include "host_win32.h"
 
 static Long Gets( Long );
 static Long Kflush( short );
@@ -2293,47 +2312,13 @@ static Long Chdir( Long name )
 	return( 0 );
 }
 
-/*
-   機能：
-     DOSCALL CURDIRを実行する
-   戻り値：
-     エラーコード
- */
-static Long Curdir( short drv, char *buf_ptr )
+// DOS _CURDIR 汎用環境用
+#ifndef HOST_CURDIR
+#define HOST_CURDIR Curdir_generic
+static Long Curdir_generic( short drv, char *buf_ptr )
 {
 	char    str [ 67 ];
 	char     *ret_ptr = str; /* NULL以外なら何でもよい。*/
-#if defined(WIN32)
-	char cpath[512], tpath[512];
-	char cdrv[3], tdrv[3];
-	BOOL b;
-
-	if ( drv != 0 ) { /* カレントドライブでなかったら */
-		/* まず、カレントディレクトリを取得して保存しておく。*/
-		b = GetCurrentDirectory(sizeof(cpath), cpath);
-		sprintf(cdrv, "%c:", cpath[0]);
-		/* 次に、カレントドライブを変更する。*/
-		sprintf(tdrv, "%c:", drv+'A'-1);
-		b = SetCurrentDirectory(tdrv);
-		if (b == FALSE) {
-			/* ドライブの変更に失敗した。*/
-			ret_ptr = NULL;
-		}
-	}
-	if (ret_ptr != NULL) {
-		/* 変更したドライブのカレントドライブを取得する。*/
-		b = GetCurrentDirectory(sizeof(tpath), tpath);
-	}
-	if ( drv != 0 ) { /* カレントドライブでなかったら */
-		/* 最後に、カレントドライブを元に戻す。*/
-		b = SetCurrentDirectory(cdrv);
-	}
-	if (ret_ptr == NULL)
-		return( -15 );
-	strncpy(str, tpath, sizeof(str)-1);
-	str[sizeof(str)-1] = '\0';
-	strcpy( buf_ptr, str);
-#else
 	unsigned getdrv, dmy;
 	if ( drv != 0 ) {
 #if defined(DOSX)
@@ -2361,9 +2346,21 @@ static Long Curdir( short drv, char *buf_ptr )
 			return( -15 );
 	}
 	strcpy( buf_ptr, &(str[ 3 ]) );
-#endif
 	return( 0 );
 }
+#endif
+
+/*
+	 機能：
+		 DOSCALL CURDIRを実行する
+	 戻り値：
+		 エラーコード(0:成功 -15:失敗)
+ */
+static Long Curdir(short drv, char* buf_ptr)
+{
+	return HOST_CURDIR(drv, buf_ptr);
+}
+
 
 /*
    機能：

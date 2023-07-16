@@ -8,15 +8,17 @@ endif()
 add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PRIVATE
-  src/ansicolor-w32.c
   src/calc.c
   src/conditions.c
   src/debugger.c
   src/disassemble.c
+  src/doscall.c
   src/eaaccess.c
   src/exec.c
   src/getini.c
+  src/human68k.h
   src/key.c
+  src/iocscall.c
   src/line0.c
   src/line2.c
   src/line4.c
@@ -33,10 +35,16 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/load.c
   src/mem.c
   src/run68.c
-  src/iocscall.c
-  src/doscall.c
   src/run68.h
 )
+if(WIN32)
+  target_sources(${PROJECT_NAME} PRIVATE
+    src/ansicolor-w32.c
+    src/ansicolor-w32.h
+    src/host_win32.c
+    src/host_win32.h
+  )
+endif()
 
 target_compile_features(${PROJECT_NAME} PRIVATE c_std_11)
 
