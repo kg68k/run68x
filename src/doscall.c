@@ -222,6 +222,28 @@ char ungetch(char c)
 #endif
 
 
+// DOSコール名を表示する
+//   function call trace用
+static void print_doscall_name(const char* name) {
+	printf("%-10s ", name);
+}
+
+// DOSコールの引数のドライブ名を表示する
+//   function call trace用
+static void print_drive_param(const char* prefix, UShort drive, const char* suffix) {
+  printf("%s", prefix);
+	if (drive == 0) {
+		printf("current drive");
+	}
+	else if (1 <= drive && drive <= 26) {
+		printf("%c:\n", (drive - 1) + 'A');
+		return;
+	}
+	else {
+		printf("???(%d)", drive);
+	}
+  printf("%s", suffix);
+}
 
 
 /*
@@ -922,7 +944,8 @@ int dos_call( UChar code )
 		srt  = (short)mem_get( stack_adr, S_WORD );
 		data = mem_get( stack_adr + 2, S_LONG );
 		if (func_trace_f) {
-			printf("%-10s drv=%c:\n", "CURDIR", srt+'A');
+			print_doscall_name("CURDIR");
+			print_drive_param("drv=", srt, "\n");
 		}
 		rd [ 0 ] = Curdir( srt, prog_ptr + data );
 		break;
