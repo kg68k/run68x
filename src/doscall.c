@@ -101,6 +101,7 @@
 #include "run68.h"
 #include "ansicolor-w32.h"
 #include "host_win32.h"
+#include "human68k.h"
 
 static Long Gets( Long );
 static Long Kflush( short );
@@ -259,7 +260,7 @@ static void print_drive_param(const char* prefix, UShort drive, const char* suff
 		return;
 	}
 	else {
-		printf("???(%d)", drive);
+		printf("%d(\?\?))", drive);
 	}
   printf("%s", suffix);
 }
@@ -2312,41 +2313,51 @@ static Long Chdir( Long name )
 	return( 0 );
 }
 
+#ifdef USE_ICONV
+// UTF-8文字列からShift_JIS文字列への変換
+static size_t utf8_to_sjis(char* inbuf, char* outbuf, size_t outbuf_size) {
+  iconv_t icd = iconv_open("Shift_JIS", "UTF-8");
+  size_t inbytes = strlen(inbuf);
+  size_t outbytes = outbuf_size - 1;
+  size_t result = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
+  iconv_close(icd);
+  *outbuf = '\0';
+  return result;
+}
+#endif
+
+// Shift_JIS文字列中のスラッシュをバックスラッシュに書き換える
+static void to_backslash(char* buf) {
+  for (; *buf; buf += 1) {
+    if (*buf == '/') {
+      *buf = '\\';
+    }
+  }
+}
+
 // DOS _CURDIR 汎用環境用
 #ifndef HOST_CURDIR
 #define HOST_CURDIR Curdir_generic
+#ifdef DOSX
+#error "DOSX is not supported"
+#endif
+
+#define ROOT_SLASH_LEN 1  // "/"
+
 static Long Curdir_generic( short drv, char *buf_ptr )
 {
-	char    str [ 67 ];
-	char     *ret_ptr = str; /* NULL以外なら何でもよい。*/
-	unsigned getdrv, dmy;
-	if ( drv != 0 ) {
-#if defined(DOSX)
-		dos_getdrive( &getdrv );
-		dos_setdrive( drv, &dmy );
-#else
-		dos_getdrive( &getdrv );
-		dos_setdrive( drv - 1, &dmy );
-#endif
-	}
-
-	ret_ptr = getcwd( str, 66 );
-	if ( drv != 0 ) {
-#if defined(DOSX)
-		dos_setdrive( getdrv, &dmy );
-#else
-		dos_setdrive( getdrv - 1, &dmy );
-#endif
-		if ( ret_ptr == NULL )
-			return( -15 );
-		if ( toupper( str[ 0 ] ) != drv - 1 + 'A' )
-			return( -15 );        /* ドライブ名指定誤り */
-	} else {
-		if ( ret_ptr == NULL )
-			return( -15 );
-	}
-	strcpy( buf_ptr, &(str[ 3 ]) );
-	return( 0 );
+  char buf[PATH_MAX];
+  const char* p = getcwd(buf, sizeof(buf));
+  if (p == NULL) {
+    // Human68kのDOS _CURDIRはエラーコードとして-15しか返さないので
+    // getdcwd()が失敗する理由は考慮しなくてよい。
+    return DOSE_ILGDRV;
+  }
+  if (utf8_to_sjis(buf + ROOT_SLASH_LEN, buf_ptr, HUMAN68K_PATH_MAX) == (size_t)-1) {
+    return DOSE_ILGDRV;
+  }
+  to_backslash(buf_ptr);
+  return 0;
 }
 #endif
 
