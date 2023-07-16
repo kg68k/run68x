@@ -555,7 +555,7 @@ int dos_call( UChar code )
 				rd [ 0 ] = -15;    /* ドライブ指定誤り */
 			}
 		}
-#elif defined(DOSX)
+#else
 		dos_getdrive( &drv );
 		rd [ 0 ] = drv - 1;
 #endif
