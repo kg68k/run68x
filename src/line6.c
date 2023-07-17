@@ -22,9 +22,10 @@
  *
  */
 
-#undef	MAIN
+#undef MAIN
 
 #include <stdio.h>
+
 #include "run68.h"
 
 /*
@@ -32,42 +33,40 @@
  �?�l�F TRUE = ���s�I��
          FALSE = ���s�p��
 */
-int	line6( char *pc_ptr )
-{
-        char	code;
-	char	cond;
-	char	disp;
-	short	disp_w;
+int line6(char *pc_ptr) {
+  char code;
+  char cond;
+  char disp;
+  short disp_w;
 
-	code = *pc_ptr;
-	cond = (*pc_ptr & 0x0F);
-	disp = *(pc_ptr + 1);
-	pc += 2;
+  code = *pc_ptr;
+  cond = (*pc_ptr & 0x0F);
+  disp = *(pc_ptr + 1);
+  pc += 2;
 
-	if ( cond == 0x01 ) {	/* bsr */
-		ra [ 7 ] -= 4;
-		if ( disp == 0 ) {
-			disp_w = (short)imi_get( S_WORD );
-			mem_set( ra [ 7 ], pc, S_LONG );
-			pc += (disp_w - 2);
-		} else {
-			mem_set( ra [ 7 ], pc, S_LONG );
-			pc += disp;
-		}
-		return( FALSE );
-	}
+  if (cond == 0x01) { /* bsr */
+    ra[7] -= 4;
+    if (disp == 0) {
+      disp_w = (short)imi_get(S_WORD);
+      mem_set(ra[7], pc, S_LONG);
+      pc += (disp_w - 2);
+    } else {
+      mem_set(ra[7], pc, S_LONG);
+      pc += disp;
+    }
+    return (FALSE);
+  }
 
-	if ( get_cond( cond ) == TRUE ) {
-		if ( disp == 0 ) {
-			disp_w = (short)imi_get( S_WORD );
-			pc += (disp_w - 2);
-		} else {
-			pc += disp;
-		}
-	} else {
-		if ( disp == 0 )
-			pc += 2;
-	}
+  if (get_cond(cond) == TRUE) {
+    if (disp == 0) {
+      disp_w = (short)imi_get(S_WORD);
+      pc += (disp_w - 2);
+    } else {
+      pc += disp;
+    }
+  } else {
+    if (disp == 0) pc += 2;
+  }
 
-	return( FALSE );
+  return (FALSE);
 }

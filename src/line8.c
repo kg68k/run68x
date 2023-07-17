@@ -6,7 +6,8 @@
  * Some Bug fix, and implemented some instruction
  * Following Modification contributed by TRAP.
  *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show word size.
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
  * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
  * Add: Nbcd, Sbcd.
  *
@@ -30,128 +31,126 @@
  *
  */
 
-#undef	MAIN
+#undef MAIN
 
 #include <stdio.h>
+
 #include "run68.h"
 
-static	int	Divu( char, char );
-static	int	Divs( char, char );
-static	int	Or1( char, char );
-static	int	Or2( char, char );
+static int Divu(char, char);
+static int Divs(char, char);
+static int Or1(char, char);
+static int Or2(char, char);
 
 /*
  　機能：8ライン命令を実行する
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-int	line8( char *pc_ptr )
-{
-	char	code1, code2;
+int line8(char *pc_ptr) {
+  char code1, code2;
 
-	code1 = *(pc_ptr++);
-	code2 = *pc_ptr;
-	pc += 2;
+  code1 = *(pc_ptr++);
+  code2 = *pc_ptr;
+  pc += 2;
 
-	if ( (code2 & 0xC0) == 0xC0 ) {
-		if ( (code1 & 0x01) == 0 )
-			return( Divu( code1, code2 ) );
-		else
-			return( Divs( code1, code2 ) );
-	}
-	if ( ((code1 & 0x01) == 0x01) && ((code2 & 0xF0) == 0) ) {
-		/* sbcd */
-		char	src_reg = (code2 & 0x7);
-		char	dst_reg = ((code1 & 0xE) >> 1);
-		char	size = 0;	/* S_BYTE 固定 */
-		Long	src_data;
-		Long	dst_data;
-		Long	kekka;
-		Long	X;
+  if ((code2 & 0xC0) == 0xC0) {
+    if ((code1 & 0x01) == 0)
+      return (Divu(code1, code2));
+    else
+      return (Divs(code1, code2));
+  }
+  if (((code1 & 0x01) == 0x01) && ((code2 & 0xF0) == 0)) {
+    /* sbcd */
+    char src_reg = (code2 & 0x7);
+    char dst_reg = ((code1 & 0xE) >> 1);
+    char size = 0; /* S_BYTE 固定 */
+    Long src_data;
+    Long dst_data;
+    Long kekka;
+    Long X;
 
-		if ( (code2 & 0x8) != 0 ) {
-			/* -(am),-(an); */
-			if ( get_data_at_ea(EA_All, EA_AIPD, src_reg, size, &src_data) ) {
-				return( TRUE );
-			}
-			if ( get_data_at_ea(EA_All, EA_AIPD, dst_reg, size, &dst_data) ) {
-				return( TRUE );
-			}
-		}else{
-			/* dm,dn; */
-			if ( get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data) ) {
-				return( TRUE );
-			}
-			if ( get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dst_data) ) {
-				return( TRUE );
-			}
-		}
+    if ((code2 & 0x8) != 0) {
+      /* -(am),-(an); */
+      if (get_data_at_ea(EA_All, EA_AIPD, src_reg, size, &src_data)) {
+        return (TRUE);
+      }
+      if (get_data_at_ea(EA_All, EA_AIPD, dst_reg, size, &dst_data)) {
+        return (TRUE);
+      }
+    } else {
+      /* dm,dn; */
+      if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
+        return (TRUE);
+      }
+      if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dst_data)) {
+        return (TRUE);
+      }
+    }
 
-		X = (CCR_X_REF() != 0) ? 1 : 0;
+    X = (CCR_X_REF() != 0) ? 1 : 0;
 
-		kekka = dst_data - src_data - X;
+    kekka = dst_data - src_data - X;
 
-		if ( (dst_data & 0xff) < ((src_data & 0xff) + X) )
-			kekka -= 0x60;
+    if ((dst_data & 0xff) < ((src_data & 0xff) + X)) kekka -= 0x60;
 
-		if ( (dst_data & 0x0f) < ((src_data & 0x0f) + X) )
-			kekka -= 0x06;
+    if ((dst_data & 0x0f) < ((src_data & 0x0f) + X)) kekka -= 0x06;
 
-		if ( (dst_data ^ kekka) & 0x100 ) {
-			CCR_X_ON();
-			CCR_C_ON();
-		}else{
-			CCR_X_OFF();
-			CCR_C_OFF();
-		}
+    if ((dst_data ^ kekka) & 0x100) {
+      CCR_X_ON();
+      CCR_C_ON();
+    } else {
+      CCR_X_OFF();
+      CCR_C_OFF();
+    }
 
-		kekka &= 0xff;
+    kekka &= 0xff;
 
-		/* 0 以外の値になった時のみ、Z フラグをリセットする */
-		if ( kekka != 0 ) {
-			CCR_Z_OFF();
-		}
+    /* 0 以外の値になった時のみ、Z フラグをリセットする */
+    if (kekka != 0) {
+      CCR_Z_OFF();
+    }
 
-		/* Nフラグは結果に応じて立てる */
-		if ( kekka & 0x80 ) {
-			CCR_N_ON();
-		}else{
-			CCR_N_OFF();
-		}
+    /* Nフラグは結果に応じて立てる */
+    if (kekka & 0x80) {
+      CCR_N_ON();
+    } else {
+      CCR_N_OFF();
+    }
 
-		/* Vフラグ */
-		if ( (dst_data <= kekka) && (0x20 <= kekka) && (kekka < 0x80) ) {
-			CCR_V_ON();
-		}else{
-			CCR_V_OFF();
-		}
+    /* Vフラグ */
+    if ((dst_data <= kekka) && (0x20 <= kekka) && (kekka < 0x80)) {
+      CCR_V_ON();
+    } else {
+      CCR_V_OFF();
+    }
 
-		dst_data = kekka;
+    dst_data = kekka;
 
-		if ( (code2 & 0x8) != 0 ) {
-			/* -(am),-(an); */
-			if ( set_data_at_ea(EA_All, EA_AI, dst_reg, size, dst_data) ) {
-				return( TRUE );
-			}
-		}else{
-			/* dm,dn; */
-			if ( set_data_at_ea(EA_All, EA_DD, dst_reg, size, dst_data) ) {
-				return( TRUE );
-			}
-		}
+    if ((code2 & 0x8) != 0) {
+      /* -(am),-(an); */
+      if (set_data_at_ea(EA_All, EA_AI, dst_reg, size, dst_data)) {
+        return (TRUE);
+      }
+    } else {
+      /* dm,dn; */
+      if (set_data_at_ea(EA_All, EA_DD, dst_reg, size, dst_data)) {
+        return (TRUE);
+      }
+    }
 
-		return( FALSE );
+    return (FALSE);
 
-/*
-		err68a( "未定義命令を実行しました", __FILE__, __LINE__ );
-		return( TRUE );
-*/
-	}
+    /*
+                    err68a( "未定義命令を実行しました", __FILE__, __LINE__ );
+                    return( TRUE );
+    */
+  }
 
-	if ( (code1 & 0x01) == 0x01 )
-		return ( Or1( code1, code2 ) );
-	else
-		return ( Or2( code1, code2 ) );
+  if ((code1 & 0x01) == 0x01)
+    return (Or1(code1, code2));
+  else
+    return (Or2(code1, code2));
 }
 
 /*
@@ -159,56 +158,55 @@ int	line8( char *pc_ptr )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Divu( char code1, char code2 )
-{
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	UShort	waru;
-	ULong	data;
-	ULong	ans;
-	UShort	mod;
-	Long	save_pc;
-	Long	waru_l;
+static int Divu(char code1, char code2) {
+  char mode;
+  char src_reg;
+  char dst_reg;
+  UShort waru;
+  ULong data;
+  ULong ans;
+  UShort mod;
+  Long save_pc;
+  Long waru_l;
 
-	save_pc = pc;
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = (code2 & 0x07);
-	dst_reg = ((code1 & 0x0E) >> 1);
-	data = rd [ dst_reg ];
+  save_pc = pc;
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = (code2 & 0x07);
+  dst_reg = ((code1 & 0x0E) >> 1);
+  data = rd[dst_reg];
 
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &waru_l)) {
-		return(TRUE);
-	}
-	waru = (UShort)waru_l;
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &waru_l)) {
+    return (TRUE);
+  }
+  waru = (UShort)waru_l;
 
-	if ( waru == 0 ) {
-		err68a( "０で除算しました", __FILE__, __LINE__ );
-		return( TRUE );
-	}
+  if (waru == 0) {
+    err68a("０で除算しました", __FILE__, __LINE__);
+    return (TRUE);
+  }
 
-	CCR_C_OFF();
-	ans = data / waru;
-	mod = (unsigned char)(data % waru);
-	if ( ans > 0xFFFF ) {
-		CCR_V_ON();
-		return( FALSE );
-	}
-	rd [ dst_reg ] = ((mod << 16) | ans);
+  CCR_C_OFF();
+  ans = data / waru;
+  mod = (unsigned char)(data % waru);
+  if (ans > 0xFFFF) {
+    CCR_V_ON();
+    return (FALSE);
+  }
+  rd[dst_reg] = ((mod << 16) | ans);
 
-	CCR_V_OFF();
-	if ( ans >= 0x8000 ) {
-		CCR_N_ON();
-		CCR_Z_OFF();
-	} else {
-		CCR_N_OFF();
-		if ( ans == 0 )
-			CCR_Z_ON();
-		else
-			CCR_Z_OFF();
-	}
-	return( FALSE );
+  CCR_V_OFF();
+  if (ans >= 0x8000) {
+    CCR_N_ON();
+    CCR_Z_OFF();
+  } else {
+    CCR_N_OFF();
+    if (ans == 0)
+      CCR_Z_ON();
+    else
+      CCR_Z_OFF();
+  }
+  return (FALSE);
 }
 
 /*
@@ -216,57 +214,56 @@ static	int	Divu( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Divs( char code1, char code2 )
-{
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	short	waru;
-	Long	data;
-	Long	ans;
-	short	mod;
-	Long	save_pc;
-	Long	waru_l;
+static int Divs(char code1, char code2) {
+  char mode;
+  char src_reg;
+  char dst_reg;
+  short waru;
+  Long data;
+  Long ans;
+  short mod;
+  Long save_pc;
+  Long waru_l;
 
-	save_pc = pc;
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = (code2 & 0x07);
-	dst_reg = ((code1 & 0x0E) >> 1);
-	data = rd [ dst_reg ];
+  save_pc = pc;
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = (code2 & 0x07);
+  dst_reg = ((code1 & 0x0E) >> 1);
+  data = rd[dst_reg];
 
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &waru_l)) {
-		return(TRUE);
-	}
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &waru_l)) {
+    return (TRUE);
+  }
 
-	waru = (UShort)waru_l;
+  waru = (UShort)waru_l;
 
-	if ( waru == 0 ) {
-		err68a( "０で除算しました", __FILE__, __LINE__ );
-		return( TRUE );
-	}
+  if (waru == 0) {
+    err68a("０で除算しました", __FILE__, __LINE__);
+    return (TRUE);
+  }
 
-	CCR_C_OFF();
-	ans = data / waru;
-	mod = data % waru;
-	if ( ans > 32767 || ans < -32768 ) {
-		CCR_V_ON();
-		return( FALSE );
-	}
-	rd [ dst_reg ] = ((mod << 16) | (ans & 0xFFFF));
+  CCR_C_OFF();
+  ans = data / waru;
+  mod = data % waru;
+  if (ans > 32767 || ans < -32768) {
+    CCR_V_ON();
+    return (FALSE);
+  }
+  rd[dst_reg] = ((mod << 16) | (ans & 0xFFFF));
 
-	CCR_V_OFF();
-	if ( ans < 0 ) {
-		CCR_N_ON();
-		CCR_Z_OFF();
-	} else {
-		CCR_N_OFF();
-		if ( ans == 0 )
-			CCR_Z_ON();
-		else
-			CCR_Z_OFF();
-	}
-	return( FALSE );
+  CCR_V_OFF();
+  if (ans < 0) {
+    CCR_N_ON();
+    CCR_Z_OFF();
+  } else {
+    CCR_N_OFF();
+    if (ans == 0)
+      CCR_Z_ON();
+    else
+      CCR_Z_OFF();
+  }
+  return (FALSE);
 }
 
 /*
@@ -274,57 +271,57 @@ static	int	Divs( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Or1( char code1, char code2 )
-{
-	char	size;
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	Long	data;
-	Long	save_pc;
-	Long	src_data;
-	Long	work_mode;
+static int Or1(char code1, char code2) {
+  char size;
+  char mode;
+  char src_reg;
+  char dst_reg;
+  Long data;
+  Long save_pc;
+  Long src_data;
+  Long work_mode;
 
-	save_pc = pc;
-	size = ((code2 >> 6) & 0x03);
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = ((code1 & 0x0E) >> 1);
-	dst_reg = (code2 & 0x07);
-	
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  save_pc = pc;
+  size = ((code2 >> 6) & 0x03);
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = ((code1 & 0x0E) >> 1);
+  dst_reg = (code2 & 0x07);
 
-	/* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
-	if (mode == EA_AIPI) {
-		work_mode = EA_AI;
-	} else {
-		work_mode = mode;
-	}
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, dst_reg, size, &data)) {
-		return(TRUE);
-	}
+  /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
+  if (mode == EA_AIPI) {
+    work_mode = EA_AI;
+  } else {
+    work_mode = mode;
+  }
 
-	/* OR演算 */
-	data |= src_data;
+  if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, dst_reg, size,
+                           &data)) {
+    return (TRUE);
+  }
 
-	/* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
-	if (mode == EA_AIPD) {
-		work_mode = EA_AI;
-	} else {
-		work_mode = mode;
-	}
+  /* OR演算 */
+  data |= src_data;
 
-	if (set_data_at_ea(EA_VariableMemory, work_mode, dst_reg, size, data)) {
-		return(TRUE);
-	}
+  /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
+  if (mode == EA_AIPD) {
+    work_mode = EA_AI;
+  } else {
+    work_mode = mode;
+  }
 
-	/* フラグの変化 */
-	general_conditions(data, size);
+  if (set_data_at_ea(EA_VariableMemory, work_mode, dst_reg, size, data)) {
+    return (TRUE);
+  }
 
-	return( FALSE );
+  /* フラグの変化 */
+  general_conditions(data, size);
+
+  return (FALSE);
 }
 
 /*
@@ -332,41 +329,40 @@ static	int	Or1( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Or2( char code1, char code2 )
-{
-	char	size;
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	Long	src_data;
-	Long	save_pc;
-	Long	data;
+static int Or2(char code1, char code2) {
+  char size;
+  char mode;
+  char src_reg;
+  char dst_reg;
+  Long src_data;
+  Long save_pc;
+  Long data;
 
-	save_pc = pc;
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = (code2 & 0x07);
-	dst_reg = ((code1 & 0x0E) >> 1);
-	size = ((code2 >> 6) & 0x03);
+  save_pc = pc;
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = (code2 & 0x07);
+  dst_reg = ((code1 & 0x0E) >> 1);
+  size = ((code2 >> 6) & 0x03);
 
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_Data, mode, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_Data, mode, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	/* デスティネーションのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &data)) {
-		return(TRUE);
-	}
+  /* デスティネーションのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &data)) {
+    return (TRUE);
+  }
 
-	data |= src_data;
+  data |= src_data;
 
-	/* デスティネーションのアドレッシングモードに応じた処理 */
-	if (set_data_at_ea(EA_All, EA_DD, dst_reg, size, data)) {
-		return(TRUE);
-	}
+  /* デスティネーションのアドレッシングモードに応じた処理 */
+  if (set_data_at_ea(EA_All, EA_DD, dst_reg, size, data)) {
+    return (TRUE);
+  }
 
-	/* フラグの変化 */
-	general_conditions(data, size);
+  /* フラグの変化 */
+  general_conditions(data, size);
 
-	return( FALSE );
+  return (FALSE);
 }

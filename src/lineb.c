@@ -28,42 +28,39 @@
  *
  */
 
-#undef	MAIN
+#undef MAIN
 
 #include <stdio.h>
+
 #include "run68.h"
 
-static	int	Cmp( char, char );
-static	int	Cmpa( char, char );
-static	int	Cmpm( char, char );
-static	int	Eor( char, char );
+static int Cmp(char, char);
+static int Cmpa(char, char);
+static int Cmpm(char, char);
+static int Eor(char, char);
 
 /*
  　機能：Bライン命令を実行する
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-int	lineb( char *pc_ptr )
-{
-	char	code1, code2;
+int lineb(char *pc_ptr) {
+  char code1, code2;
 
-	code1 = *(pc_ptr++);
-	code2 = *pc_ptr;
-	pc += 2;
+  code1 = *(pc_ptr++);
+  code2 = *pc_ptr;
+  pc += 2;
 
-	if ( (code1 & 0x01) == 0x00 ) {
-		if ( (code2 & 0xC0) == 0xC0 )
-			return( Cmpa( code1, code2 ) );
-		return( Cmp( code1, code2 ) );
-	}
+  if ((code1 & 0x01) == 0x00) {
+    if ((code2 & 0xC0) == 0xC0) return (Cmpa(code1, code2));
+    return (Cmp(code1, code2));
+  }
 
-	if ( (code2 & 0xC0) == 0xC0 )
-		return( Cmpa( code1, code2 ) );
+  if ((code2 & 0xC0) == 0xC0) return (Cmpa(code1, code2));
 
-	if ( (code2 & 0x38) == 0x08 )
-		return( Cmpm( code1, code2 ) );
+  if ((code2 & 0x38) == 0x08) return (Cmpm(code1, code2));
 
-	return( Eor( code1, code2 ) );
+  return (Eor(code1, code2));
 }
 
 /*
@@ -71,79 +68,79 @@ int	lineb( char *pc_ptr )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Cmp( char code1, char code2 )
-{
-	char	size;
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	Long	src_data;
-	Long	save_pc;
-	short	save_x;
-	Long	dest_data;
-	Long	result;
+static int Cmp(char code1, char code2) {
+  char size;
+  char mode;
+  char src_reg;
+  char dst_reg;
+  Long src_data;
+  Long save_pc;
+  short save_x;
+  Long dest_data;
+  Long result;
 
 #ifdef TEST_CCR
-	short	before;
+  short before;
 #endif
 
-	save_pc = pc;
-	size = ((code2 >> 6) & 0x03);
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = (code2 & 0x07);
-	dst_reg = ((code1 & 0x0E) >> 1);
+  save_pc = pc;
+  size = ((code2 >> 6) & 0x03);
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = (code2 & 0x07);
+  dst_reg = ((code1 & 0x0E) >> 1);
 
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (mode == EA_AD && size == S_BYTE) {
-		err68a( "不正な命令: cmp.b An, Dn を実行しようとしました。", __FILE__, __LINE__ );
-		return(TRUE);
-	} else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (mode == EA_AD && size == S_BYTE) {
+    err68a("不正な命令: cmp.b An, Dn を実行しようとしました。", __FILE__,
+           __LINE__);
+    return (TRUE);
+  } else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	/* ディスティネーションのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dest_data)) {
-		return(TRUE);
-	}
+  /* ディスティネーションのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dest_data)) {
+    return (TRUE);
+  }
 
 #ifdef TEST_CCR
-	before = sr & 0x1f;
+  before = sr & 0x1f;
 #endif
 
-	/* サイズに応じてCCRをセットする */
-	save_x = CCR_X_REF();
-//	result = sub_rd( dst_reg, src_data, size );
-	result = sub_long(src_data, dest_data, size);
-//	if ( save_x == 0 )
-//		CCR_X_OFF();
-//	else
-//		CCR_X_ON();
+  /* サイズに応じてCCRをセットする */
+  save_x = CCR_X_REF();
+  //	result = sub_rd( dst_reg, src_data, size );
+  result = sub_long(src_data, dest_data, size);
+  //	if ( save_x == 0 )
+  //		CCR_X_OFF();
+  //	else
+  //		CCR_X_ON();
 
-	/* 先のフラグ変化を無視する */
-	/* フラグの変化 */
-	cmp_conditions(src_data, dest_data, result, size);
+  /* 先のフラグ変化を無視する */
+  /* フラグの変化 */
+  cmp_conditions(src_data, dest_data, result, size);
 
 #ifdef TEST_CCR
-	check("cmp", src_data, dest_data, result, size, before);
+  check("cmp", src_data, dest_data, result, size, before);
 #endif
 
-#ifdef	TRACE
-	switch( size ) {
-		case S_BYTE:
-			rd [ 8 ] = ( rd [ dst_reg ] & 0xFF );
-			break;
-		case S_WORD:
-			rd [ 8 ] = ( rd [ dst_reg ] & 0xFFFF);
-			break;
-		default:	/* S_LONG */
-			rd [ 8 ] = rd [ dst_reg ];
-			break;
-	}
-	printf( "trace: cmp.%c    src=%d dst=%d PC=%06lX\n",
-		size_char [ size ], src_data, rd [ 8 ], save_pc );
+#ifdef TRACE
+  switch (size) {
+    case S_BYTE:
+      rd[8] = (rd[dst_reg] & 0xFF);
+      break;
+    case S_WORD:
+      rd[8] = (rd[dst_reg] & 0xFFFF);
+      break;
+    default: /* S_LONG */
+      rd[8] = rd[dst_reg];
+      break;
+  }
+  printf("trace: cmp.%c    src=%d dst=%d PC=%06lX\n", size_char[size], src_data,
+         rd[8], save_pc);
 #endif
 
-	return( FALSE );
+  return (FALSE);
 }
 
 /*
@@ -151,59 +148,58 @@ static	int	Cmp( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Cmpa( char code1, char code2 )
-{
-	char	size;
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	Long	src_data;
-	Long	save_pc;
-	Long	old;
-	Long	ans;
-	Long	dest_data;
+static int Cmpa(char code1, char code2) {
+  char size;
+  char mode;
+  char src_reg;
+  char dst_reg;
+  Long src_data;
+  Long save_pc;
+  Long old;
+  Long ans;
+  Long dest_data;
 
 #ifdef TEST_CCR
-	short	before;
+  short before;
 #endif
 
-	save_pc = pc;
-	if ( (code1 & 0x01) == 0 )
-		size = S_WORD;
-	else
-		size = S_LONG;
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = (code2 & 0x07);
-	dst_reg = ((code1 & 0x0E) >> 1);
+  save_pc = pc;
+  if ((code1 & 0x01) == 0)
+    size = S_WORD;
+  else
+    size = S_LONG;
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = (code2 & 0x07);
+  dst_reg = ((code1 & 0x0E) >> 1);
 
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (size == S_BYTE) {
-		err68a( "不正な命令: cmp.b <ea>, An を実行しようとしました。", __FILE__, __LINE__ );
-		return(TRUE);
-	} else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (size == S_BYTE) {
+    err68a("不正な命令: cmp.b <ea>, An を実行しようとしました。", __FILE__,
+           __LINE__);
+    return (TRUE);
+  } else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	/* ディスティネーションのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_All, EA_AD, dst_reg, size, &dest_data)) {
-		return(TRUE);
-	}
+  /* ディスティネーションのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_All, EA_AD, dst_reg, size, &dest_data)) {
+    return (TRUE);
+  }
 
-	if ( size == S_WORD ) {
-		if ( (src_data & 0x8000) != 0 )
-			src_data |= 0xFFFF0000;
-	}
+  if (size == S_WORD) {
+    if ((src_data & 0x8000) != 0) src_data |= 0xFFFF0000;
+  }
 
-#ifdef	TRACE
-	printf( "trace: cmpa.%c   src=%d PC=%06lX\n",
-		size_char [ size ], src_data, save_pc );
+#ifdef TRACE
+  printf("trace: cmpa.%c   src=%d PC=%06lX\n", size_char[size], src_data,
+         save_pc);
 #endif
 
 #ifdef TEST_CCR
-	before = sr & 0x1f;
+  before = sr & 0x1f;
 #endif
-	old = ra [ dst_reg ];
-	ans = old - src_data;
+  old = ra[dst_reg];
+  ans = old - src_data;
 
 #if 0
 	carry = ((old >> 1) & 0x7FFFFFFF) - ((src_data >> 1) & 0x7FFFFFFF);
@@ -233,14 +229,14 @@ static	int	Cmpa( char code1, char code2 )
 	/* 先のフラグ変化を無視する */
 #endif
 
-	/* フラグの変化 */
-	cmp_conditions(src_data, old, ans, size);
+  /* フラグの変化 */
+  cmp_conditions(src_data, old, ans, size);
 
 #ifdef TEST_CCR
-	check("cmpa", src_data, dest_data, ans, size, before);
+  check("cmpa", src_data, dest_data, ans, size, before);
 #endif
 
-	return( FALSE );
+  return (FALSE);
 }
 
 /*
@@ -248,52 +244,49 @@ static	int	Cmpa( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Cmpm( char code1, char code2 )
-{
-	char	size;
-	char	src_reg;
-	char	dst_reg;
-	Long	src_data;
-	Long	dest_data;
-	Long	result;
+static int Cmpm(char code1, char code2) {
+  char size;
+  char src_reg;
+  char dst_reg;
+  Long src_data;
+  Long dest_data;
+  Long result;
 
-	size = ((code2 >> 6) & 0x03);
-	src_reg = (code2 & 0x07);
-	dst_reg = ((code1 & 0x0E) >> 1);
+  size = ((code2 >> 6) & 0x03);
+  src_reg = (code2 & 0x07);
+  dst_reg = ((code1 & 0x0E) >> 1);
 
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_All, EA_AIPI, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_All, EA_AIPI, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	/* ディスティネーションのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_All, EA_AIPI, dst_reg, size, &dest_data)) {
-		return(TRUE);
-	}
+  /* ディスティネーションのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_All, EA_AIPI, dst_reg, size, &dest_data)) {
+    return (TRUE);
+  }
 
-	rd [ 8 ] = dest_data;
+  rd[8] = dest_data;
 
-	/* サイズに応じてCCRをセットする */
-//	save_x = CCR_X_REF();
-	// result = sub_rd( 8, src_data, size );
-	result = sub_long(src_data, dest_data, size);
-//	if ( save_x == 0 )
-//		CCR_X_OFF();
-//	else
-//		CCR_X_ON();
+  /* サイズに応じてCCRをセットする */
+  //	save_x = CCR_X_REF();
+  // result = sub_rd( 8, src_data, size );
+  result = sub_long(src_data, dest_data, size);
+  //	if ( save_x == 0 )
+  //		CCR_X_OFF();
+  //	else
+  //		CCR_X_ON();
 
-	/* 先のフラグ変化を無視する */
-	/* フラグの変化 */
-	cmp_conditions(src_data, dest_data, result, size);
+  /* 先のフラグ変化を無視する */
+  /* フラグの変化 */
+  cmp_conditions(src_data, dest_data, result, size);
 
-
-#ifdef	TRACE
-	printf( "trace: cmpm.%c   src=%d dst=%d PC=%06lX\n",
-		size_char [ size ], src_data, rd [ 8 ], pc );
+#ifdef TRACE
+  printf("trace: cmpm.%c   src=%d dst=%d PC=%06lX\n", size_char[size], src_data,
+         rd[8], pc);
 #endif
 
-
-	return( FALSE );
+  return (FALSE);
 }
 
 /*
@@ -301,60 +294,59 @@ static	int	Cmpm( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Eor( char code1, char code2 )
-{
-	char	size;
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	Long	data;
-	Long	save_pc;
-	Long	src_data;
-	int	work_mode;
+static int Eor(char code1, char code2) {
+  char size;
+  char mode;
+  char src_reg;
+  char dst_reg;
+  Long data;
+  Long save_pc;
+  Long src_data;
+  int work_mode;
 
-	save_pc = pc;
-	size = ((code2 >> 6) & 0x03);
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = ((code1 & 0x0E) >> 1);
-	dst_reg = (code2 & 0x07);
+  save_pc = pc;
+  size = ((code2 >> 6) & 0x03);
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = ((code1 & 0x0E) >> 1);
+  dst_reg = (code2 & 0x07);
 
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	/* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
-	if (mode == EA_AIPI) {
-		work_mode = EA_AI;
-	} else {
-		work_mode = mode;
-	}
+  /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
+  if (mode == EA_AIPI) {
+    work_mode = EA_AI;
+  } else {
+    work_mode = mode;
+  }
 
-	if (get_data_at_ea_noinc(EA_VariableData, work_mode, dst_reg, size, &data)) {
-		return(TRUE);
-	}
+  if (get_data_at_ea_noinc(EA_VariableData, work_mode, dst_reg, size, &data)) {
+    return (TRUE);
+  }
 
-	/* EOR演算 */
-	data ^= src_data;
+  /* EOR演算 */
+  data ^= src_data;
 
-	/* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
-	if (mode == EA_AIPD) {
-		work_mode = EA_AI;
-	} else {
-		work_mode = mode;
-	}
+  /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
+  if (mode == EA_AIPD) {
+    work_mode = EA_AI;
+  } else {
+    work_mode = mode;
+  }
 
-	if (set_data_at_ea(EA_VariableData, work_mode, dst_reg, size, data)) {
-		return(TRUE);
-	}
+  if (set_data_at_ea(EA_VariableData, work_mode, dst_reg, size, data)) {
+    return (TRUE);
+  }
 
-	/* フラグの変化 */
-	general_conditions(data, size);
+  /* フラグの変化 */
+  general_conditions(data, size);
 
-#ifdef	TRACE
-	printf( "trace: eor.%c    src=%d PC=%06lX\n",
-		size_char [ size ], rd [ src_reg ], save_pc );
+#ifdef TRACE
+  printf("trace: eor.%c    src=%d PC=%06lX\n", size_char[size], rd[src_reg],
+         save_pc);
 #endif
 
-	return( FALSE );
+  return (FALSE);
 }

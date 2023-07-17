@@ -26,7 +26,8 @@
  * Some Bug fix, and implemented some instruction
  * Following Modification contributed by TRAP.
  *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show word size.
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
  * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
  * Add: Nbcd, Sbcd.
  *
@@ -71,1127 +72,1094 @@
  *
  */
 
-#undef    MAIN
+#undef MAIN
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #if !defined(__GNUC__)
 #include <conio.h>
 #endif
 
 #if defined(DOSX) || defined(WIN32)
-  #include <dos.h>
-  #include <direct.h>
-  #include <io.h>
+#include <direct.h>
+#include <dos.h>
+#include <io.h>
 #else
-  #include <time.h>
-  #include <dirent.h>
+#include <dirent.h>
+#include <time.h>
 #endif
 
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #if defined(USE_ICONV)
 #include <iconv.h>
 #endif
 
-#include "run68.h"
 #include "ansicolor-w32.h"
 #include "host_win32.h"
 #include "human68k.h"
+#include "run68.h"
 
-static Long Gets( Long );
-static Long Kflush( short );
-static Long Ioctrl( short, Long );
-static Long Dup( short );
-static Long Dup2( short, short );
-static Long Malloc( Long );
-static Long Mfree( Long );
-static Long Dskfre( short, Long );
-static Long Setblock( Long, Long );
-static Long Create( char *, short );
-static Long Newfile( char *, short );
-static Long Open( char *, short );
-static Long Close( short );
-static Long Fgets( Long, short );
-static Long Read( short, Long, Long );
+static Long Gets(Long);
+static Long Kflush(short);
+static Long Ioctrl(short, Long);
+static Long Dup(short);
+static Long Dup2(short, short);
+static Long Malloc(Long);
+static Long Mfree(Long);
+static Long Dskfre(short, Long);
+static Long Setblock(Long, Long);
+static Long Create(char *, short);
+static Long Newfile(char *, short);
+static Long Open(char *, short);
+static Long Close(short);
+static Long Fgets(Long, short);
+static Long Read(short, Long, Long);
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Read_conv( short, void *, size_t );
+static Long Read_conv(short, void *, size_t);
 #endif
-static Long Write( short, Long, Long );
+static Long Write(short, Long, Long);
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Write_conv( short, void *, size_t );
+static Long Write_conv(short, void *, size_t);
 #endif
-static Long Delete( char * );
-static Long Seek( short, Long, short );
-static Long Rename( Long, Long );
-static Long Chmod( Long, short );
-static Long Mkdir( Long );
-static Long Rmdir( Long );
-static Long Chdir( Long );
-static Long Curdir( short, char* );
-static Long Files( Long, Long, short );
-static Long Nfiles( Long );
-static Long Filedate( short, Long );
-static Long Getdate( void );
-static Long Setdate( short );
-static Long Gettime( int );
-static Long Settim2( Long );
-static Long Getenv( Long, Long, Long );
-static Long Namests( Long, Long );
-static Long Nameck( Long, Long );
-static Long Conctrl( short, Long );
-static Long Keyctrl( short, Long );
-static void Fnckey( short, Long );
-static Long Intvcg( UShort );
-static Long Intvcs( UShort, Long );
-static Long Assign( short, Long );
-static Long Getfcb( short );
-static Long Exec01( Long, Long, Long, int );
-static Long Exec2( Long, Long, Long );
-static Long Exec3( Long, Long, Long );
-static void Exec4( Long );
-static void get_jtime( UShort *, UShort *, int );
-static Long gets2( char *, int );
+static Long Delete(char *);
+static Long Seek(short, Long, short);
+static Long Rename(Long, Long);
+static Long Chmod(Long, short);
+static Long Mkdir(Long);
+static Long Rmdir(Long);
+static Long Chdir(Long);
+static Long Curdir(short, char *);
+static Long Files(Long, Long, short);
+static Long Nfiles(Long);
+static Long Filedate(short, Long);
+static Long Getdate(void);
+static Long Setdate(short);
+static Long Gettime(int);
+static Long Settim2(Long);
+static Long Getenv(Long, Long, Long);
+static Long Namests(Long, Long);
+static Long Nameck(Long, Long);
+static Long Conctrl(short, Long);
+static Long Keyctrl(short, Long);
+static void Fnckey(short, Long);
+static Long Intvcg(UShort);
+static Long Intvcs(UShort, Long);
+static Long Assign(short, Long);
+static Long Getfcb(short);
+static Long Exec01(Long, Long, Long, int);
+static Long Exec2(Long, Long, Long);
+static Long Exec3(Long, Long, Long);
+static void Exec4(Long);
+static void get_jtime(UShort *, UShort *, int);
+static Long gets2(char *, int);
 
 Long Getenv_common(const char *name_p, char *buf_p);
 
 #if !defined(WIN32) && !defined(DOSX)
-void CloseHandle( FILE* fp ) {
-	fclose( fp );
-}
-int CreateDirectoryA(char * name, void* ptr) {
-	printf("CreateDirectoryA(\"%s\")\n", name);
-	return 1;
+void CloseHandle(FILE *fp) { fclose(fp); }
+int CreateDirectoryA(char *name, void *ptr) {
+  printf("CreateDirectoryA(\"%s\")\n", name);
+  return 1;
 }
 
-int RemoveDirectoryA(char * name) {
-	printf("RemoveDirectoryA(\"%s\")\n", name);
-	return 1;
+int RemoveDirectoryA(char *name) {
+  printf("RemoveDirectoryA(\"%s\")\n", name);
+  return 1;
 }
 
-int SetCurrentDirectory(char * name) {
-	printf("SetCurrentDirectory(\"%s\")\n", name);
-	return 1;
+int SetCurrentDirectory(char *name) {
+  printf("SetCurrentDirectory(\"%s\")\n", name);
+  return 1;
 }
 
-int _dos_getfileattr( char* name, void *ret ) {
-	printf("_dos_getfileattr(\"%s\")\n", name);
+int _dos_getfileattr(char *name, void *ret) {
+  printf("_dos_getfileattr(\"%s\")\n", name);
 
-	return 1;
+  return 1;
 }
 
-int _dos_setfileattr( char* name, short attr ) {
-	printf("_dos_setfileattr(\"%s\", %d)\n", name, attr);
+int _dos_setfileattr(char *name, short attr) {
+  printf("_dos_setfileattr(\"%s\", %d)\n", name, attr);
 
-	return 1;
+  return 1;
 }
 
-int _dos_write( int fd, void* data, int size, size_t *res ) {
-//	printf("_dos_write()\n" );
-	*res = write(fd, data, size);
-	return 0;
+int _dos_write(int fd, void *data, int size, size_t *res) {
+  //	printf("_dos_write()\n" );
+  *res = write(fd, data, size);
+  return 0;
 }
 
-void _flushall()
-{
-//	printf("_flushall()\n" );
+void _flushall() {
+  //	printf("_flushall()\n" );
 }
 
-char _getch()
-{
-	printf("_getch()\n" );
-	return getchar();
+char _getch() {
+  printf("_getch()\n");
+  return getchar();
 }
 
-char _getche()
-{
-	printf("_getche()\n" );
-	return getchar();
+char _getche() {
+  printf("_getche()\n");
+  return getchar();
 }
 
 void dos_getdrive(Long *drv) {
-//	printf("dos_getdrive(%p)\n", drv );
-	*drv = 1;	// 1 = A:
+  //	printf("dos_getdrive(%p)\n", drv );
+  *drv = 1;  // 1 = A:
 }
 
-void dos_setdrive(Long drv, Long* dmy) {
-//	printf("dos_setdrive(%d, %p)\n", drv, dmy );
+void dos_setdrive(Long drv, Long *dmy) {
+  //	printf("dos_setdrive(%d, %p)\n", drv, dmy );
 }
 
-int _kbhit()
-{
-//	printf("_kbhit()\n");
-	return 1;
+int _kbhit() {
+  //	printf("_kbhit()\n");
+  return 1;
 }
 
-int kbhit()
-{
-//	printf("kbhit()\n");
-	return 1;
+int kbhit() {
+  //	printf("kbhit()\n");
+  return 1;
 }
 
-char ungetch(char c)
-{
-	printf("ungetch()\n");	
-	return 0;
+char ungetch(char c) {
+  printf("ungetch()\n");
+  return 0;
 }
 #endif
 
-
 // DOSコール名を表示する
 //   function call trace用
-static void print_doscall_name(const char* name) {
-	printf("%-10s ", name);
-}
+static void print_doscall_name(const char *name) { printf("%-10s ", name); }
 
 // DOSコールの引数のドライブ名を表示する
 //   function call trace用
-static void print_drive_param(const char* prefix, UShort drive, const char* suffix) {
+static void print_drive_param(const char *prefix, UShort drive,
+                              const char *suffix) {
   printf("%s", prefix);
-	if (drive == 0) {
-		printf("current drive");
-	}
-	else if (1 <= drive && drive <= 26) {
-		printf("%c:\n", (drive - 1) + 'A');
-		return;
-	}
-	else {
-		printf("%d(\?\?))", drive);
-	}
+  if (drive == 0) {
+    printf("current drive");
+  } else if (1 <= drive && drive <= 26) {
+    printf("%c:\n", (drive - 1) + 'A');
+    return;
+  } else {
+    printf("%d(\?\?))", drive);
+  }
   printf("%s", suffix);
 }
-
 
 /*
  　機能：DOSCALLを実行する
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
  */
-int dos_call( UChar code )
-{
-	char *data_ptr = 0;
-	Long stack_adr;
-	Long data;
-	Long env;
-	Long buf;
-	Long len;
-	short    srt;
-	short    fhdl;
-	Long c = 0;
-	int    i;
+int dos_call(UChar code) {
+  char *data_ptr = 0;
+  Long stack_adr;
+  Long data;
+  Long env;
+  Long buf;
+  Long len;
+  short srt;
+  short fhdl;
+  Long c = 0;
+  int i;
 #if defined(WIN32)
-	DWORD st;
+  DWORD st;
 #endif
-	if (func_trace_f) {
-		printf( "$%06x FUNC(%02X):", pc-2, code);
-	}
-	stack_adr = ra [ 7 ];
-	if ( code >= 0x80 && code <= 0xAF )
-	  code -= 0x30;
+  if (func_trace_f) {
+    printf("$%06x FUNC(%02X):", pc - 2, code);
+  }
+  stack_adr = ra[7];
+  if (code >= 0x80 && code <= 0xAF) code -= 0x30;
 
-#ifdef    TRACE
-	printf( "trace: DOSCALL  0xFF%02X PC=%06lX\n", code, pc );
+#ifdef TRACE
+  printf("trace: DOSCALL  0xFF%02X PC=%06lX\n", code, pc);
 #endif
 
-	switch( code ) {
-	  case 0x01:    /* GETCHAR */
-		if (func_trace_f) {
-			printf("%-10s\n", "GETCHAR");
-		}
+  switch (code) {
+    case 0x01: /* GETCHAR */
+      if (func_trace_f) {
+        printf("%-10s\n", "GETCHAR");
+      }
 #if defined(WIN32)
-		FlushFileBuffers(finfo[ 1 ].fh);
+      FlushFileBuffers(finfo[1].fh);
 #elif defined(DOSX)
-		fflush( stdout );
+      fflush(stdout);
 #endif
-		rd [ 0 ] = (_getche() & 0xFF);
-		break;
-	  case 0x02:    /* PUTCHAR */
-  	data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
-		if (func_trace_f) {
-			printf("%-10s char='%c'\n", "PUTCHAR", *(unsigned char*)data_ptr);
-		}
+      rd[0] = (_getche() & 0xFF);
+      break;
+    case 0x02:                              /* PUTCHAR */
+      data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s char='%c'\n", "PUTCHAR", *(unsigned char *)data_ptr);
+      }
 #if defined(WIN32)
-		if (GetConsoleMode(finfo[1].fh, &st) != 0) {
-			// 非リダイレクト
-			WriteW32( 1, finfo[ 1 ].fh, data_ptr, 1 );
-		} else {
-			Long nwritten;
-			/* Win32API */
-			WriteFile( finfo[ 1 ].fh, data_ptr, 1,
-					   (LPDWORD)&nwritten, NULL);
-		}
+      if (GetConsoleMode(finfo[1].fh, &st) != 0) {
+        // 非リダイレクト
+        WriteW32(1, finfo[1].fh, data_ptr, 1);
+      } else {
+        Long nwritten;
+        /* Win32API */
+        WriteFile(finfo[1].fh, data_ptr, 1, (LPDWORD)&nwritten, NULL);
+      }
 #elif defined(DOSX)
-		_dos_write( fileno(finfo[ 1 ].fh), data_ptr, 1, &drv );
+      _dos_write(fileno(finfo[1].fh), data_ptr, 1, &drv);
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-		Write_conv( 1, data_ptr, 1 );
+      Write_conv(1, data_ptr, 1);
 #endif
-		rd [ 0 ] = 0;
-		break;
-	  case 0x06:    /* KBHIT */
-		if (func_trace_f) {
-			printf("%-10s\n", "KBHIT");
-		}
-		srt = (short)mem_get( stack_adr, S_WORD );
-		srt &= 0xFF;
-		if ( srt >= 0xFE ) {
+      rd[0] = 0;
+      break;
+    case 0x06: /* KBHIT */
+      if (func_trace_f) {
+        printf("%-10s\n", "KBHIT");
+      }
+      srt = (short)mem_get(stack_adr, S_WORD);
+      srt &= 0xFF;
+      if (srt >= 0xFE) {
 #if defined(WIN32)
-			INPUT_RECORD ir;
-			DWORD read_len;
-			BOOL b;
-			rd [ 0 ] = 0;
-			b = PeekConsoleInput(finfo [0].fh, &ir, 1, (LPDWORD)&read_len);
-			if (read_len == 0) {
-				/* Do nothing. */
-			} else if(ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown
-					  || c == 0x0)
-			{
-				/* 不要なイベントは読み捨てる */
-				b = ReadConsoleInput(finfo [0].fh, &ir, 1, (LPDWORD)&read_len);
-			} else if ( srt != 0xFE ) {
-				b = ReadConsoleInput(finfo [0].fh, &ir, 1, (LPDWORD)&read_len);
-				c = ir.Event.KeyEvent.uChar.AsciiChar;
-				if ( ini_info.pc98_key == TRUE )
-				  c = cnv_key98( c );
-				rd [ 0 ] = c;
-			}
+        INPUT_RECORD ir;
+        DWORD read_len;
+        BOOL b;
+        rd[0] = 0;
+        b = PeekConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
+        if (read_len == 0) {
+          /* Do nothing. */
+        } else if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown ||
+                   c == 0x0) {
+          /* 不要なイベントは読み捨てる */
+          b = ReadConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
+        } else if (srt != 0xFE) {
+          b = ReadConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
+          c = ir.Event.KeyEvent.uChar.AsciiChar;
+          if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
+          rd[0] = c;
+        }
 #else
-			rd [ 0 ] = 0;
-			if ( kbhit() != 0 ) {
-				c = _getch();
-				if ( c == 0x00 ) {
-					c = _getch();
-				} else {
-					if ( ini_info.pc98_key == TRUE )
-					  c = cnv_key98( c );
-				}
-				if ( srt == 0xFE )
-				  ungetch( c );
-				rd [ 0 ] = c;
-			}
+        rd[0] = 0;
+        if (kbhit() != 0) {
+          c = _getch();
+          if (c == 0x00) {
+            c = _getch();
+          } else {
+            if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
+          }
+          if (srt == 0xFE) ungetch(c);
+          rd[0] = c;
+        }
 #endif
-		} else {
-			putchar( srt );
-			rd [ 0 ] = 0;
-		}
-		break;
-	  case 0x07:    /* INKEY */
-	  case 0x08:    /* GETC */
-		if (func_trace_f) {
-			printf("%-10s\n", code == 0x07 ? "INKEY" : "GETC");
-		}
+      } else {
+        putchar(srt);
+        rd[0] = 0;
+      }
+      break;
+    case 0x07: /* INKEY */
+    case 0x08: /* GETC */
+      if (func_trace_f) {
+        printf("%-10s\n", code == 0x07 ? "INKEY" : "GETC");
+      }
 #if defined(WIN32)
-		FlushFileBuffers(finfo[ 1 ].fh);
+      FlushFileBuffers(finfo[1].fh);
 #elif defined(DOSX)
-		fflush( stdout );
+      fflush(stdout);
 #endif
-		c = _getch();
-		if ( c == 0x00 ) {
-			c = _getch();
-			c = 0x1B;
-		}
-		rd [ 0 ] = c;
-		break;
-	  case 0x09:    /* PRINT */
-		data = mem_get( stack_adr, S_LONG );
-		data_ptr = prog_ptr + data;
-		len = strlen( data_ptr );
-		if (func_trace_f) {
-			printf("%-10s str=%s\n", "PRINT", data_ptr);
-		}
+      c = _getch();
+      if (c == 0x00) {
+        c = _getch();
+        c = 0x1B;
+      }
+      rd[0] = c;
+      break;
+    case 0x09: /* PRINT */
+      data = mem_get(stack_adr, S_LONG);
+      data_ptr = prog_ptr + data;
+      len = strlen(data_ptr);
+      if (func_trace_f) {
+        printf("%-10s str=%s\n", "PRINT", data_ptr);
+      }
 #if defined(WIN32)
-		if (GetConsoleMode(finfo[1].fh, &st) != 0) {
-			WriteW32( 1, finfo[ 1 ].fh, data_ptr, len );
-		} else {
-			Long nwritten;
-			/* Win32API */
-			WriteFile( finfo[ 1 ].fh, data_ptr, len,
-					   (LPDWORD)&nwritten, NULL);
-		}
+      if (GetConsoleMode(finfo[1].fh, &st) != 0) {
+        WriteW32(1, finfo[1].fh, data_ptr, len);
+      } else {
+        Long nwritten;
+        /* Win32API */
+        WriteFile(finfo[1].fh, data_ptr, len, (LPDWORD)&nwritten, NULL);
+      }
 #elif defined(DOSX)
-		_dos_write( fileno(finfo[ 1 ].fh), data_ptr,
-					(unsigned)len, &drv );
+      _dos_write(fileno(finfo[1].fh), data_ptr, (unsigned)len, &drv);
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-		Write_conv( 1, data_ptr, (unsigned)len );
+      Write_conv(1, data_ptr, (unsigned)len);
 #else
-		printf("DOSCALL:PRINT not implemented yet.\n");
+      printf("DOSCALL:PRINT not implemented yet.\n");
 #endif
-		/* printf( "%s", data_ptr ); */
-		rd [ 0 ] = 0;
-		break;
-	  case 0x0A:     /* GETS */
-		buf = mem_get( stack_adr, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s\n", "GETS");
-		}
-		rd [ 0 ] = Gets( buf );
-		break;
-		//#elif defined(DOSX)
-	  case 0x0B:    /* KEYSNS */
-		if (func_trace_f) {
-			printf("%-10s\n", "KEYSNS");
-		}
-		if ( _kbhit() != 0 )
-		  rd [ 0 ] = -1;
-		else
-		  rd [ 0 ] = 0;
-		break;
-	  case 0x0C:    /* KFLUSH */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s mode=%d\n", "KFLUSH", srt);
-		}
-		rd [ 0 ] = Kflush( srt );
-		break;
-	  case 0x0D:    /* FFLUSH */
-		if (func_trace_f) {
-			printf("%-10s\n", "FFLUSH");
-		}
+      /* printf( "%s", data_ptr ); */
+      rd[0] = 0;
+      break;
+    case 0x0A: /* GETS */
+      buf = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s\n", "GETS");
+      }
+      rd[0] = Gets(buf);
+      break;
+      // #elif defined(DOSX)
+    case 0x0B: /* KEYSNS */
+      if (func_trace_f) {
+        printf("%-10s\n", "KEYSNS");
+      }
+      if (_kbhit() != 0)
+        rd[0] = -1;
+      else
+        rd[0] = 0;
+      break;
+    case 0x0C: /* KFLUSH */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s mode=%d\n", "KFLUSH", srt);
+      }
+      rd[0] = Kflush(srt);
+      break;
+    case 0x0D: /* FFLUSH */
+      if (func_trace_f) {
+        printf("%-10s\n", "FFLUSH");
+      }
 #if defined(WIN32)
-		/* オープン中の全てのファイルをフラッシュする。*/
-		for( i = 5; i < FILE_MAX; i ++ ) {
-			if ( finfo [ i ].fh == NULL)
-			  continue;
-			FlushFileBuffers(finfo [ i ].fh);
-		}
+      /* オープン中の全てのファイルをフラッシュする。*/
+      for (i = 5; i < FILE_MAX; i++) {
+        if (finfo[i].fh == NULL) continue;
+        FlushFileBuffers(finfo[i].fh);
+      }
 #else
-		_flushall();
+      _flushall();
 #endif
-		rd [ 0 ] = 0;
-		break;
-	  case 0x0E:    /* CHGDRV */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s drv=%c:\n", "CHGDRV", srt+'A');
-		}
+      rd[0] = 0;
+      break;
+    case 0x0E: /* CHGDRV */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s drv=%c:\n", "CHGDRV", srt + 'A');
+      }
 #if defined(WIN32)
-		{
-			char drv[3];
-			BOOL b;
-			sprintf(drv, "%c:", srt+'A');
-			/* Win32 API */
-			b = SetCurrentDirectory(drv);
-			if (b) {
-				/* When succeeded. */
-				rd [ 0 ] = srt;
-			}
-		}
+      {
+        char drv[3];
+        BOOL b;
+        sprintf(drv, "%c:", srt + 'A');
+        /* Win32 API */
+        b = SetCurrentDirectory(drv);
+        if (b) {
+          /* When succeeded. */
+          rd[0] = srt;
+        }
+      }
 #elif defined(DOSX)
-		srt += 1;
-		dos_setdrive( srt, &drv );
-		rd [ 0 ] = drv;
+      srt += 1;
+      dos_setdrive(srt, &drv);
+      rd[0] = drv;
 #else
-		srt += 1;
-		int drv = 0;
-		dos_setdrive( srt, &drv );
-		rd [ 0 ] = drv;
+      srt += 1;
+      int drv = 0;
+      dos_setdrive(srt, &drv);
+      rd[0] = drv;
 
 #endif
-		// Verify
+      // Verify
 #if defined(WIN32)
-		{
-			char drv[512];
-			BOOL b;
-			b = GetCurrentDirectoryA(sizeof(drv), drv);
-			if (b && strlen(drv) != 0 && (drv[0] - 'A') == rd[0]) {
-				/* OK, nothing to do. */
-			} else {
-				rd [ 0 ] = -15;    /* ドライブ指定誤り */
-			}
-		}
+      {
+        char drv[512];
+        BOOL b;
+        b = GetCurrentDirectoryA(sizeof(drv), drv);
+        if (b && strlen(drv) != 0 && (drv[0] - 'A') == rd[0]) {
+          /* OK, nothing to do. */
+        } else {
+          rd[0] = -15; /* ドライブ指定誤り */
+        }
+      }
 #elif defined(DOSX)
-		dos_getdrive( &drv );
-		srt += 1;
-		if ( srt != drv )
-		  rd [ 0 ] = -15;
+      dos_getdrive(&drv);
+      srt += 1;
+      if (srt != drv) rd[0] = -15;
 #else
-			dos_getdrive( &drv );
-			srt += 1;
-			if ( srt != drv )
-				rd [ 0 ] = -15;
+      dos_getdrive(&drv);
+      srt += 1;
+      if (srt != drv) rd[0] = -15;
 #endif
-		break;
-	  case 0x0F:    /* DRVCTRL(何もしない) */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s drv=%c:\n", "DRVCTRL", srt);
-		}
-		if ( srt > 26 && srt < 256 )
-		  rd [ 0 ] = -15;    /* ドライブ指定誤り */
-		else
-		  rd [ 0 ] = 0x02;    /* READY */
-		break;
-	  case 0x10:    /* CONSNS */
-		if (func_trace_f) {
-			printf("%-10s\n", "CONSNS");
-		}
-		_flushall();
-		rd [ 0 ] = -1;
-		break;
-	  case 0x11:    /* PRNSNS */
-	  case 0x12:    /* CINSNS */
-	  case 0x13:    /* COUTSNS */
-		if (func_trace_f) {
-			printf("%-10s\n", code == 0x11 ? "PRNSNS" : code == 0x12 ? "CINSNS" : "COUTSNS");
-		}
-		_flushall();
-		rd [ 0 ] = 0;
-		break;
-	  case 0x19:    /* CURDRV */
-		if (func_trace_f) {
-			printf("%-10s\n", "CURDRV");
-		}
+      break;
+    case 0x0F: /* DRVCTRL(何もしない) */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s drv=%c:\n", "DRVCTRL", srt);
+      }
+      if (srt > 26 && srt < 256)
+        rd[0] = -15; /* ドライブ指定誤り */
+      else
+        rd[0] = 0x02; /* READY */
+      break;
+    case 0x10: /* CONSNS */
+      if (func_trace_f) {
+        printf("%-10s\n", "CONSNS");
+      }
+      _flushall();
+      rd[0] = -1;
+      break;
+    case 0x11: /* PRNSNS */
+    case 0x12: /* CINSNS */
+    case 0x13: /* COUTSNS */
+      if (func_trace_f) {
+        printf("%-10s\n", code == 0x11   ? "PRNSNS"
+                          : code == 0x12 ? "CINSNS"
+                                         : "COUTSNS");
+      }
+      _flushall();
+      rd[0] = 0;
+      break;
+    case 0x19: /* CURDRV */
+      if (func_trace_f) {
+        printf("%-10s\n", "CURDRV");
+      }
 #if defined(WIN32)
-		{
-			char path[512];
-			BOOL b;
-			b = GetCurrentDirectory(sizeof(path), path);
-			if (b && strlen(path) != 0) {
-				rd [ 0 ] = path[0] - 'A';
-			} else {
-				rd [ 0 ] = -15;    /* ドライブ指定誤り */
-			}
-		}
+      {
+        char path[512];
+        BOOL b;
+        b = GetCurrentDirectory(sizeof(path), path);
+        if (b && strlen(path) != 0) {
+          rd[0] = path[0] - 'A';
+        } else {
+          rd[0] = -15; /* ドライブ指定誤り */
+        }
+      }
 #else
-		dos_getdrive( &drv );
-		rd [ 0 ] = drv - 1;
+      dos_getdrive(&drv);
+      rd[0] = drv - 1;
 #endif
-		break;
-	  case 0x1B:    /* FGETC */
-		if (func_trace_f) {
-			printf("%-10s\n", "FGETC");
-		}
-		fhdl = (short)mem_get( stack_adr, S_WORD );
-		if ( finfo [ fhdl ].mode == 1 ) {
-			rd [ 0 ] = -1;
-		} else {
+      break;
+    case 0x1B: /* FGETC */
+      if (func_trace_f) {
+        printf("%-10s\n", "FGETC");
+      }
+      fhdl = (short)mem_get(stack_adr, S_WORD);
+      if (finfo[fhdl].mode == 1) {
+        rd[0] = -1;
+      } else {
 #if defined(WIN32)
-			DWORD read_len;
-			BOOL b = FALSE;
-			INPUT_RECORD ir;
-			if (GetFileType(finfo [ fhdl ].fh) == FILE_TYPE_CHAR) {
-				/* 標準入力のハンドルがキャラクタタイプだったら、ReadConsoleを試してみる。*/
-				while(TRUE) {
-					b = ReadConsoleInput(finfo [ fhdl ].fh, &ir, 1, (LPDWORD)&read_len);
-					if (b == FALSE) {
-						/* コンソールではなかった。*/
-						ReadFile(finfo [ fhdl ].fh, &c, 1, (LPDWORD)&read_len, NULL);
-						break;
-					}
-					if (read_len == 1 && ir.EventType == KEY_EVENT
-						&& ir.Event.KeyEvent.bKeyDown) {
-						c = ir.Event.KeyEvent.uChar.AsciiChar;
-						if (0x01 <= c && c <= 0xff)
-						  break;
-					}
-				}
-			} else {
-				ReadFile(finfo [ fhdl ].fh, &c, 1, (LPDWORD)&read_len, NULL);
-			}
-			if (read_len == 0)
-				c = EOF;
-			rd[0] = c;
+        DWORD read_len;
+        BOOL b = FALSE;
+        INPUT_RECORD ir;
+        if (GetFileType(finfo[fhdl].fh) == FILE_TYPE_CHAR) {
+          /* 標準入力のハンドルがキャラクタタイプだったら、ReadConsoleを試してみる。*/
+          while (TRUE) {
+            b = ReadConsoleInput(finfo[fhdl].fh, &ir, 1, (LPDWORD)&read_len);
+            if (b == FALSE) {
+              /* コンソールではなかった。*/
+              ReadFile(finfo[fhdl].fh, &c, 1, (LPDWORD)&read_len, NULL);
+              break;
+            }
+            if (read_len == 1 && ir.EventType == KEY_EVENT &&
+                ir.Event.KeyEvent.bKeyDown) {
+              c = ir.Event.KeyEvent.uChar.AsciiChar;
+              if (0x01 <= c && c <= 0xff) break;
+            }
+          }
+        } else {
+          ReadFile(finfo[fhdl].fh, &c, 1, (LPDWORD)&read_len, NULL);
+        }
+        if (read_len == 0) c = EOF;
+        rd[0] = c;
 #else
-			rd [ 0 ] = fgetc( finfo [ fhdl ].fh );
+        rd[0] = fgetc(finfo[fhdl].fh);
 #endif
-		}
-		break;
-	  case 0x1C:    /* FGETS */
-		data = mem_get( stack_adr, S_LONG );
-		fhdl = (short)mem_get( stack_adr + 4, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s file_no=%d\n", "FGETS", fhdl);
-		}
-		rd [ 0 ] = Fgets( data, fhdl );
-		break;
-	  case 0x1D:    /* FPUTC */
-		data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
-		fhdl = (short)mem_get( stack_adr + 2, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s file_no=%d char=0x%02X\n", "FPUTC", fhdl, *(unsigned char*)data_ptr);
-		}
+      }
+      break;
+    case 0x1C: /* FGETS */
+      data = mem_get(stack_adr, S_LONG);
+      fhdl = (short)mem_get(stack_adr + 4, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s file_no=%d\n", "FGETS", fhdl);
+      }
+      rd[0] = Fgets(data, fhdl);
+      break;
+    case 0x1D:                              /* FPUTC */
+      data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
+      fhdl = (short)mem_get(stack_adr + 2, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s file_no=%d char=0x%02X\n", "FPUTC", fhdl,
+               *(unsigned char *)data_ptr);
+      }
 #if defined(WIN32)
-		if (GetConsoleMode(finfo[fhdl].fh, &st) != 0 &&
-			(fhdl == 1 || fhdl == 2) ) {
-			// 非リダイレクトで標準出力か標準エラー出力
-			WriteW32( fhdl, finfo[fhdl].fh, data_ptr, 1 );
-			rd [ 0 ] = 0;
-		} else {
-			if (WriteFile(finfo [ fhdl ].fh, data_ptr,
-						  1, (LPDWORD)&len, NULL) == FALSE)
-			  rd [ 0 ] = 0;
-			else
-			  rd [ 0 ] = 1;
-		}
+      if (GetConsoleMode(finfo[fhdl].fh, &st) != 0 &&
+          (fhdl == 1 || fhdl == 2)) {
+        // 非リダイレクトで標準出力か標準エラー出力
+        WriteW32(fhdl, finfo[fhdl].fh, data_ptr, 1);
+        rd[0] = 0;
+      } else {
+        if (WriteFile(finfo[fhdl].fh, data_ptr, 1, (LPDWORD)&len, NULL) ==
+            FALSE)
+          rd[0] = 0;
+        else
+          rd[0] = 1;
+      }
 #elif defined(DOSX)
-		if ( fputc( *(unsigned char*)data_ptr, finfo [ fhdl ].fh ) == EOF )
-		  rd [ 0 ] = 0;
-		else
-		  rd [ 0 ] = 1;
+      if (fputc(*(unsigned char *)data_ptr, finfo[fhdl].fh) == EOF)
+        rd[0] = 0;
+      else
+        rd[0] = 1;
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-		if ( Write_conv( fhdl, data_ptr, 1 ) == EOF )
-		  rd [ 0 ] = 0;
-		else
-		  rd [ 0 ] = 1;
+      if (Write_conv(fhdl, data_ptr, 1) == EOF)
+        rd[0] = 0;
+      else
+        rd[0] = 1;
 #endif
-		break;
-	  case 0x1E:    /* FPUTS */
-		data = mem_get( stack_adr, S_LONG );
-		fhdl = (short)mem_get( stack_adr + 4, S_WORD );
-		data_ptr = prog_ptr + data;
-		if (func_trace_f) {
-			printf("%-10s file_no=%d str=\"%s\"\n", "FPUTS", fhdl, data_ptr);
-		}
+      break;
+    case 0x1E: /* FPUTS */
+      data = mem_get(stack_adr, S_LONG);
+      fhdl = (short)mem_get(stack_adr + 4, S_WORD);
+      data_ptr = prog_ptr + data;
+      if (func_trace_f) {
+        printf("%-10s file_no=%d str=\"%s\"\n", "FPUTS", fhdl, data_ptr);
+      }
 #if defined(WIN32)
-		if (GetConsoleMode(finfo[1].fh, &st) != 0 &&
-			(fhdl == 1 || fhdl == 2) ) {
-			// 非リダイレクトで標準出力か標準エラー出力
-			len = WriteW32( fhdl, finfo [ fhdl ].fh, data_ptr, strlen(data_ptr) );
-		} else {
-			WriteFile(finfo [ fhdl ].fh, data_ptr,
-					  strlen(data_ptr), (LPDWORD)&len, NULL);
-		}
-		rd[0] = len;
+      if (GetConsoleMode(finfo[1].fh, &st) != 0 && (fhdl == 1 || fhdl == 2)) {
+        // 非リダイレクトで標準出力か標準エラー出力
+        len = WriteW32(fhdl, finfo[fhdl].fh, data_ptr, strlen(data_ptr));
+      } else {
+        WriteFile(finfo[fhdl].fh, data_ptr, strlen(data_ptr), (LPDWORD)&len,
+                  NULL);
+      }
+      rd[0] = len;
 #elif defined(DOSX)
-		if ( fprintf( finfo [ fhdl ].fh, "%s", data_ptr ) == -1 ) {
-		  rd [ 0 ] = 0;
-		 } else {
-		  rd [ 0 ] = strlen( data_ptr );
-		}
+      if (fprintf(finfo[fhdl].fh, "%s", data_ptr) == -1) {
+        rd[0] = 0;
+      } else {
+        rd[0] = strlen(data_ptr);
+      }
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-		if ( Write_conv( fhdl, data_ptr, strlen(data_ptr)) == -1 ) {
-		  rd [ 0 ] = 0;
-		 } else {
-		  rd [ 0 ] = strlen( data_ptr );
-		}
+      if (Write_conv(fhdl, data_ptr, strlen(data_ptr)) == -1) {
+        rd[0] = 0;
+      } else {
+        rd[0] = strlen(data_ptr);
+      }
 #endif
-		break;
-	  case 0x1F:    /* ALLCLOSE */
-		if (func_trace_f) {
-			printf("%-10s\n", "ALLCLOSE");
-		}
-		for ( i = 5; i < FILE_MAX; i ++ ) {
-			if ( finfo [ i ].fh != NULL )
-			  CloseHandle(finfo [ i ].fh);
-		}
-		rd [ 0 ] = 0;
-		break;
-	  case 0x20:    /* SUPER */
-		data = mem_get( stack_adr, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s data=%d\n", "SUPER", data);
-		}
-		if ( data == 0 ) {
-			/* user -> super */
-			if ( SR_S_REF() != 0 ) {
-				rd [ 0 ] = -26;
-			} else {
-				rd [ 0 ] = ra [ 7 ];
-				usp = ra [ 7 ];
-				SR_S_ON();
-			}
-		} else {
-			/* super -> user */
-			ra [ 7 ] = data;
-			rd [ 0 ] = 0;
-			usp = 0;
-			SR_S_OFF();
-		}
-		break;
-	  case 0x21:    /* FNCKEY */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		buf = mem_get( stack_adr + 2, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s mode=%d\n", "FNCKEY", srt);
-		}
-		Fnckey( srt, buf );
-		rd [ 0 ] = 0;
-		break;
-	  case 0x23:    /* CONCTRL */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s mode=%d\n", "CONCTRL", srt);
-		}
-		rd [ 0 ] = Conctrl( srt, stack_adr + 2 );
-		break;
-	  case 0x24:    /* KEYCTRL */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s mode=%d\n", "KEYCTRL", srt);
-		}
-		rd [ 0 ] = Keyctrl( srt, stack_adr + 2 );
-		break;
-	  case 0x25:    /* INTVCS */
-		srt  = (short)mem_get( stack_adr, S_WORD );
-		data = mem_get( stack_adr + 2, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s intno=%d vec=%X\n", "INTVCS", srt, data);
-		}
-		rd [ 0 ] = Intvcs( srt, data );
-		break;
-	  case 0x27:    /* GETTIM2 */
-		if (func_trace_f) {
-			printf("%-10s\n", "GETTIM2");
-		}
-		rd [ 0 ] = Gettime( 1 );
-		break;
-	  case 0x28:    /* SETTIM2 */
-		data = mem_get( stack_adr, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s %X\n", "SETTIM2", data);
-		}
-		rd [ 0 ] = Settim2( data );
-		break;
-	  case 0x29:    /* NAMESTS */
-		data = mem_get( stack_adr, S_LONG );
-		buf  = mem_get( stack_adr + 4, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s fname=%s\n", "NAMESTS", prog_ptr+data);
-		}
-		rd [ 0 ] = Namests( data, buf );
-		break;
-	  case 0x2A:    /* GETDATE */
-		if (func_trace_f) {
-			printf("%-10s", "GETDATE");
-		}
-		rd [ 0 ] = Getdate();
-		if (func_trace_f) {
-			printf("date=%X\n", rd[0]);
-		}
-		break;
-	  case 0x2B:    /* SETDATE */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s date=%X\n", "SETDATE", srt);
-		}
-		rd [ 0 ] = Setdate( srt );
-		break;
-	  case 0x2C:    /* GETTIME */
-		if (func_trace_f) {
-			printf("%-10s flag=0\n", "GETTIME");
-		}
-		rd [ 0 ] = Gettime( 0 );
-		break;
-	  case 0x30:    /* VERNUM */
-		if (func_trace_f) {
-			printf("%-10s\n", "VERNUM");
-		}
-		rd [ 0 ] = 0x36380302;
-		break;
-	  case 0x32:    /* GETDPB */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s: drive=%d. Not supported, returns -1.\n", "GETDPB", srt);
-		}
-		rd[0] = -1;
-		break;
-	  case 0x33:    /* BREAKCK */
-		if (func_trace_f) {
-			printf("%-10s\n", "BREAKCK");
-		}
-		rd [ 0 ] = 1;
-		break;
-	  case 0x34:    /* DRVXCHG */
-		if (func_trace_f) {
-			printf("%-10s\n", "DRVXCHG");
-		}
-		rd [ 0 ] = -15;    /* ドライブ指定誤り */
-		break;
-	  case 0x35:    /* INTVCG */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s intno=%d", "INTVCG", srt);
-		}
-		rd [ 0 ] = Intvcg( srt );
-		if (func_trace_f) {
-			printf(" vec=%X\n", rd[0]);
-		}
-		break;
-	  case 0x36:    /* DSKFRE */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		buf = mem_get( stack_adr + 2, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s drv=%c:\n", "DISKFRE", srt);
-		}
-		rd [ 0 ] = Dskfre( srt, buf );
-		break;
-	  case 0x37:    /* NAMECK */
-		data = mem_get( stack_adr, S_LONG );
-		buf  = mem_get( stack_adr + 4, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s fname=%s\n", "NAMECK", prog_ptr+data);
-		}
-		rd [ 0 ] = Nameck( data, buf );
-		break;
-	  case 0x39:    /* MKDIR */
-		data = mem_get( stack_adr, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s dname=%s\n", "MKDIR", prog_ptr+data);
-		}
-		rd [ 0 ] = Mkdir( data );
-		break;
-	  case 0x3A:    /* RMDIR */
-		data = mem_get( stack_adr, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s dname=%s\n", "RMDIR", prog_ptr+data);
-		}
-		rd [ 0 ] = Rmdir( data );
-		break;
-	  case 0x3B:    /* CHDIR */
-		data = mem_get( stack_adr, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s dname=%s\n", "CHDIR", prog_ptr+data);
-		}
-		rd [ 0 ] = Chdir( data );
-		break;
-	  case 0x3C:    /* CREATE */
-		data = mem_get( stack_adr, S_LONG );
-		srt  = (short)mem_get( stack_adr + 4, S_WORD );
-		data_ptr = prog_ptr + data;
-		if (func_trace_f) {
-			printf("%-10s fname=%s attr=%d\n", "CREATE", data_ptr, srt);
-		}
-		rd [ 0 ] = Create( data_ptr, srt );
-		break;
-	  case 0x3D:    /* OPEN */
-		data = mem_get( stack_adr, S_LONG );
-		srt  = (short)mem_get( stack_adr + 4, S_WORD );
-		data_ptr = prog_ptr + data;
-		if (func_trace_f) {
-			printf("%-10s fname=%s mode=%d\n", "OPEN", data_ptr, srt);
-		}
-		rd [ 0 ] = Open( data_ptr, srt );
-		break;
-	  case 0x3E:    /* CLOSE */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s file_no=%d\n", "CLOSE", srt);
-		}
-		rd [ 0 ] = Close(srt);
-		break;
-	  case 0x3F:    /* READ */
-		srt  = (short)mem_get( stack_adr, S_WORD );
-		data = mem_get( stack_adr + 2, S_LONG );
-		len  = mem_get( stack_adr + 6, S_LONG );
-		rd [ 0 ] = Read( srt, data, len );
-		if (func_trace_f) {
-			char *str = prog_ptr + data;
-			printf("%-10s file_no=%d size=%d ret=%d str=", "READ", srt, len, rd[0]);
-			for (i = 0; i < (len <= 30 ? len : 30); i ++) {
-				if (str[i] == 0)
-					break;
-				if (str[i] < ' ')
-					printf("\\%03o", (unsigned char)str[i]);
-				putchar(str[i]);
-			}
-			if (len > 30)
-				printf(" ...(truncated)");
-			printf("\n");
-		}
-		break;
-	  case 0x40:    /* WRITE */
-		srt  = (short)mem_get( stack_adr, S_WORD );
-		data = mem_get( stack_adr + 2, S_LONG );
-		len  = mem_get( stack_adr + 6, S_LONG );
-		rd [ 0 ] = Write( srt, data, len );
-		if (func_trace_f) {
-			char *str = prog_ptr + data;
-			printf("%-10s file_no=%d size=%d ret=%d str=", "WRITE", srt, len, rd[0]);
-			for (i = 0; i < (len <= 30 ? len : 30); i ++) {
-				if (str[i] == 0)
-					break;
-				if (str[i] < ' ')
-					printf("\\%03o", (unsigned char)str[i]);
-				putchar(str[i]);
-			}
-			if (len > 30)
-			  printf(" ...(truncated)");
-			printf("\n");
-		}
-		break;
-	  case 0x41:    /* DELETE */
-		data = mem_get( stack_adr, S_LONG );
-		data_ptr = prog_ptr + data;
-		if (func_trace_f) {
-			printf("%-10s fname=%s\n", "DELETE", data_ptr);
-		}
-		rd [ 0 ] = Delete( data_ptr );
-		break;
-	  case 0x42:    /* SEEK */
-		fhdl = (short)mem_get( stack_adr, S_WORD );
-		data = mem_get( stack_adr + 2, S_LONG );
-		srt  = (short)mem_get( stack_adr + 6, S_WORD );
-		rd [ 0 ] = Seek( fhdl, data, srt );
-		if (func_trace_f) {
-			printf("%-10s file_no=%d offset=%d mode=%d ret=%d\n", "SEEK", fhdl, data, srt, rd[0]);
-		}
-		break;
-	  case 0x43:    /* CHMOD */
-		data = mem_get( stack_adr, S_LONG );
-		srt  = (short)mem_get( stack_adr + 4, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s name=%s attr=%02X\n", "CHMOD", prog_ptr+data, srt);
-		}
-		rd [ 0 ] = Chmod( data, srt );
-		break;
-	  case 0x44:    /* IOCTRL */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s mode=%d stack=%08X\n", "IOCTRL", srt, stack_adr+2);
-		}
-		rd [ 0 ] = Ioctrl( srt, stack_adr + 2 );
-		break;
-	  case 0x45:    /* DUP */
-		fhdl = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s org-handle=%d\n", "DUP", fhdl);
-		}
-		rd [ 0 ] = Dup( fhdl );
-		break;
-	  case 0x46:    /* DUP2 */
-		srt  = (short)mem_get( stack_adr, S_WORD );
-		fhdl = (short)mem_get( stack_adr + 2, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s org-handle=%d new-handle=%d\n", "DUP", srt, fhdl);
-		}
-		rd [ 0 ] = Dup2( srt, fhdl );
-		break;
-	  case 0x47:    /* CURDIR */
-		srt  = (short)mem_get( stack_adr, S_WORD );
-		data = mem_get( stack_adr + 2, S_LONG );
-		if (func_trace_f) {
-			print_doscall_name("CURDIR");
-			print_drive_param("drv=", srt, "\n");
-		}
-		rd [ 0 ] = Curdir( srt, prog_ptr + data );
-		break;
-	  case 0x48:    /* MALLOC */
-		len  = mem_get( stack_adr , S_LONG );
-		if (func_trace_f) {
-			printf("%-10s len=%d\n", "MALLOC", len);
-		}
-		rd [ 0 ] = Malloc( len );
-		break;
-	  case 0x49:    /* MFREE */
-		data = mem_get( stack_adr , S_LONG );
-		if (func_trace_f) {
-			printf("%-10s addr=%08X\n", "MFREE", data);
-		}
-		rd [ 0 ] = Mfree( data );
-		break;
-	  case 0x4A:    /* SETBLOCK */
-		data = mem_get( stack_adr, S_LONG );
-		len  = mem_get( stack_adr + 4, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s size=%d\n", "SETBLOCK", len);
-		}
-		rd [ 0 ] = Setblock( data, len );
-		break;
-	  case 0x4B:    /* EXEC */
-		srt  = (short)mem_get( stack_adr, S_WORD );
-		data = mem_get( stack_adr + 2, S_LONG );
-		if ( srt < 4 ) {
-			buf  = mem_get( stack_adr + 6, S_LONG );
-			len  = mem_get( stack_adr + 10, S_LONG );
-		}
-		if (func_trace_f) {
-			printf("%-10s md=%d cmd=%s\n", "EXEC", srt, prog_ptr+data);
-		}
-		switch( srt ) {
-		  case 0:
-			rd [ 0 ] = Exec01( data, buf, len, 0 );
-			break;
-		  case 1:
-			rd [ 0 ] = Exec01( data, buf, len, 1 );
-			break;
-		  case 2:
-			rd [ 0 ] = Exec2( data, buf, len );
-			break;
-		  case 3:
-			rd [ 0 ] = Exec3( data, buf, len );
-			break;
-		  case 4:
-			Exec4( data );
-			break;
-		  default:
-			err68( "DOSCALL EXEC(5)が実行されました" );
-			return( TRUE );
-		}
-		break;
-	  case 0x4E:    /* FILES */
-		buf  = mem_get( stack_adr, S_LONG );
-		data = mem_get( stack_adr + 4, S_LONG );
-		srt  = (short)mem_get( stack_adr + 8, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s fname=\"%s\" attr=%02X\n", "FILES", prog_ptr+data, srt);
-		}
-		rd [ 0 ] = Files( buf, data, srt );
-		break;
-	  case 0x4F:    /* NFILES */
-		buf  = mem_get( stack_adr, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s\n", "NFILES");
-		}
-		rd [ 0 ] = Nfiles( buf );
-		break;
-	  case 0x51:    /* GETPDB */
-		rd [ 0 ] = psp [ nest_cnt ] + MB_SIZE;
-		if (func_trace_f) {
-			printf("%-10s\n", "GETPDB");
-		}
-		break;
-	  case 0x53:    /* GETENV */
-		data = mem_get( stack_adr, S_LONG );
-		env  = mem_get( stack_adr + 4, S_LONG );
-		buf  = mem_get( stack_adr + 8, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s env=%s\n", "GETENV", prog_ptr+data);
-		}
-		rd [ 0 ] = Getenv( data, env, buf );
-		break;
-	  case 0x54:    /* VERIFYG */
-		if (func_trace_f) {
-			printf("%-10s\n", "VERIFYG");
-		}
-		rd [ 0 ] = 1;
-		break;
-	  case 0x56:    /* RENAME */
-		data = mem_get( stack_adr, S_LONG );
-		buf  = mem_get( stack_adr + 4, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s old=\"%s\" new=\"%s\"\n", "RENAME", prog_ptr+data, prog_ptr+buf);
-		}
-		rd [ 0 ] = Rename( data, buf );
-		break;
-	  case 0x57:    /* FILEDATE */
-		fhdl = (short)mem_get( stack_adr, S_WORD );
-		data = mem_get( stack_adr + 2, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s file_no=%d datetime=%X\n", "FILEDATE", fhdl, data);
-		}
-		rd [ 0 ] = Filedate( fhdl, data );
-		break;
-	  case 0x58:    /* MALLOC2 */
-		len  = mem_get( stack_adr + 2, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s len=%d\n", "MALLOC2", len);
-		}
-		rd [ 0 ] = Malloc( len );
-		break;
-	  case 0x5B:    /* NEWFILE */
-		data = mem_get( stack_adr, S_LONG );
-		srt  = (short)mem_get( stack_adr + 4, S_WORD );
-		data_ptr = prog_ptr + data;
-		if (func_trace_f) {
-			printf("%-10s name=\"%s\" attr=%d\n", "NEWFILE", data_ptr, srt);
-		}
-		rd [ 0 ] = Newfile( data_ptr, srt );
-		break;
-	  case 0x5F:    /* ASSIGN */
-		srt  = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s mode=%d", "ASSIGN", srt);
-		}
-		rd [ 0 ] = Assign( srt, stack_adr + 2 );
-		break;
-	  case 0x7C:    /* GETFCB */
-		fhdl = (short)mem_get( stack_adr, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s file_no=%d\n", "GETFCB", fhdl);
-		}
-		rd [ 0 ] = Getfcb( fhdl );
-		break;
-	  case 0xF6:    /* SUPER_JSR */
-		data = mem_get( stack_adr, S_LONG );
-		if (func_trace_f) {
-			printf("%-10s adr=$%08X\n", "SUPER_JSR", data);
-		}
-		ra [ 7 ] -= 4;
-		mem_set( ra [ 7 ], pc, S_LONG );
-		if ( SR_S_REF() == 0 ) {
-			superjsr_ret = pc;
-			SR_S_ON();
-		}
-		pc = data;
-		break;
-	  case 0x4C:    /* EXIT2 */
-		srt = (short)mem_get( stack_adr, S_WORD );
-	  case 0x00:    /* EXIT */
-		if (func_trace_f) {
-			printf("%-10s\n", code == 0x4C ? "EXIT2" : "EXIT");
-		}
-		Mfree( 0 );
-		for( i = 5; i < FILE_MAX; i ++ ) {
-			if (finfo[i].nest == nest_cnt) {
-				if (finfo [i].fh != NULL) {
-					CloseHandle(finfo [i].fh);
-					finfo[i].fh = NULL;
-				}
-			}
-		}
-		if (nest_cnt <= 0) {
-			if (code == 0x00)
-				rd[0] = 0;
-			else
-				rd[0] = (UShort)srt;
-			return TRUE;
-		}
-		sr = (short)mem_get( psp [ nest_cnt ] + 0x44, S_WORD );
-		Mfree( psp [ nest_cnt ] + MB_SIZE );
-		nest_cnt --;
-		pc =       nest_pc [ nest_cnt ];
-		ra [ 7 ] = nest_sp [ nest_cnt ];
-		if ( code == 0x00 )
-		  rd [ 0 ] = 0;
-		else
-		  rd [ 0 ] = (UShort)srt;
-		break;
-	  case 0x31:    /* KEEPPR */
-		len = mem_get( stack_adr, S_LONG );
-		srt = (short)mem_get( stack_adr + 4, S_WORD );
-		if (func_trace_f) {
-			printf("%-10s\n", "KEEPPR");
-		}
-		Mfree( 0 );
-		for( i = 5; i < FILE_MAX; i ++ ) {
-			if ( finfo [ i ].nest == nest_cnt ) {
-				if ( finfo [ i ].fh != NULL )
-				  CloseHandle(finfo [ i ].fh);
-			}
-		}
-		if ( nest_cnt <= 0 )
-		  return( TRUE );
-		Setblock( psp [ nest_cnt ] + MB_SIZE,
-				  len + PSP_SIZE - MB_SIZE );
-		mem_set( psp [ nest_cnt ] + 0x04, 0xFF, S_BYTE );
-		sr = (short)mem_get( psp [ nest_cnt ] + 0x44, S_WORD );
-		nest_cnt --;
-		pc =       nest_pc [ nest_cnt ];
-		ra [ 7 ] = nest_sp [ nest_cnt ];
-		rd [ 0 ] = (UShort)srt;
+      break;
+    case 0x1F: /* ALLCLOSE */
+      if (func_trace_f) {
+        printf("%-10s\n", "ALLCLOSE");
+      }
+      for (i = 5; i < FILE_MAX; i++) {
+        if (finfo[i].fh != NULL) CloseHandle(finfo[i].fh);
+      }
+      rd[0] = 0;
+      break;
+    case 0x20: /* SUPER */
+      data = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s data=%d\n", "SUPER", data);
+      }
+      if (data == 0) {
+        /* user -> super */
+        if (SR_S_REF() != 0) {
+          rd[0] = -26;
+        } else {
+          rd[0] = ra[7];
+          usp = ra[7];
+          SR_S_ON();
+        }
+      } else {
+        /* super -> user */
+        ra[7] = data;
+        rd[0] = 0;
+        usp = 0;
+        SR_S_OFF();
+      }
+      break;
+    case 0x21: /* FNCKEY */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      buf = mem_get(stack_adr + 2, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s mode=%d\n", "FNCKEY", srt);
+      }
+      Fnckey(srt, buf);
+      rd[0] = 0;
+      break;
+    case 0x23: /* CONCTRL */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s mode=%d\n", "CONCTRL", srt);
+      }
+      rd[0] = Conctrl(srt, stack_adr + 2);
+      break;
+    case 0x24: /* KEYCTRL */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s mode=%d\n", "KEYCTRL", srt);
+      }
+      rd[0] = Keyctrl(srt, stack_adr + 2);
+      break;
+    case 0x25: /* INTVCS */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      data = mem_get(stack_adr + 2, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s intno=%d vec=%X\n", "INTVCS", srt, data);
+      }
+      rd[0] = Intvcs(srt, data);
+      break;
+    case 0x27: /* GETTIM2 */
+      if (func_trace_f) {
+        printf("%-10s\n", "GETTIM2");
+      }
+      rd[0] = Gettime(1);
+      break;
+    case 0x28: /* SETTIM2 */
+      data = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s %X\n", "SETTIM2", data);
+      }
+      rd[0] = Settim2(data);
+      break;
+    case 0x29: /* NAMESTS */
+      data = mem_get(stack_adr, S_LONG);
+      buf = mem_get(stack_adr + 4, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s fname=%s\n", "NAMESTS", prog_ptr + data);
+      }
+      rd[0] = Namests(data, buf);
+      break;
+    case 0x2A: /* GETDATE */
+      if (func_trace_f) {
+        printf("%-10s", "GETDATE");
+      }
+      rd[0] = Getdate();
+      if (func_trace_f) {
+        printf("date=%X\n", rd[0]);
+      }
+      break;
+    case 0x2B: /* SETDATE */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s date=%X\n", "SETDATE", srt);
+      }
+      rd[0] = Setdate(srt);
+      break;
+    case 0x2C: /* GETTIME */
+      if (func_trace_f) {
+        printf("%-10s flag=0\n", "GETTIME");
+      }
+      rd[0] = Gettime(0);
+      break;
+    case 0x30: /* VERNUM */
+      if (func_trace_f) {
+        printf("%-10s\n", "VERNUM");
+      }
+      rd[0] = 0x36380302;
+      break;
+    case 0x32: /* GETDPB */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s: drive=%d. Not supported, returns -1.\n", "GETDPB", srt);
+      }
+      rd[0] = -1;
+      break;
+    case 0x33: /* BREAKCK */
+      if (func_trace_f) {
+        printf("%-10s\n", "BREAKCK");
+      }
+      rd[0] = 1;
+      break;
+    case 0x34: /* DRVXCHG */
+      if (func_trace_f) {
+        printf("%-10s\n", "DRVXCHG");
+      }
+      rd[0] = -15; /* ドライブ指定誤り */
+      break;
+    case 0x35: /* INTVCG */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s intno=%d", "INTVCG", srt);
+      }
+      rd[0] = Intvcg(srt);
+      if (func_trace_f) {
+        printf(" vec=%X\n", rd[0]);
+      }
+      break;
+    case 0x36: /* DSKFRE */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      buf = mem_get(stack_adr + 2, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s drv=%c:\n", "DISKFRE", srt);
+      }
+      rd[0] = Dskfre(srt, buf);
+      break;
+    case 0x37: /* NAMECK */
+      data = mem_get(stack_adr, S_LONG);
+      buf = mem_get(stack_adr + 4, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s fname=%s\n", "NAMECK", prog_ptr + data);
+      }
+      rd[0] = Nameck(data, buf);
+      break;
+    case 0x39: /* MKDIR */
+      data = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s dname=%s\n", "MKDIR", prog_ptr + data);
+      }
+      rd[0] = Mkdir(data);
+      break;
+    case 0x3A: /* RMDIR */
+      data = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s dname=%s\n", "RMDIR", prog_ptr + data);
+      }
+      rd[0] = Rmdir(data);
+      break;
+    case 0x3B: /* CHDIR */
+      data = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s dname=%s\n", "CHDIR", prog_ptr + data);
+      }
+      rd[0] = Chdir(data);
+      break;
+    case 0x3C: /* CREATE */
+      data = mem_get(stack_adr, S_LONG);
+      srt = (short)mem_get(stack_adr + 4, S_WORD);
+      data_ptr = prog_ptr + data;
+      if (func_trace_f) {
+        printf("%-10s fname=%s attr=%d\n", "CREATE", data_ptr, srt);
+      }
+      rd[0] = Create(data_ptr, srt);
+      break;
+    case 0x3D: /* OPEN */
+      data = mem_get(stack_adr, S_LONG);
+      srt = (short)mem_get(stack_adr + 4, S_WORD);
+      data_ptr = prog_ptr + data;
+      if (func_trace_f) {
+        printf("%-10s fname=%s mode=%d\n", "OPEN", data_ptr, srt);
+      }
+      rd[0] = Open(data_ptr, srt);
+      break;
+    case 0x3E: /* CLOSE */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s file_no=%d\n", "CLOSE", srt);
+      }
+      rd[0] = Close(srt);
+      break;
+    case 0x3F: /* READ */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      data = mem_get(stack_adr + 2, S_LONG);
+      len = mem_get(stack_adr + 6, S_LONG);
+      rd[0] = Read(srt, data, len);
+      if (func_trace_f) {
+        char *str = prog_ptr + data;
+        printf("%-10s file_no=%d size=%d ret=%d str=", "READ", srt, len, rd[0]);
+        for (i = 0; i < (len <= 30 ? len : 30); i++) {
+          if (str[i] == 0) break;
+          if (str[i] < ' ') printf("\\%03o", (unsigned char)str[i]);
+          putchar(str[i]);
+        }
+        if (len > 30) printf(" ...(truncated)");
+        printf("\n");
+      }
+      break;
+    case 0x40: /* WRITE */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      data = mem_get(stack_adr + 2, S_LONG);
+      len = mem_get(stack_adr + 6, S_LONG);
+      rd[0] = Write(srt, data, len);
+      if (func_trace_f) {
+        char *str = prog_ptr + data;
+        printf("%-10s file_no=%d size=%d ret=%d str=", "WRITE", srt, len,
+               rd[0]);
+        for (i = 0; i < (len <= 30 ? len : 30); i++) {
+          if (str[i] == 0) break;
+          if (str[i] < ' ') printf("\\%03o", (unsigned char)str[i]);
+          putchar(str[i]);
+        }
+        if (len > 30) printf(" ...(truncated)");
+        printf("\n");
+      }
+      break;
+    case 0x41: /* DELETE */
+      data = mem_get(stack_adr, S_LONG);
+      data_ptr = prog_ptr + data;
+      if (func_trace_f) {
+        printf("%-10s fname=%s\n", "DELETE", data_ptr);
+      }
+      rd[0] = Delete(data_ptr);
+      break;
+    case 0x42: /* SEEK */
+      fhdl = (short)mem_get(stack_adr, S_WORD);
+      data = mem_get(stack_adr + 2, S_LONG);
+      srt = (short)mem_get(stack_adr + 6, S_WORD);
+      rd[0] = Seek(fhdl, data, srt);
+      if (func_trace_f) {
+        printf("%-10s file_no=%d offset=%d mode=%d ret=%d\n", "SEEK", fhdl,
+               data, srt, rd[0]);
+      }
+      break;
+    case 0x43: /* CHMOD */
+      data = mem_get(stack_adr, S_LONG);
+      srt = (short)mem_get(stack_adr + 4, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s name=%s attr=%02X\n", "CHMOD", prog_ptr + data, srt);
+      }
+      rd[0] = Chmod(data, srt);
+      break;
+    case 0x44: /* IOCTRL */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s mode=%d stack=%08X\n", "IOCTRL", srt, stack_adr + 2);
+      }
+      rd[0] = Ioctrl(srt, stack_adr + 2);
+      break;
+    case 0x45: /* DUP */
+      fhdl = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s org-handle=%d\n", "DUP", fhdl);
+      }
+      rd[0] = Dup(fhdl);
+      break;
+    case 0x46: /* DUP2 */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      fhdl = (short)mem_get(stack_adr + 2, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s org-handle=%d new-handle=%d\n", "DUP", srt, fhdl);
+      }
+      rd[0] = Dup2(srt, fhdl);
+      break;
+    case 0x47: /* CURDIR */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      data = mem_get(stack_adr + 2, S_LONG);
+      if (func_trace_f) {
+        print_doscall_name("CURDIR");
+        print_drive_param("drv=", srt, "\n");
+      }
+      rd[0] = Curdir(srt, prog_ptr + data);
+      break;
+    case 0x48: /* MALLOC */
+      len = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s len=%d\n", "MALLOC", len);
+      }
+      rd[0] = Malloc(len);
+      break;
+    case 0x49: /* MFREE */
+      data = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s addr=%08X\n", "MFREE", data);
+      }
+      rd[0] = Mfree(data);
+      break;
+    case 0x4A: /* SETBLOCK */
+      data = mem_get(stack_adr, S_LONG);
+      len = mem_get(stack_adr + 4, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s size=%d\n", "SETBLOCK", len);
+      }
+      rd[0] = Setblock(data, len);
+      break;
+    case 0x4B: /* EXEC */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      data = mem_get(stack_adr + 2, S_LONG);
+      if (srt < 4) {
+        buf = mem_get(stack_adr + 6, S_LONG);
+        len = mem_get(stack_adr + 10, S_LONG);
+      }
+      if (func_trace_f) {
+        printf("%-10s md=%d cmd=%s\n", "EXEC", srt, prog_ptr + data);
+      }
+      switch (srt) {
+        case 0:
+          rd[0] = Exec01(data, buf, len, 0);
+          break;
+        case 1:
+          rd[0] = Exec01(data, buf, len, 1);
+          break;
+        case 2:
+          rd[0] = Exec2(data, buf, len);
+          break;
+        case 3:
+          rd[0] = Exec3(data, buf, len);
+          break;
+        case 4:
+          Exec4(data);
+          break;
+        default:
+          err68("DOSCALL EXEC(5)が実行されました");
+          return (TRUE);
+      }
+      break;
+    case 0x4E: /* FILES */
+      buf = mem_get(stack_adr, S_LONG);
+      data = mem_get(stack_adr + 4, S_LONG);
+      srt = (short)mem_get(stack_adr + 8, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s fname=\"%s\" attr=%02X\n", "FILES", prog_ptr + data, srt);
+      }
+      rd[0] = Files(buf, data, srt);
+      break;
+    case 0x4F: /* NFILES */
+      buf = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s\n", "NFILES");
+      }
+      rd[0] = Nfiles(buf);
+      break;
+    case 0x51: /* GETPDB */
+      rd[0] = psp[nest_cnt] + MB_SIZE;
+      if (func_trace_f) {
+        printf("%-10s\n", "GETPDB");
+      }
+      break;
+    case 0x53: /* GETENV */
+      data = mem_get(stack_adr, S_LONG);
+      env = mem_get(stack_adr + 4, S_LONG);
+      buf = mem_get(stack_adr + 8, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s env=%s\n", "GETENV", prog_ptr + data);
+      }
+      rd[0] = Getenv(data, env, buf);
+      break;
+    case 0x54: /* VERIFYG */
+      if (func_trace_f) {
+        printf("%-10s\n", "VERIFYG");
+      }
+      rd[0] = 1;
+      break;
+    case 0x56: /* RENAME */
+      data = mem_get(stack_adr, S_LONG);
+      buf = mem_get(stack_adr + 4, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s old=\"%s\" new=\"%s\"\n", "RENAME", prog_ptr + data,
+               prog_ptr + buf);
+      }
+      rd[0] = Rename(data, buf);
+      break;
+    case 0x57: /* FILEDATE */
+      fhdl = (short)mem_get(stack_adr, S_WORD);
+      data = mem_get(stack_adr + 2, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s file_no=%d datetime=%X\n", "FILEDATE", fhdl, data);
+      }
+      rd[0] = Filedate(fhdl, data);
+      break;
+    case 0x58: /* MALLOC2 */
+      len = mem_get(stack_adr + 2, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s len=%d\n", "MALLOC2", len);
+      }
+      rd[0] = Malloc(len);
+      break;
+    case 0x5B: /* NEWFILE */
+      data = mem_get(stack_adr, S_LONG);
+      srt = (short)mem_get(stack_adr + 4, S_WORD);
+      data_ptr = prog_ptr + data;
+      if (func_trace_f) {
+        printf("%-10s name=\"%s\" attr=%d\n", "NEWFILE", data_ptr, srt);
+      }
+      rd[0] = Newfile(data_ptr, srt);
+      break;
+    case 0x5F: /* ASSIGN */
+      srt = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s mode=%d", "ASSIGN", srt);
+      }
+      rd[0] = Assign(srt, stack_adr + 2);
+      break;
+    case 0x7C: /* GETFCB */
+      fhdl = (short)mem_get(stack_adr, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s file_no=%d\n", "GETFCB", fhdl);
+      }
+      rd[0] = Getfcb(fhdl);
+      break;
+    case 0xF6: /* SUPER_JSR */
+      data = mem_get(stack_adr, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s adr=$%08X\n", "SUPER_JSR", data);
+      }
+      ra[7] -= 4;
+      mem_set(ra[7], pc, S_LONG);
+      if (SR_S_REF() == 0) {
+        superjsr_ret = pc;
+        SR_S_ON();
+      }
+      pc = data;
+      break;
+    case 0x4C: /* EXIT2 */
+      srt = (short)mem_get(stack_adr, S_WORD);
+    case 0x00: /* EXIT */
+      if (func_trace_f) {
+        printf("%-10s\n", code == 0x4C ? "EXIT2" : "EXIT");
+      }
+      Mfree(0);
+      for (i = 5; i < FILE_MAX; i++) {
+        if (finfo[i].nest == nest_cnt) {
+          if (finfo[i].fh != NULL) {
+            CloseHandle(finfo[i].fh);
+            finfo[i].fh = NULL;
+          }
+        }
+      }
+      if (nest_cnt <= 0) {
+        if (code == 0x00)
+          rd[0] = 0;
+        else
+          rd[0] = (UShort)srt;
+        return TRUE;
+      }
+      sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
+      Mfree(psp[nest_cnt] + MB_SIZE);
+      nest_cnt--;
+      pc = nest_pc[nest_cnt];
+      ra[7] = nest_sp[nest_cnt];
+      if (code == 0x00)
+        rd[0] = 0;
+      else
+        rd[0] = (UShort)srt;
+      break;
+    case 0x31: /* KEEPPR */
+      len = mem_get(stack_adr, S_LONG);
+      srt = (short)mem_get(stack_adr + 4, S_WORD);
+      if (func_trace_f) {
+        printf("%-10s\n", "KEEPPR");
+      }
+      Mfree(0);
+      for (i = 5; i < FILE_MAX; i++) {
+        if (finfo[i].nest == nest_cnt) {
+          if (finfo[i].fh != NULL) CloseHandle(finfo[i].fh);
+        }
+      }
+      if (nest_cnt <= 0) return (TRUE);
+      Setblock(psp[nest_cnt] + MB_SIZE, len + PSP_SIZE - MB_SIZE);
+      mem_set(psp[nest_cnt] + 0x04, 0xFF, S_BYTE);
+      sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
+      nest_cnt--;
+      pc = nest_pc[nest_cnt];
+      ra[7] = nest_sp[nest_cnt];
+      rd[0] = (UShort)srt;
 
-		case 0xf7:	// BUS_ERR
-		{
-			short size  = (short)mem_get( stack_adr, S_WORD );	// アクセスサイズ
-			Long r_ptr  = mem_get( stack_adr + 2, S_LONG );
-			Long w_ptr  = mem_get( stack_adr + 6, S_LONG );
-			if (func_trace_f) {
-				printf("%-10s size=%d P1.l=%08X P2.l=%08X\n", "BUS_ERR",
-					   size, r_ptr, w_ptr);
-			}
-			rd [ 0 ] = 1;//BusErr( buf, data, srt );
-		}
-		break;
-	  default:
-		if (func_trace_f) {
-			printf("%-10s code=0xFF%02X\n", "????????", code );
-		}
-		break;
-	}
-	return( FALSE );
+    case 0xf7:  // BUS_ERR
+    {
+      short size = (short)mem_get(stack_adr, S_WORD);  // アクセスサイズ
+      Long r_ptr = mem_get(stack_adr + 2, S_LONG);
+      Long w_ptr = mem_get(stack_adr + 6, S_LONG);
+      if (func_trace_f) {
+        printf("%-10s size=%d P1.l=%08X P2.l=%08X\n", "BUS_ERR", size, r_ptr,
+               w_ptr);
+      }
+      rd[0] = 1;  // BusErr( buf, data, srt );
+    } break;
+    default:
+      if (func_trace_f) {
+        printf("%-10s code=0xFF%02X\n", "????????", code);
+      }
+      break;
+  }
+  return (FALSE);
 }
 
 /*
@@ -1202,19 +1170,18 @@ int dos_call( UChar code )
    戻り値：
      Long  入力文字数
  */
-static Long Gets( Long buf )
-{
-	char    str [ 256 ];
-	char    *buf_ptr;
-	UChar    max;
-	Long len;
+static Long Gets(Long buf) {
+  char str[256];
+  char *buf_ptr;
+  UChar max;
+  Long len;
 
-	buf_ptr = prog_ptr + buf;
-	max = (UChar)(buf_ptr[ 0 ]);
-	len = gets2( str, max );
-	buf_ptr[ 1 ] = (char)len;
-	strcpy( &(buf_ptr[ 2 ]), str );
-	return( len );
+  buf_ptr = prog_ptr + buf;
+  max = (UChar)(buf_ptr[0]);
+  len = gets2(str, max);
+  buf_ptr[1] = (char)len;
+  strcpy(&(buf_ptr[2]), str);
+  return (len);
 }
 
 /*
@@ -1225,31 +1192,29 @@ static Long Gets( Long buf )
    戻り値：
      Long  キーコード等
  */
-static Long Kflush( short mode )
-{
-	UChar    c;
+static Long Kflush(short mode) {
+  UChar c;
 
 #if defined(WIN32)
 #elif defined(DOSX)
-	while( kbhit() != 0 )
-	  _getch();
+  while (kbhit() != 0) _getch();
 #endif
-	switch( mode ) {
-	  case 0x01:
-		return( _getche() & 0xFF );
-	  case 0x07:
-	  case 0x08:
-		c = _getch();
-		if ( c == 0x00 ) {
-			c = _getch();
-			c = 0x1B;
-		}
-		return( c );
-	  case 0x0A:
-		return( 0 );
-	  default:
-		return( 0 );
-	}
+  switch (mode) {
+    case 0x01:
+      return (_getche() & 0xFF);
+    case 0x07:
+    case 0x08:
+      c = _getch();
+      if (c == 0x00) {
+        c = _getch();
+        c = 0x1B;
+      }
+      return (c);
+    case 0x0A:
+      return (0);
+    default:
+      return (0);
+  }
 }
 
 /*
@@ -1261,43 +1226,32 @@ static Long Kflush( short mode )
    戻り値：
      Long  バイト数等
  */
-static Long Ioctrl( short mode, Long stack_adr )
-{
-	short    fno;
+static Long Ioctrl(short mode, Long stack_adr) {
+  short fno;
 
-	switch( mode ) {
-	  case 0:
-		fno = (short)mem_get( stack_adr, S_WORD );
-		if ( fno == 0 )
-		  return( 0x80C1 );
-		if ( fno == 1 || fno == 2 )
-		  return( 0x80C2 );
-		return( 0 );
-	  case 6:
-		fno = (short)mem_get( stack_adr, S_WORD );
-		if ( fno == 0 )
-		  return( 0xFF );    /* 入力可 */
-		if ( fno < 5 )
-		  return( 0 );
-		if ( finfo [ fno ].fh == NULL )
-		  return( 0 );
-		if ( finfo [ fno ].mode == 0 || finfo [ fno ].mode == 2 )
-		  return( 0xFF );
-		return( 0 );
-	  case 7:
-		fno = (short)mem_get( stack_adr, S_WORD );
-		if ( fno == 1 || fno == 2 )
-		  return( 0xFF );    /* 出力可 */
-		if ( fno < 5 )
-		  return( 0 );
-		if ( finfo [ fno ].fh == NULL )
-		  return( 0 );
-		if ( finfo [ fno ].mode == 1 || finfo [ fno ].mode == 2 )
-		  return( 0xFF );
-		return( 0 );
-	  default:
-		return( 0 );
-	}
+  switch (mode) {
+    case 0:
+      fno = (short)mem_get(stack_adr, S_WORD);
+      if (fno == 0) return (0x80C1);
+      if (fno == 1 || fno == 2) return (0x80C2);
+      return (0);
+    case 6:
+      fno = (short)mem_get(stack_adr, S_WORD);
+      if (fno == 0) return (0xFF); /* 入力可 */
+      if (fno < 5) return (0);
+      if (finfo[fno].fh == NULL) return (0);
+      if (finfo[fno].mode == 0 || finfo[fno].mode == 2) return (0xFF);
+      return (0);
+    case 7:
+      fno = (short)mem_get(stack_adr, S_WORD);
+      if (fno == 1 || fno == 2) return (0xFF); /* 出力可 */
+      if (fno < 5) return (0);
+      if (finfo[fno].fh == NULL) return (0);
+      if (finfo[fno].mode == 1 || finfo[fno].mode == 2) return (0xFF);
+      return (0);
+    default:
+      return (0);
+  }
 }
 
 /*
@@ -1308,58 +1262,51 @@ static Long Ioctrl( short mode, Long stack_adr )
    戻り値：
      Long  複写先のハンドルまたはエラーコード
  */
-static Long Dup( short org )
-{
-	Long ret;
-	int    i;
+static Long Dup(short org) {
+  Long ret;
+  int i;
 
-	if ( org < 5 )
-	  return( -14 );
+  if (org < 5) return (-14);
 
-	ret = 0;
-	for ( i = 5; i < FILE_MAX; i++ ) {
-		if ( finfo [ i ].fh == NULL ) {
-			ret = i;
-			break;
-		}
-	}
-	if ( ret == 0 )
-	  return( -4 );    /* オープンしているファイルが多すぎる */
-	finfo [ ret ].fh   = finfo [ org ].fh;
-	finfo [ ret ].date = finfo [ org ].date;
-	finfo [ ret ].time = finfo [ org ].time;
-	finfo [ ret ].mode = finfo [ org ].mode;
-	finfo [ ret ].nest = finfo [ org ].nest;
-	strcpy( finfo [ ret ].name, finfo [ org ].name );
+  ret = 0;
+  for (i = 5; i < FILE_MAX; i++) {
+    if (finfo[i].fh == NULL) {
+      ret = i;
+      break;
+    }
+  }
+  if (ret == 0) return (-4); /* オープンしているファイルが多すぎる */
+  finfo[ret].fh = finfo[org].fh;
+  finfo[ret].date = finfo[org].date;
+  finfo[ret].time = finfo[org].time;
+  finfo[ret].mode = finfo[org].mode;
+  finfo[ret].nest = finfo[org].nest;
+  strcpy(finfo[ret].name, finfo[org].name);
 
-	return( ret );
+  return (ret);
 }
 
 /*
  　機能：DOSCALL DUP2を実行する
  戻り値：エラーコード
  */
-static Long Dup2( short org, short new )
-{
-	if ( new < 5 || org < 5 )
-	  return( -14 );
+static Long Dup2(short org, short new) {
+  if (new < 5 || org < 5) return (-14);
 
-	if ( new >= FILE_MAX )
-	  return( -14 );    /* 無効なパラメータ */
+  if (new >= FILE_MAX) return (-14); /* 無効なパラメータ */
 
-	if ( finfo [ new ].fh != NULL ) {
-		Close( new );
-		if ( Close( new ) < 0 )
-		  return( -14 );
-	}
-	finfo [ new ].fh   = finfo [ org ].fh;
-	finfo [ new ].date = finfo [ org ].date;
-	finfo [ new ].time = finfo [ org ].time;
-	finfo [ new ].mode = finfo [ org ].mode;
-	finfo [ new ].nest = finfo [ org ].nest;
-	strcpy( finfo [ new ].name, finfo [ org ].name );
+  if (finfo[new].fh != NULL) {
+    Close(new);
+    if (Close(new) < 0) return (-14);
+  }
+  finfo[new].fh = finfo[org].fh;
+  finfo[new].date = finfo[org].date;
+  finfo[new].time = finfo[org].time;
+  finfo[new].mode = finfo[org].mode;
+  finfo[new].nest = finfo[org].nest;
+  strcpy(finfo[new].name, finfo[org].name);
 
-	return( 0 );
+  return (0);
 }
 
 /*
@@ -1371,48 +1318,45 @@ static Long Dup2( short org, short new )
      Long  メモリブロックへのポインタ(>0)
               エラーコード(<0)
  */
-static Long Malloc( Long size )
-{
-	char    *mem_ptr;
-	Long mem_adr;    /* メモリブロックのアドレス */
-	Long mem_end;    /* メモリブロックの終端アドレス */
-	Long end_adr;    /* メモリブロックの一番低位のアドレス */
-	Long next_adr;    /* 次のメモリブロックのアドレス */
-	Long data;
+static Long Malloc(Long size) {
+  char *mem_ptr;
+  Long mem_adr;  /* メモリブロックのアドレス */
+  Long mem_end;  /* メモリブロックの終端アドレス */
+  Long end_adr;  /* メモリブロックの一番低位のアドレス */
+  Long next_adr; /* 次のメモリブロックのアドレス */
+  Long data;
 
-	mem_adr  = psp [ nest_cnt ];
-	end_adr  = mem_get( mem_adr + 0x08, S_LONG );
-	size &= 0xFFFFFF;
+  mem_adr = psp[nest_cnt];
+  end_adr = mem_get(mem_adr + 0x08, S_LONG);
+  size &= 0xFFFFFF;
 
-	while( (next_adr=mem_get( mem_adr + 0x0C, S_LONG )) != 0 ) {
-		/* メモリブロックIDを検査 */
-		data = mem_get( next_adr + 0x04, S_BYTE );
-		if ( data != 0x00 && data != 0xFF )
-		  return( 0x82000000 );    /* 完全に確保できない */
-		mem_adr = next_adr;
-		mem_end = mem_get( mem_adr + 0x08, S_LONG );
-		if ( mem_end > end_adr )
-		  end_adr = mem_end;
-	}
+  while ((next_adr = mem_get(mem_adr + 0x0C, S_LONG)) != 0) {
+    /* メモリブロックIDを検査 */
+    data = mem_get(next_adr + 0x04, S_BYTE);
+    if (data != 0x00 && data != 0xFF)
+      return (0x82000000); /* 完全に確保できない */
+    mem_adr = next_adr;
+    mem_end = mem_get(mem_adr + 0x08, S_LONG);
+    if (mem_end > end_adr) end_adr = mem_end;
+  }
 
-	if ( (end_adr & 0xF) != 0 )
-	  end_adr += (16 - (end_adr % 16));
+  if ((end_adr & 0xF) != 0) end_adr += (16 - (end_adr % 16));
 
-	if ( end_adr + MB_SIZE + size > mem_aloc ) {
-		if ( mem_aloc - (end_adr + MB_SIZE) < 0 )
-		  return( 0x82000000 );    /* 完全に確保できない */
-		/* 確保できる最大長 */
-		return( 0x81000000 + mem_aloc - (end_adr + MB_SIZE) );
-	}
+  if (end_adr + MB_SIZE + size > mem_aloc) {
+    if (mem_aloc - (end_adr + MB_SIZE) < 0)
+      return (0x82000000); /* 完全に確保できない */
+    /* 確保できる最大長 */
+    return (0x81000000 + mem_aloc - (end_adr + MB_SIZE));
+  }
 
-	/* メモリ管理ブロックを作成 */
-	mem_ptr = prog_ptr + end_adr;
-	memset( mem_ptr, 0x00, MB_SIZE );
-	mem_set( mem_adr + 0x0C, end_adr, S_LONG );
-	mem_set( end_adr, mem_adr, S_LONG );
-	mem_set( end_adr + 0x04, psp [ nest_cnt ], S_LONG );
-	mem_set( end_adr + 0x08, end_adr + MB_SIZE + size, S_LONG );
-	return ( end_adr + MB_SIZE );
+  /* メモリ管理ブロックを作成 */
+  mem_ptr = prog_ptr + end_adr;
+  memset(mem_ptr, 0x00, MB_SIZE);
+  mem_set(mem_adr + 0x0C, end_adr, S_LONG);
+  mem_set(end_adr, mem_adr, S_LONG);
+  mem_set(end_adr + 0x04, psp[nest_cnt], S_LONG);
+  mem_set(end_adr + 0x08, end_adr + MB_SIZE + size, S_LONG);
+  return (end_adr + MB_SIZE);
 }
 
 /*
@@ -1423,41 +1367,37 @@ static Long Malloc( Long size )
    戻り値：
      Long  エラーコード(<0)
  */
-static Long Mfree( Long adr )
-{
-	Long prev_adr;
-	Long next_adr;
-	Long data;
+static Long Mfree(Long adr) {
+  Long prev_adr;
+  Long next_adr;
+  Long data;
 
-	if ( adr < 0 )
-	  return( -9 );    /* 無効なメモリ管理ポインタ */
+  if (adr < 0) return (-9); /* 無効なメモリ管理ポインタ */
 
-	if ( adr == 0 ) {
-		mem_set( psp [ nest_cnt ] + 0x0C, 0, S_LONG );
-		return( 0 );
-	}
+  if (adr == 0) {
+    mem_set(psp[nest_cnt] + 0x0C, 0, S_LONG);
+    return (0);
+  }
 
-	/* メモリブロックIDを検査 */
-	data = mem_get( adr - MB_SIZE + 0x04, S_BYTE );
-	if ( data != 0x00 && data != 0xFF )
-	  return( -9 );    /* 無効なメモリ管理ポインタ */
+  /* メモリブロックIDを検査 */
+  data = mem_get(adr - MB_SIZE + 0x04, S_BYTE);
+  if (data != 0x00 && data != 0xFF) return (-9); /* 無効なメモリ管理ポインタ */
 
-	/* 前のブロックを調べる */
-	prev_adr = mem_get( adr - MB_SIZE, S_LONG );
-	data = mem_get( prev_adr + 0x04, S_BYTE );
-	if ( data != 0x00 && data != 0xFF )
-	  return( -7 );    /* メモリ管理領域が壊された */
+  /* 前のブロックを調べる */
+  prev_adr = mem_get(adr - MB_SIZE, S_LONG);
+  data = mem_get(prev_adr + 0x04, S_BYTE);
+  if (data != 0x00 && data != 0xFF) return (-7); /* メモリ管理領域が壊された */
 
-	/* 次のブロックを調べる＆ポインタを張り替える */
-	next_adr = mem_get( adr - MB_SIZE + 0x0C, S_LONG );
-	if ( next_adr != 0 ) {
-		data = mem_get( next_adr + 0x04, S_BYTE );
-		if ( data != 0x00 && data != 0xFF )
-		  return( -7 );    /* メモリ管理領域が壊された */
-		mem_set( next_adr, prev_adr, S_LONG );
-	}
-	mem_set( prev_adr + 0x0C, next_adr, S_LONG );
-	return ( 0 );
+  /* 次のブロックを調べる＆ポインタを張り替える */
+  next_adr = mem_get(adr - MB_SIZE + 0x0C, S_LONG);
+  if (next_adr != 0) {
+    data = mem_get(next_adr + 0x04, S_BYTE);
+    if (data != 0x00 && data != 0xFF)
+      return (-7); /* メモリ管理領域が壊された */
+    mem_set(next_adr, prev_adr, S_LONG);
+  }
+  mem_set(prev_adr + 0x0C, next_adr, S_LONG);
+  return (0);
 }
 
 /*
@@ -1470,53 +1410,44 @@ static Long Mfree( Long adr )
      Long  ディスクの空き容量(バイト>0)
               エラーコード(<0)
  */
-static Long Dskfre( short drv, Long buf )
-{
-	Long disksize;
+static Long Dskfre(short drv, Long buf) {
+  Long disksize;
 #if defined(WIN32)
-	BOOL b;
-	ULong SectorsPerCluster, BytesPerSector,
-	NumberOfFreeClusters, TotalNumberOfClusters;
-	b = GetDiskFreeSpaceA(
-		NULL,
-		(LPDWORD)&SectorsPerCluster,
-		(LPDWORD)&BytesPerSector,
-		(LPDWORD)&NumberOfFreeClusters,
-		(LPDWORD)&TotalNumberOfClusters);
-	if (!b)
-	  return (-15);
-	NumberOfFreeClusters &= 0xFFFF;
-	mem_set( buf    , NumberOfFreeClusters, S_WORD );
-	TotalNumberOfClusters &= 0xFFFF;
-	mem_set( buf + 2, TotalNumberOfClusters, S_WORD );
-	SectorsPerCluster &= 0xFFFF;
-	mem_set( buf + 4, SectorsPerCluster, S_WORD );
-	BytesPerSector &= 0xFFFF;
-	mem_set( buf + 6, BytesPerSector, S_WORD );
-	disksize = NumberOfFreeClusters *
-	  SectorsPerCluster *
-		BytesPerSector;
+  BOOL b;
+  ULong SectorsPerCluster, BytesPerSector, NumberOfFreeClusters,
+      TotalNumberOfClusters;
+  b = GetDiskFreeSpaceA(
+      NULL, (LPDWORD)&SectorsPerCluster, (LPDWORD)&BytesPerSector,
+      (LPDWORD)&NumberOfFreeClusters, (LPDWORD)&TotalNumberOfClusters);
+  if (!b) return (-15);
+  NumberOfFreeClusters &= 0xFFFF;
+  mem_set(buf, NumberOfFreeClusters, S_WORD);
+  TotalNumberOfClusters &= 0xFFFF;
+  mem_set(buf + 2, TotalNumberOfClusters, S_WORD);
+  SectorsPerCluster &= 0xFFFF;
+  mem_set(buf + 4, SectorsPerCluster, S_WORD);
+  BytesPerSector &= 0xFFFF;
+  mem_set(buf + 6, BytesPerSector, S_WORD);
+  disksize = NumberOfFreeClusters * SectorsPerCluster * BytesPerSector;
 #elif defined(DOSX)
-	static buf_save;
-	struct    diskfree_t    dspace;
-	buf_save = buf;    /* dos_getdiskfreeがDskfreの引数を壊すため */
-	if ( _dos_getdiskfree( drv, &dspace ) != 0 )
-	  return( -15 );        /* ドライブ指定誤り */
-	buf = buf_save;
-	buf = buf_save;
-	dspace.avail_clusters &= 0xFFFF;
-	mem_set( buf    , dspace.avail_clusters, S_WORD );
-	dspace.total_clusters &= 0xFFFF;
-	mem_set( buf + 2, dspace.total_clusters, S_WORD );
-	dspace.sectors_per_cluster &= 0xFFFF;
-	mem_set( buf + 4, dspace.sectors_per_cluster, S_WORD );
-	dspace.bytes_per_sector &= 0xFFFF;
-	mem_set( buf + 6, dspace.bytes_per_sector, S_WORD );
-	disksize = dspace.avail_clusters *
-		dspace.sectors_per_cluster *
-		dspace.bytes_per_sector;
+  static buf_save;
+  struct diskfree_t dspace;
+  buf_save = buf; /* dos_getdiskfreeがDskfreの引数を壊すため */
+  if (_dos_getdiskfree(drv, &dspace) != 0) return (-15); /* ドライブ指定誤り */
+  buf = buf_save;
+  buf = buf_save;
+  dspace.avail_clusters &= 0xFFFF;
+  mem_set(buf, dspace.avail_clusters, S_WORD);
+  dspace.total_clusters &= 0xFFFF;
+  mem_set(buf + 2, dspace.total_clusters, S_WORD);
+  dspace.sectors_per_cluster &= 0xFFFF;
+  mem_set(buf + 4, dspace.sectors_per_cluster, S_WORD);
+  dspace.bytes_per_sector &= 0xFFFF;
+  mem_set(buf + 6, dspace.bytes_per_sector, S_WORD);
+  disksize = dspace.avail_clusters * dspace.sectors_per_cluster *
+             dspace.bytes_per_sector;
 #endif
-	return disksize;
+  return disksize;
 }
 
 /*
@@ -1528,48 +1459,42 @@ static Long Dskfre( short drv, Long buf )
    戻り値：
      Long  エラーコード
  */
-static Long Setblock( Long adr, Long size )
-{
-	Long data;
-	Long tail_adr;
-	Long near_adr;
-	Long mem_adr;
-	Long next_adr;
+static Long Setblock(Long adr, Long size) {
+  Long data;
+  Long tail_adr;
+  Long near_adr;
+  Long mem_adr;
+  Long next_adr;
 
-	if( adr == 0 )
-	  adr = psp [ nest_cnt ] + MB_SIZE;
+  if (adr == 0) adr = psp[nest_cnt] + MB_SIZE;
 
-	/* メモリブロックIDを検査 */
-	data = mem_get( adr - 0x0C, S_BYTE );
-	if ( data != 0x00 && data != 0xFF )
-	  return( -9 );
+  /* メモリブロックIDを検査 */
+  data = mem_get(adr - 0x0C, S_BYTE);
+  if (data != 0x00 && data != 0xFF) return (-9);
 
-	/* サイズを検査 */
-	size &= 0x00FFFFFF;
-	tail_adr = mem_get( adr - 0x08, S_LONG );
-	data = tail_adr - adr;
-	if ( size > data ) {
-		near_adr = mem_aloc;
-		/* 前のブロックを見る */
-		mem_adr = adr - MB_SIZE;
-		while( (next_adr=mem_get( mem_adr, S_LONG )) != HUMAN_HEAD ) {
-			if ( next_adr >= tail_adr && next_adr < near_adr )
-			  near_adr = next_adr;
-			mem_adr = next_adr;
-		}
-		/* 後ろのブロックを見る */
-		mem_adr = adr - MB_SIZE;
-		while( (next_adr=mem_get( mem_adr + 0x0C, S_LONG )) != 0 ) {
-			if ( next_adr >= tail_adr && next_adr < near_adr )
-			  near_adr = next_adr;
-			mem_adr = next_adr;
-		}
-		if ( adr + size > near_adr )
-		  return( 0x81000000 + near_adr - adr );
-	}
+  /* サイズを検査 */
+  size &= 0x00FFFFFF;
+  tail_adr = mem_get(adr - 0x08, S_LONG);
+  data = tail_adr - adr;
+  if (size > data) {
+    near_adr = mem_aloc;
+    /* 前のブロックを見る */
+    mem_adr = adr - MB_SIZE;
+    while ((next_adr = mem_get(mem_adr, S_LONG)) != HUMAN_HEAD) {
+      if (next_adr >= tail_adr && next_adr < near_adr) near_adr = next_adr;
+      mem_adr = next_adr;
+    }
+    /* 後ろのブロックを見る */
+    mem_adr = adr - MB_SIZE;
+    while ((next_adr = mem_get(mem_adr + 0x0C, S_LONG)) != 0) {
+      if (next_adr >= tail_adr && next_adr < near_adr) near_adr = next_adr;
+      mem_adr = next_adr;
+    }
+    if (adr + size > near_adr) return (0x81000000 + near_adr - adr);
+  }
 
-	mem_set( adr - 0x08, adr + size, S_LONG );
-	return( 0 );
+  mem_set(adr - 0x08, adr + size, S_LONG);
+  return (0);
 }
 
 /*
@@ -1582,421 +1507,388 @@ static Long Setblock( Long adr, Long size )
      Long  ファイルハンドル(>=0)
               エラーコード(<0)
  */
-static Long Create( char *p, short atr )
-{
+static Long Create(char *p, short atr) {
 #if defined(WIN32)
-	HANDLE  fp;
+  HANDLE fp;
 #else
-	FILE    *fp;
+  FILE *fp;
 #endif
-	Long ret;
-	Long i;
-	int    len;
-	
-	
+  Long ret;
+  Long i;
+  int len;
+
 #if !defined(WIN32) && !defined(DOSX)
-	char* name = p;
-	int namelen = strlen(name);
-	for (int i=0;i<namelen;++i) {
-		if ( name[i] == '\\' ) {
-			name[i] = '/';
-		}
-		if ( name[i] == ':' ) {
-			p = &name[i+1];
-		}
-	}
+  char *name = p;
+  int namelen = strlen(name);
+  for (int i = 0; i < namelen; ++i) {
+    if (name[i] == '\\') {
+      name[i] = '/';
+    }
+    if (name[i] == ':') {
+      p = &name[i + 1];
+    }
+  }
 //	printf("Create(\"%s\", %d) = %s\n", name, atr, p);
 #endif
 
+  ret = 0;
+  for (i = 5; i < FILE_MAX; i++) {
+    if (finfo[i].fh == NULL) {
+      ret = i;
+      break;
+    }
+  }
+  if (ret == 0) return (-4); /* オープンしているファイルが多すぎる */
 
-	ret = 0;
-	for ( i = 5; i < FILE_MAX; i++ ) {
-		if ( finfo [ i ].fh == NULL ) {
-			ret = i;
-			break;
-		}
-	}
-	if ( ret == 0 )
-	  return( -4 );    /* オープンしているファイルが多すぎる */
+  /* ファイル名後ろの空白をつめる */
+  len = strlen(p);
+  for (i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
 
-	/* ファイル名後ろの空白をつめる */
-	len = strlen( p );
-	for( i = len - 1; i >= 0 && p [ i ] == ' '; i-- )
-	  p [ i ] = '\0';
+  /* ファイル名のチェック */
+  if ((len = strlen(p)) > 88) return (-13); /* ファイル名の指定誤り */
 
-	/* ファイル名のチェック */
-	if ( (len=strlen( p )) > 88 )
-	  return( -13 );    /* ファイル名の指定誤り */
-
-	for( i = len - 1; i >= 0 && p [ i ] != '.'; i-- )
-	  ;
-	if ( i >= 0 ) {
-		/* 拡張子が存在する */
-		if ( strlen( &(p [ i ]) ) > 4 )
-		  return( -13 );
-	}
+  for (i = len - 1; i >= 0 && p[i] != '.'; i--)
+    ;
+  if (i >= 0) {
+    /* 拡張子が存在する */
+    if (strlen(&(p[i])) > 4) return (-13);
+  }
 #if defined(WIN32)
-	if ((fp = CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL,
-						 CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
+  if ((fp = CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL, CREATE_ALWAYS,
+                       FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
 #else
-	if ((fp=fopen( p, "w+b" )) == NULL)
+  if ((fp = fopen(p, "w+b")) == NULL)
 #endif
-	  return( -23 );    /* ディスクがいっぱい */
-	finfo [ ret ].fh   = fp;
-	finfo [ ret ].mode = 2;
-	finfo [ ret ].nest = nest_cnt;
-	strcpy( finfo [ ret ].name, p );
-	return( ret );
+    return (-23); /* ディスクがいっぱい */
+  finfo[ret].fh = fp;
+  finfo[ret].mode = 2;
+  finfo[ret].nest = nest_cnt;
+  strcpy(finfo[ret].name, p);
+  return (ret);
 }
 
 /*
  　機能：DOSCALL NEWFILEを実行する
  戻り値：ファイルハンドル(負ならエラーコード)
  */
-static Long Newfile( char *p, short atr )
-{
+static Long Newfile(char *p, short atr) {
 #if defined(WIN32)
-	HANDLE  fp;
+  HANDLE fp;
 #else
-	FILE    *fp;
+  FILE *fp;
 #endif
-	Long ret;
-	Long i;
-	Long len;
+  Long ret;
+  Long i;
+  Long len;
 
-	ret = 0;
-	for ( i = 5; i < FILE_MAX; i++ ) {
-		if ( finfo [ i ].fh == NULL ) {
-			ret = i;
-			break;
-		}
-	}
-	if ( ret == 0 )
-	  return( -4 );    /* オープンしているファイルが多すぎる */
-
-	/* ファイル名後ろの空白をつめる */
-	len = strlen( p );
-	for( i = len - 1; i >= 0 && p [ i ] == ' '; i-- )
-	  p [ i ] = '\0';
-
-	/* ファイル名のチェック */
-	if ( (len=strlen( p )) > 88 )
-	  return( -13 );    /* ファイル名の指定誤り */
-
-	for( i = len - 1; i >= 0 && p [ i ] != '.'; i-- )
-	  ;
-	if ( i >= 0 ) {
-		/* 拡張子が存在する */
-		if ( strlen( &(p [ i ]) ) > 4 )
-		  return( -13 );
-	}
-#if defined(WIN32)
-	/*
-	 * 「X68000環境ハンドブック」によると、ファイルが存在する場合でも
-	 * 新たにファイルを生成するとあるので、ファイルの存在チェックは不要
-	 * である。
-    if ((fp = CreateFile(p, GENERIC_READ, 0, NULL,
-        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)) != INVALID_HANDLE_VALUE)
-    {
-        CloseHandle(fp);
-        return( -80 );
+  ret = 0;
+  for (i = 5; i < FILE_MAX; i++) {
+    if (finfo[i].fh == NULL) {
+      ret = i;
+      break;
     }
-	 */
-	if ((fp = CreateFile(p, GENERIC_READ | GENERIC_WRITE, 0, NULL,
-						 CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
-	  {
-		  return( -23 );    /* ディスクがいっぱい */
-	  }
+  }
+  if (ret == 0) return (-4); /* オープンしているファイルが多すぎる */
+
+  /* ファイル名後ろの空白をつめる */
+  len = strlen(p);
+  for (i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
+
+  /* ファイル名のチェック */
+  if ((len = strlen(p)) > 88) return (-13); /* ファイル名の指定誤り */
+
+  for (i = len - 1; i >= 0 && p[i] != '.'; i--)
+    ;
+  if (i >= 0) {
+    /* 拡張子が存在する */
+    if (strlen(&(p[i])) > 4) return (-13);
+  }
+#if defined(WIN32)
+  /*
+   * 「X68000環境ハンドブック」によると、ファイルが存在する場合でも
+   * 新たにファイルを生成するとあるので、ファイルの存在チェックは不要
+   * である。
+if ((fp = CreateFile(p, GENERIC_READ, 0, NULL,
+  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)) != INVALID_HANDLE_VALUE)
+{
+  CloseHandle(fp);
+  return( -80 );
+}
+   */
+  if ((fp = CreateFile(p, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,
+                       FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE) {
+    return (-23); /* ディスクがいっぱい */
+  }
 #else
-	if ((fp=fopen( p, "rb" )) != NULL) {
-		fclose( fp );
-		return( -80 );    /* 既に存在している */
-	}
-	if ((fp=fopen( p, "w+b" )) == NULL)
-	  return( -23 );    /* ディスクがいっぱい */
+  if ((fp = fopen(p, "rb")) != NULL) {
+    fclose(fp);
+    return (-80); /* 既に存在している */
+  }
+  if ((fp = fopen(p, "w+b")) == NULL) return (-23); /* ディスクがいっぱい */
 #endif
 
-	finfo [ ret ].fh = fp;
-	finfo [ ret ].mode = 2;
-	finfo [ ret ].nest = nest_cnt;
-	strcpy( finfo [ ret ].name, p );
-	return( ret );
+  finfo[ret].fh = fp;
+  finfo[ret].mode = 2;
+  finfo[ret].nest = nest_cnt;
+  strcpy(finfo[ret].name, p);
+  return (ret);
 }
 
 /*
  　機能：DOSCALL OPENを実行する
  戻り値：ファイルハンドル(負ならエラーコード)
  */
-static Long Open( char *p, short mode )
-{
+static Long Open(char *p, short mode) {
 #if defined(WIN32)
-	HANDLE fh;
-	DWORD md;
+  HANDLE fh;
+  DWORD md;
 #else
-	FILE    *fp;
-	char    md [ 4 ];
+  FILE *fp;
+  char md[4];
 #endif
-	int    len;
-	Long ret;
-	Long i;
+  int len;
+  Long ret;
+  Long i;
 
 #if !defined(WIN32) && !defined(DOSX)
-	char* name = p;
-	int namelen = strlen(name);
-	for (int i=0;i<namelen;++i) {
-		if ( name[i] == '\\' ) {
-			name[i] = '/';
-		}
-		if ( name[i] == ':' ) {
-			p = &name[i+1];
-		}
-	}
+  char *name = p;
+  int namelen = strlen(name);
+  for (int i = 0; i < namelen; ++i) {
+    if (name[i] == '\\') {
+      name[i] = '/';
+    }
+    if (name[i] == ':') {
+      p = &name[i + 1];
+    }
+  }
 //	printf("Open(\"%s\", %d) = %s\n", name, mode, p);
 #endif
 
-	switch( mode ) {
-	  case 0: /* 読み込みオープン */
+  switch (mode) {
+    case 0: /* 読み込みオープン */
 #if defined(WIN32)
-		md = GENERIC_READ;
+      md = GENERIC_READ;
 #else
-		strcpy( md, "rb" );
+      strcpy(md, "rb");
 #endif
-		break;
-	  case 1: /* 書き込みオープン */
+      break;
+    case 1: /* 書き込みオープン */
 #if defined(WIN32)
-		if ((fh = CreateFile(p, GENERIC_READ, 0, NULL,
-							 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
-		  return -2;
-		CloseHandle(fh);
-		md = GENERIC_WRITE;
+      if ((fh = CreateFile(p, GENERIC_READ, 0, NULL, OPEN_EXISTING,
+                           FILE_ATTRIBUTE_NORMAL, NULL)) ==
+          INVALID_HANDLE_VALUE)
+        return -2;
+      CloseHandle(fh);
+      md = GENERIC_WRITE;
 #else
-		if ((fp=fopen( p, "rb" )) == NULL)
-		  return( -2 );    /* ファイルは見つからない */
-		fclose( fp );
-		strcpy( md, "r+b" );
+      if ((fp = fopen(p, "rb")) == NULL)
+        return (-2); /* ファイルは見つからない */
+      fclose(fp);
+      strcpy(md, "r+b");
 #endif
-		break;
-	  case 2: /* 読み書きオープン */
+      break;
+    case 2: /* 読み書きオープン */
 #if defined(WIN32)
-		md = GENERIC_READ | GENERIC_WRITE;
+      md = GENERIC_READ | GENERIC_WRITE;
 #else
-		strcpy( md, "r+b" );
+      strcpy(md, "r+b");
 #endif
-		break;
-	  default:
-		return( -12 );        /* アクセスモードが異常 */
-	}
+      break;
+    default:
+      return (-12); /* アクセスモードが異常 */
+  }
 
-	/* ファイル名後ろの空白をつめる */
-	len = strlen( p );
-	for( i = len - 1; i >= 0 && p [ i ] == ' '; i-- )
-	  p [ i ] = '\0';
+  /* ファイル名後ろの空白をつめる */
+  len = strlen(p);
+  for (i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
 
-	if ( (len=strlen( p )) > 88 )
-	  return( -13 );    /* ファイル名の指定誤り */
+  if ((len = strlen(p)) > 88) return (-13); /* ファイル名の指定誤り */
 #if defined(WIN32)
-	if ((fh = CreateFile(p, md, 0, NULL,
-						 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
+  if ((fh = CreateFile(p, md, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                       NULL)) == INVALID_HANDLE_VALUE)
 #else
-	if ((fp=fopen( p, md )) == NULL)
+  if ((fp = fopen(p, md)) == NULL)
 #endif
-	{
-		if ( mode == 1 )
-			return( -23 );    /* ディスクがいっぱい */
-		else
-			return( -2 );    /* ファイルは見つからない */
-	}
+  {
+    if (mode == 1)
+      return (-23); /* ディスクがいっぱい */
+    else
+      return (-2); /* ファイルは見つからない */
+  }
 
-	ret = 0;
-	for ( i = 5; i < FILE_MAX; i++ ) {
-		if ( finfo [ i ].fh == NULL ) {
-			ret = i;
-			break;
-		}
-	}
+  ret = 0;
+  for (i = 5; i < FILE_MAX; i++) {
+    if (finfo[i].fh == NULL) {
+      ret = i;
+      break;
+    }
+  }
 
-	if ( ret == 0 ) {
+  if (ret == 0) {
 #if defined(WIN32)
-		CloseHandle(fh);
+    CloseHandle(fh);
 #else
-		fclose( fp );
+    fclose(fp);
 #endif
-		return( -4 );    /* オープンしているファイルが多すぎる */
-	}
+    return (-4); /* オープンしているファイルが多すぎる */
+  }
 
 #if defined(WIN32)
-	finfo [ ret ].fh   = fh;
+  finfo[ret].fh = fh;
 #else
-	finfo [ ret ].fh   = fp;
+  finfo[ret].fh = fp;
 #endif
-	finfo [ ret ].mode = mode;
-	finfo [ ret ].nest = nest_cnt;
-	strcpy( finfo [ ret ].name, p );
-	return( ret );
+  finfo[ret].mode = mode;
+  finfo[ret].nest = nest_cnt;
+  strcpy(finfo[ret].name, p);
+  return (ret);
 }
 
 /*
  　機能：DOSCALL CLOSEを実行する
  戻り値：エラーコード
  */
-static Long Close( short hdl )
-{
-	if ( finfo [ hdl ].fh == NULL )
-	  return( -6 );    /* オープンされていない */
+static Long Close(short hdl) {
+  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
 
-	if ( hdl <= 4 )
-	  return( 0 );
+  if (hdl <= 4) return (0);
 
 #if defined(WIN32)
-	if (CloseHandle(finfo[hdl].fh) == FALSE)
+  if (CloseHandle(finfo[hdl].fh) == FALSE)
 #else
-	if ( fclose( finfo [ hdl ].fh ) == EOF )
+  if (fclose(finfo[hdl].fh) == EOF)
 #endif
-	  return( -14 );    /* 無効なパラメータでコールした */
+    return (-14); /* 無効なパラメータでコールした */
 
-	finfo [ hdl ].fh = NULL;
-	/* タイムスタンプ変更 */
+  finfo[hdl].fh = NULL;
+  /* タイムスタンプ変更 */
 #if defined(WIN32)
-	if ( finfo [ hdl ].date != 0 || finfo [ hdl ].time != 0 ) {
-		FILETIME ft0, ft1, ft2;
-		HANDLE fh;
-		__int64 datetime;
+  if (finfo[hdl].date != 0 || finfo[hdl].time != 0) {
+    FILETIME ft0, ft1, ft2;
+    HANDLE fh;
+    __int64 datetime;
 
-		fh = CreateFileA(finfo [ hdl ].name,
-						 GENERIC_WRITE, 0, NULL,
-						 OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		GetFileTime(fh, &ft0, &ft1, &ft2);
-		// 秒→100nsecに変換する。
-		datetime = ((__int64)finfo [ hdl ].date*86400L + finfo [ hdl ].time) * 10000000;
-		ft2.dwLowDateTime = (ULong)(datetime & 0xffffffff);
-		ft2.dwHighDateTime = (ULong)(datetime >> 32);
-		SetFileTime(fh, &ft0, &ft1, &ft2);
-		CloseHandle(fh);
-		finfo [ hdl ].date = 0;
-		finfo [ hdl ].time = 0;
-	}
+    fh = CreateFileA(finfo[hdl].name, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
+                     FILE_ATTRIBUTE_NORMAL, NULL);
+    GetFileTime(fh, &ft0, &ft1, &ft2);
+    // 秒→100nsecに変換する。
+    datetime = ((__int64)finfo[hdl].date * 86400L + finfo[hdl].time) * 10000000;
+    ft2.dwLowDateTime = (ULong)(datetime & 0xffffffff);
+    ft2.dwHighDateTime = (ULong)(datetime >> 32);
+    SetFileTime(fh, &ft0, &ft1, &ft2);
+    CloseHandle(fh);
+    finfo[hdl].date = 0;
+    finfo[hdl].time = 0;
+  }
 #elif defined(DOSX)
-	if ( finfo [ hdl ].date != 0 || finfo [ hdl ].time != 0 ) {
-		if ( _dos_open( finfo [ hdl ].name, 1, &dos_fh ) == 0 ) {
-			dos_setftime( dos_fh, finfo [ hdl ].date,
-						  finfo [ hdl ].time );
-			dos_close( dos_fh );
-		}
-		finfo [ hdl ].date = 0;
-		finfo [ hdl ].time = 0;
-	}
+  if (finfo[hdl].date != 0 || finfo[hdl].time != 0) {
+    if (_dos_open(finfo[hdl].name, 1, &dos_fh) == 0) {
+      dos_setftime(dos_fh, finfo[hdl].date, finfo[hdl].time);
+      dos_close(dos_fh);
+    }
+    finfo[hdl].date = 0;
+    finfo[hdl].time = 0;
+  }
 #endif
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL FGETSを実行する
  戻り値：エラーコード
  */
-static Long Fgets( Long adr, short hdl )
-{
-	char    buf [ 257 ];
-	char    *p;
-	size_t  len;
-	UChar   max;
+static Long Fgets(Long adr, short hdl) {
+  char buf[257];
+  char *p;
+  size_t len;
+  UChar max;
 
-	if ( finfo [ hdl ].fh == NULL )
-	  return( -6 );    /* オープンされていない */
+  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
 
-	if ( finfo [ hdl ].mode == 1 )
-	  return( -1 );
+  if (finfo[hdl].mode == 1) return (-1);
 
-	max = (unsigned char)mem_get( adr, S_BYTE );
+  max = (unsigned char)mem_get(adr, S_BYTE);
 #if defined(WIN32)
-	{
-		BOOL b;
-		DWORD read_len;
-		char c;
-		int i;
-		for (i = 0; i < max; i ++) {
-			b = ReadFile(finfo [ hdl ].fh, &c, 1, (LPDWORD)&read_len, NULL);
-			if (c == '\r') {
-				b = ReadFile(finfo [ hdl ].fh, &c, 1, (LPDWORD)&read_len, NULL);
-				if (c == 'n') {
-					buf[i] = '\0';
-					break;
-				} else {
-					buf[i] = '\r';
-				}
-			}
-		}
-		if (b == FALSE)
-		  return -1;
-	}
+  {
+    BOOL b;
+    DWORD read_len;
+    char c;
+    int i;
+    for (i = 0; i < max; i++) {
+      b = ReadFile(finfo[hdl].fh, &c, 1, (LPDWORD)&read_len, NULL);
+      if (c == '\r') {
+        b = ReadFile(finfo[hdl].fh, &c, 1, (LPDWORD)&read_len, NULL);
+        if (c == 'n') {
+          buf[i] = '\0';
+          break;
+        } else {
+          buf[i] = '\r';
+        }
+      }
+    }
+    if (b == FALSE) return -1;
+  }
 #else
-	if ( fgets( buf, max, finfo [ hdl ].fh ) == NULL )
-	  return( -1 );
+  if (fgets(buf, max, finfo[hdl].fh) == NULL) return (-1);
 #endif
-	len = strlen( buf );
-	if ( len < 2 )
-	  return( -1 );
+  len = strlen(buf);
+  if (len < 2) return (-1);
 
-	len -= 2;
-	buf [ len ] = '\0';
-	mem_set( adr + 1, len, S_BYTE );
-	p = prog_ptr + adr + 2;
-	strcpy( p, buf );
+  len -= 2;
+  buf[len] = '\0';
+  mem_set(adr + 1, len, S_BYTE);
+  p = prog_ptr + adr + 2;
+  strcpy(p, buf);
 
-	return( len );
+  return (len);
 }
 
 /*
  　機能：DOSCALL READを実行する
  戻り値：読み込んだバイト数(負ならエラーコード)
  */
-static Long Read( short hdl, Long buf, Long len )
-{
-	char    *read_buf;
-	Long read_len;
-	BOOL    ret;
+static Long Read(short hdl, Long buf, Long len) {
+  char *read_buf;
+  Long read_len;
+  BOOL ret;
 
-	if ( finfo [ hdl ].fh == NULL )
-	  return( -6 );    /* オープンされていない */
+  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
 
-	if ( finfo [ hdl ].mode == 1 )
-	  return( -1 );    /* 無効なファンクションコール */
+  if (finfo[hdl].mode == 1) return (-1); /* 無効なファンクションコール */
 
-	if ( len == 0 )
-	  return( 0 );
+  if (len == 0) return (0);
 
-	read_buf = prog_ptr + buf;
+  read_buf = prog_ptr + buf;
 #if defined(WIN32)
-	ret = ReadFile(finfo [ hdl ].fh, read_buf, len, (LPDWORD)&read_len, NULL);
+  ret = ReadFile(finfo[hdl].fh, read_buf, len, (LPDWORD)&read_len, NULL);
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-	read_len = Read_conv( hdl, read_buf, len );
+  read_len = Read_conv(hdl, read_buf, len);
 #else
-	read_len = fread( read_buf, 1, len, finfo [ hdl ].fh );
+  read_len = fread(read_buf, 1, len, finfo[hdl].fh);
 #endif
 
-	return( read_len );
+  return (read_len);
 }
 
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Read_conv( short hdl, void *buf, size_t size )
-{
-	Long read_len;
-	FILE *fp = finfo[hdl].fh;
+static Long Read_conv(short hdl, void *buf, size_t size) {
+  Long read_len;
+  FILE *fp = finfo[hdl].fh;
 
-	if ( fp == NULL )
-	  return( -6 );
+  if (fp == NULL) return (-6);
 
-	if (!isatty(fileno(fp))) {
-		read_len = fread( buf, 1, size, fp );
-	} else {
-		int crlf_len;
+  if (!isatty(fileno(fp))) {
+    read_len = fread(buf, 1, size, fp);
+  } else {
+    int crlf_len;
 
-		read_len = gets2(buf, size);
-		crlf_len = size - read_len >= 2 ? 2 : size - read_len;
-		memcpy(buf + read_len, "\r\n", crlf_len);
-		read_len += crlf_len;
-	}
+    read_len = gets2(buf, size);
+    crlf_len = size - read_len >= 2 ? 2 : size - read_len;
+    memcpy(buf + read_len, "\r\n", crlf_len);
+    read_len += crlf_len;
+  }
 
-	return read_len;
+  return read_len;
 }
 #endif
 
@@ -2004,107 +1896,98 @@ static Long Read_conv( short hdl, void *buf, size_t size )
  　機能：DOSCALL WRITEを実行する
  戻り値：書き込んだバイト数(負ならエラーコード)
  */
-static Long Write( short hdl, Long buf, Long len )
-{
-	char    *write_buf;
-	Long write_len = 0;
-	unsigned len2;
+static Long Write(short hdl, Long buf, Long len) {
+  char *write_buf;
+  Long write_len = 0;
+  unsigned len2;
 
-	if ( finfo [ hdl ].fh == NULL )
-	  return( -6 );    /* オープンされていない */
+  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
 
-	if ( len == 0 )
-	  return( 0 );
+  if (len == 0) return (0);
 
-	write_buf = prog_ptr + buf;
+  write_buf = prog_ptr + buf;
 #if defined(WIN32)
-	WriteFile(finfo[ hdl ].fh, (LPCVOID)write_buf, len, &len2, NULL);
-	write_len = len2;
-	if (finfo [ hdl ].fh == GetStdHandle(STD_OUTPUT_HANDLE))
-	  FlushFileBuffers(finfo [ hdl ].fh);
+  WriteFile(finfo[hdl].fh, (LPCVOID)write_buf, len, &len2, NULL);
+  write_len = len2;
+  if (finfo[hdl].fh == GetStdHandle(STD_OUTPUT_HANDLE))
+    FlushFileBuffers(finfo[hdl].fh);
 #elif defined(DOSX)
-	if ( len < 65536 ) {
-		_dos_write( fileno(finfo[ hdl ].fh), write_buf, (unsigned)len,
-					&len2 );
-		write_len = len2;
-	} else {
-		write_len = fwrite( write_buf, 1, len, finfo [ hdl ].fh );
-	}
-	if (finfo [ hdl ].fh == stdout)
-	  fflush( stdout );
+  if (len < 65536) {
+    _dos_write(fileno(finfo[hdl].fh), write_buf, (unsigned)len, &len2);
+    write_len = len2;
+  } else {
+    write_len = fwrite(write_buf, 1, len, finfo[hdl].fh);
+  }
+  if (finfo[hdl].fh == stdout) fflush(stdout);
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-	write_len = Write_conv( hdl, write_buf, len );
+  write_len = Write_conv(hdl, write_buf, len);
 #else
-	write_len = fwrite( write_buf, 1, len, finfo [ hdl ].fh );
-	if (finfo [ hdl ].fh == stdout)
-	  fflush( stdout );
+  write_len = fwrite(write_buf, 1, len, finfo[hdl].fh);
+  if (finfo[hdl].fh == stdout) fflush(stdout);
 #endif
 
-	return( write_len );
+  return (write_len);
 }
 
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Write_conv( short hdl, void *buf, size_t size )
-{
-	Long write_len;
-	FILE *fp = finfo[hdl].fh;
+static Long Write_conv(short hdl, void *buf, size_t size) {
+  Long write_len;
+  FILE *fp = finfo[hdl].fh;
 
-	if ( fp == NULL )
-	  return( -6 );
+  if (fp == NULL) return (-6);
 
-	if (!isatty(fileno(fp))) {
-		write_len = fwrite( buf, 1, size, fp );
-	} else {
-#if defined (USE_ICONV)
-		static char prev_char = 0;
-		iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+  if (!isatty(fileno(fp))) {
+    write_len = fwrite(buf, 1, size, fp);
+  } else {
+#if defined(USE_ICONV)
+    static char prev_char = 0;
+    iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
 
-		write_len = 0;
+    write_len = 0;
 
-		while (size > 0) {
-			char sjis_buf[2048];
-			char utf8_buf[4096];
-			int sjis_buf_size;
-			char *sjis_buf_p;
-			size_t sjis_bytes;
-			char *utf8_buf_p = utf8_buf;
-			size_t utf8_bytes = sizeof(utf8_buf);
-			size_t utf8_bytes_prev = utf8_bytes;
-			int res;
+    while (size > 0) {
+      char sjis_buf[2048];
+      char utf8_buf[4096];
+      int sjis_buf_size;
+      char *sjis_buf_p;
+      size_t sjis_bytes;
+      char *utf8_buf_p = utf8_buf;
+      size_t utf8_bytes = sizeof(utf8_buf);
+      size_t utf8_bytes_prev = utf8_bytes;
+      int res;
 
-			if (prev_char) {
-				sjis_buf[0] = prev_char;
-				sjis_buf_p = sjis_buf + 1;
-				sjis_buf_size = sizeof(sjis_buf) - 1;
-				prev_char = 0;
-			} else {
-				sjis_buf_p = sjis_buf;
-				sjis_buf_size = sizeof(sjis_buf);
-			}
+      if (prev_char) {
+        sjis_buf[0] = prev_char;
+        sjis_buf_p = sjis_buf + 1;
+        sjis_buf_size = sizeof(sjis_buf) - 1;
+        prev_char = 0;
+      } else {
+        sjis_buf_p = sjis_buf;
+        sjis_buf_size = sizeof(sjis_buf);
+      }
 
-			sjis_bytes = size > sjis_buf_size ? sjis_buf_size : size;
-			memcpy(sjis_buf_p, buf, sjis_bytes);
-			buf += sjis_bytes;
-			size -= sjis_bytes;
-			write_len += sjis_bytes;
-			sjis_bytes += sjis_buf_p - sjis_buf;
-			sjis_buf_p = sjis_buf;
+      sjis_bytes = size > sjis_buf_size ? sjis_buf_size : size;
+      memcpy(sjis_buf_p, buf, sjis_bytes);
+      buf += sjis_bytes;
+      size -= sjis_bytes;
+      write_len += sjis_bytes;
+      sjis_bytes += sjis_buf_p - sjis_buf;
+      sjis_buf_p = sjis_buf;
 
-			res = iconv(icd, &sjis_buf_p, &sjis_bytes,
-							 &utf8_buf_p, &utf8_bytes);
-			if (res < 0 && errno == EINVAL) {
-					prev_char = *sjis_buf_p;
-			}
-			fwrite( utf8_buf, 1, utf8_bytes_prev - utf8_bytes, fp );
-		}
-		iconv_close(icd);
+      res = iconv(icd, &sjis_buf_p, &sjis_bytes, &utf8_buf_p, &utf8_bytes);
+      if (res < 0 && errno == EINVAL) {
+        prev_char = *sjis_buf_p;
+      }
+      fwrite(utf8_buf, 1, utf8_bytes_prev - utf8_bytes, fp);
+    }
+    iconv_close(icd);
 
-		fflush( fp );
+    fflush(fp);
 #else
-		write_len = fwrite( buf, 1, size, fp );
+    write_len = fwrite(buf, 1, size, fp);
 #endif
-	}
-	return write_len;
+  }
+  return write_len;
 }
 #endif
 
@@ -2112,209 +1995,196 @@ static Long Write_conv( short hdl, void *buf, size_t size )
  　機能：DOSCALL DELETEを実行する
  戻り値：ファイルハンドル(負ならエラーコード)
  */
-static Long Delete( char *p )
-{
-	int    err_save;
-	unsigned int    len;
-	int    hdl;
-	int    i;
+static Long Delete(char *p) {
+  int err_save;
+  unsigned int len;
+  int hdl;
+  int i;
 
-	errno = 0;
-	if ( remove( p ) != 0 ) {
-		/* オープン中のファイルを調べる */
-		err_save = errno;
-		len = strlen( p );
-		hdl = 0;
-		for( i = 5; i < FILE_MAX; i ++ ) {
-			if ( finfo [ i ].fh == NULL || nest_cnt != finfo [ i ].nest )
-			  continue;
-			if ( len == strlen( finfo [ i ].name ) ) {
-				if ( memcmp( p, finfo [ i ].name, len ) == 0 ) {
-					hdl = i;
-					break;
-				}
-			}
-		}
-		if ( len > 0 && hdl > 0 ) {
-			CloseHandle(finfo [hdl].fh);
-			errno = 0;
-			if ( remove( p ) != 0 ) {
-				if ( errno == ENOENT )
-				  return( -2 );    /* ファイルがない */
-				else
-				  return( -13 );    /* ファイル名指定誤り */
-			}
-		} else {
-			if ( err_save == ENOENT )
-			  return( -2 );
-			else
-			  return( -13 );
-		}
-	}
-	return( 0 );
+  errno = 0;
+  if (remove(p) != 0) {
+    /* オープン中のファイルを調べる */
+    err_save = errno;
+    len = strlen(p);
+    hdl = 0;
+    for (i = 5; i < FILE_MAX; i++) {
+      if (finfo[i].fh == NULL || nest_cnt != finfo[i].nest) continue;
+      if (len == strlen(finfo[i].name)) {
+        if (memcmp(p, finfo[i].name, len) == 0) {
+          hdl = i;
+          break;
+        }
+      }
+    }
+    if (len > 0 && hdl > 0) {
+      CloseHandle(finfo[hdl].fh);
+      errno = 0;
+      if (remove(p) != 0) {
+        if (errno == ENOENT)
+          return (-2); /* ファイルがない */
+        else
+          return (-13); /* ファイル名指定誤り */
+      }
+    } else {
+      if (err_save == ENOENT)
+        return (-2);
+      else
+        return (-13);
+    }
+  }
+  return (0);
 }
 
 /*
  　機能：DOSCALL SEEKを実行する
  戻り値：先頭からのオフセット(負ならエラーコード)
  */
-static Long Seek( short hdl, Long offset, short mode )
-{
-	int    sk;
-	Long ret;
+static Long Seek(short hdl, Long offset, short mode) {
+  int sk;
+  Long ret;
 
 #if defined(WIN32)
-	if (finfo [ hdl ].fh == INVALID_HANDLE_VALUE)
-	  return( -6 );        /* オープンされていない */
-	switch( mode ) {
-	  case 0:
-		sk = FILE_BEGIN;
-		break;
-	  case 1:
-		sk = FILE_CURRENT;
-		break;
-	  case 2:
-		sk = FILE_END;
-		break;
-	  default:
-		return( -14 );    /* 無効なパラメータ */
-	}
-	if ((ret = SetFilePointer(finfo [ hdl ].fh, offset, NULL, sk )) < 0 )
-	  return( -25 );        /* 指定の位置にシークできない */
+  if (finfo[hdl].fh == INVALID_HANDLE_VALUE)
+    return (-6); /* オープンされていない */
+  switch (mode) {
+    case 0:
+      sk = FILE_BEGIN;
+      break;
+    case 1:
+      sk = FILE_CURRENT;
+      break;
+    case 2:
+      sk = FILE_END;
+      break;
+    default:
+      return (-14); /* 無効なパラメータ */
+  }
+  if ((ret = SetFilePointer(finfo[hdl].fh, offset, NULL, sk)) < 0)
+    return (-25); /* 指定の位置にシークできない */
 #else
-	if ( finfo [ hdl ].fh == NULL )
-	  return( -6 );        /* オープンされていない */
-	switch( mode ) {
-	  case 0:
-		sk = SEEK_SET;
-		break;
-	  case 1:
-		sk = SEEK_CUR;
-		break;
-	  case 2:
-		sk = SEEK_END;
-		break;
-	  default:
-		return( -14 );    /* 無効なパラメータ */
-	}
-	if ( fseek( finfo [ hdl ].fh, offset, sk ) != 0 )
-	  return( -25 );        /* 指定の位置にシークできない */
-	ret = ftell( finfo [ hdl ].fh );
+  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
+  switch (mode) {
+    case 0:
+      sk = SEEK_SET;
+      break;
+    case 1:
+      sk = SEEK_CUR;
+      break;
+    case 2:
+      sk = SEEK_END;
+      break;
+    default:
+      return (-14); /* 無効なパラメータ */
+  }
+  if (fseek(finfo[hdl].fh, offset, sk) != 0)
+    return (-25); /* 指定の位置にシークできない */
+  ret = ftell(finfo[hdl].fh);
 #endif
-	return( ret );
+  return (ret);
 }
 
 /*
  　機能：DOSCALL RENAMEを実行する
  戻り値：エラーコード
  */
-static Long Rename( Long old, Long new1 )
-{
-	char    *old_ptr;
-	char    *new_ptr;
+static Long Rename(Long old, Long new1) {
+  char *old_ptr;
+  char *new_ptr;
 
-	old_ptr = prog_ptr + old;
-	new_ptr = prog_ptr + new1;
-	errno = 0;
-	if (rename( old_ptr, new_ptr ) != 0 ) {
-		if ( errno == EACCES )
-			return( -22 );    /* ファイルがあってリネームできない */
-		else
-			return( -7 );    /* ファイル名指定誤り */
-	}
+  old_ptr = prog_ptr + old;
+  new_ptr = prog_ptr + new1;
+  errno = 0;
+  if (rename(old_ptr, new_ptr) != 0) {
+    if (errno == EACCES)
+      return (-22); /* ファイルがあってリネームできない */
+    else
+      return (-7); /* ファイル名指定誤り */
+  }
 
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL CHMODを実行する
  戻り値：エラーコード
  */
-static Long Chmod( Long adr, short atr )
-{
-	char    *name_ptr;
-	ULong ret;
+static Long Chmod(Long adr, short atr) {
+  char *name_ptr;
+  ULong ret;
 
-	name_ptr = prog_ptr + adr;
-	if ( atr == -1 ) {
-		/* 読み出し */
+  name_ptr = prog_ptr + adr;
+  if (atr == -1) {
+    /* 読み出し */
 #if defined(WIN32)
-		if ((ret = GetFileAttributesA(name_ptr)) == 0xFFFFFFFF)
-		  return -2;
+    if ((ret = GetFileAttributesA(name_ptr)) == 0xFFFFFFFF) return -2;
 #else
-		if ( _dos_getfileattr( name_ptr, &ret ) != 0 )
-		  return( -2 );        /* ファイルがない */
+    if (_dos_getfileattr(name_ptr, &ret) != 0) return (-2); /* ファイルがない */
 #endif
-		return( ret );
-	} else {
-		atr &= 0x3F;
-		errno = 0;
+    return (ret);
+  } else {
+    atr &= 0x3F;
+    errno = 0;
 #if defined(WIN32)
-		if (SetFileAttributesA(name_ptr, atr) == FALSE) {
+    if (SetFileAttributesA(name_ptr, atr) == FALSE) {
 #else
-		if ( _dos_setfileattr( name_ptr, atr ) != 0 ) {
+    if (_dos_setfileattr(name_ptr, atr) != 0) {
 #endif
-			if ( errno == ENOENT )
-			  return( -2 );        /* ファイルがない */
-			else
-			  return( -19 );        /* 書き込み禁止 */
-		}
-		return( atr );
-	}
+      if (errno == ENOENT)
+        return (-2); /* ファイルがない */
+      else
+        return (-19); /* 書き込み禁止 */
+    }
+    return (atr);
+  }
 }
 
 /*
  　機能：DOSCALL MKDIRを実行する
  戻り値：エラーコード
  */
-static Long Mkdir( Long name )
-{
-	char    *name_ptr;
+static Long Mkdir(Long name) {
+  char *name_ptr;
 
-	name_ptr = prog_ptr + name;
-	if (CreateDirectoryA(name_ptr, NULL) == FALSE) {
-		if ( errno == EACCES )
-			return( -20 );    /* ディレクトリは既に存在する */
-		return( -13 );        /* ファイル名指定誤り */
-	}
-	return( 0 );
+  name_ptr = prog_ptr + name;
+  if (CreateDirectoryA(name_ptr, NULL) == FALSE) {
+    if (errno == EACCES) return (-20); /* ディレクトリは既に存在する */
+    return (-13);                      /* ファイル名指定誤り */
+  }
+  return (0);
 }
 
 /*
  　機能：DOSCALL RMDIRを実行する
  戻り値：エラーコード
-	 */
-static Long Rmdir( Long name )
-{
-	char    *name_ptr;
+         */
+static Long Rmdir(Long name) {
+  char *name_ptr;
 
-	name_ptr = prog_ptr + name;
-	errno = 0;
-	if (RemoveDirectoryA(name_ptr) == FALSE) {
-		if ( errno == EACCES )
-			return( -21 );    /* ディレクトリ中にファイルがある */
-		return( -13 );        /* ファイル名指定誤り */
-	}
-	return( 0 );
+  name_ptr = prog_ptr + name;
+  errno = 0;
+  if (RemoveDirectoryA(name_ptr) == FALSE) {
+    if (errno == EACCES) return (-21); /* ディレクトリ中にファイルがある */
+    return (-13);                      /* ファイル名指定誤り */
+  }
+  return (0);
 }
 
 /*
  　機能：DOSCALL CHDIRを実行する
  戻り値：エラーコード
  */
-static Long Chdir( Long name )
-{
-	char    *name_ptr;
+static Long Chdir(Long name) {
+  char *name_ptr;
 
-	name_ptr = prog_ptr + name;
-	if (SetCurrentDirectory(name_ptr) == FALSE )
-		return( -3 );        /* ディレクトリが見つからない */
-	return( 0 );
+  name_ptr = prog_ptr + name;
+  if (SetCurrentDirectory(name_ptr) == FALSE)
+    return (-3); /* ディレクトリが見つからない */
+  return (0);
 }
 
 #ifdef USE_ICONV
 // UTF-8文字列からShift_JIS文字列への変換
-static size_t utf8_to_sjis(char* inbuf, char* outbuf, size_t outbuf_size) {
+static size_t utf8_to_sjis(char *inbuf, char *outbuf, size_t outbuf_size) {
   iconv_t icd = iconv_open("Shift_JIS", "UTF-8");
   size_t inbytes = strlen(inbuf);
   size_t outbytes = outbuf_size - 1;
@@ -2326,7 +2196,7 @@ static size_t utf8_to_sjis(char* inbuf, char* outbuf, size_t outbuf_size) {
 #endif
 
 // Shift_JIS文字列中のスラッシュをバックスラッシュに書き換える
-static void to_backslash(char* buf) {
+static void to_backslash(char *buf) {
   for (; *buf; buf += 1) {
     if (*buf == '/') {
       *buf = '\\';
@@ -2343,16 +2213,16 @@ static void to_backslash(char* buf) {
 
 #define ROOT_SLASH_LEN 1  // "/"
 
-static Long Curdir_generic( short drv, char *buf_ptr )
-{
+static Long Curdir_generic(short drv, char *buf_ptr) {
   char buf[PATH_MAX];
-  const char* p = getcwd(buf, sizeof(buf));
+  const char *p = getcwd(buf, sizeof(buf));
   if (p == NULL) {
     // Human68kのDOS _CURDIRはエラーコードとして-15しか返さないので
     // getdcwd()が失敗する理由は考慮しなくてよい。
     return DOSE_ILGDRV;
   }
-  if (utf8_to_sjis(buf + ROOT_SLASH_LEN, buf_ptr, HUMAN68K_PATH_MAX) == (size_t)-1) {
+  if (utf8_to_sjis(buf + ROOT_SLASH_LEN, buf_ptr, HUMAN68K_PATH_MAX) ==
+      (size_t)-1) {
     return DOSE_ILGDRV;
   }
   to_backslash(buf_ptr);
@@ -2361,16 +2231,14 @@ static Long Curdir_generic( short drv, char *buf_ptr )
 #endif
 
 /*
-	 機能：
-		 DOSCALL CURDIRを実行する
-	 戻り値：
-		 エラーコード(0:成功 -15:失敗)
+         機能：
+                 DOSCALL CURDIRを実行する
+         戻り値：
+                 エラーコード(0:成功 -15:失敗)
  */
-static Long Curdir(short drv, char* buf_ptr)
-{
-	return HOST_CURDIR(drv, buf_ptr);
+static Long Curdir(short drv, char *buf_ptr) {
+  return HOST_CURDIR(drv, buf_ptr);
 }
-
 
 /*
    機能：
@@ -2382,346 +2250,327 @@ static Long Curdir(short drv, char* buf_ptr)
    戻り値：
      エラーコード
  */
-static Long Files( Long buf, Long name, short atr )
-{
+static Long Files(Long buf, Long name, short atr) {
 #if defined(WIN32)
 
-	WIN32_FIND_DATA f_data;
-	HANDLE handle;
-	char        *name_ptr;
-	char        *buf_ptr;
-	name_ptr = prog_ptr + name;
-	buf_ptr  = prog_ptr + buf;
+  WIN32_FIND_DATA f_data;
+  HANDLE handle;
+  char *name_ptr;
+  char *buf_ptr;
+  name_ptr = prog_ptr + name;
+  buf_ptr = prog_ptr + buf;
 
-	/* 最初にマッチするファイルを探す。*/
-	/* FindFirstFileEx()はWindowsNTにしかないのでボツ
-    handle = FindFirstFileEx
-                   (name_ptr,
-                    FindExInfoStandard,
-                    (LPVOID)&f_data,
-                    FindExSearchNameMatch,
-                    NULL,
-                    0);
-	 */
-	/* 最初のファイルを検索する。*/
-	handle = FindFirstFile(name_ptr, &f_data);
-	/* 予約領域をセット */
-	buf_ptr[0] = atr;  /* ファイルの属性 */
-	buf_ptr[1] = 0;    /* ドライブ番号(not used) */
-	*((HANDLE*)&buf_ptr[2]) = handle; /* サーチハンドル */
-	{
-		BOOL b = handle != INVALID_HANDLE_VALUE;
-		/* 属性の一致するファイルが見つかるまで繰返し検索する。*/
-		while(b == TRUE) {
-			unsigned char fatr;
-			fatr  = f_data.dwFileAttributes & FILE_ATTRIBUTE_READONLY ? 0x01 : 0;
-			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN ? 0x02 : 0;
-			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM ? 0x04 : 0;
-/*			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_VOLUMEID ? 0x08 : 0; */
-			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ? 0x10 : 0;
-			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE ? 0x20 : 0;
-			if (fatr & buf_ptr[0] || (fatr == 0 && (buf_ptr[0] & 0x20))) {
-				/* ATRをセット */
-				buf_ptr[21] = fatr;
-				break;  /* 指定された属性のファイルが見つかった。*/
-			}
-			b = FindNextFile(handle, &f_data);
-		}
-		if (!b)
-			return( -2 );
-	}
-	/* DATEとTIMEをセット */
-	{
-		SYSTEMTIME st;
-		unsigned short s;
-		FileTimeToSystemTime(&f_data.ftLastWriteTime, &st);
-		s = (st.wHour << 11) +
-			(st.wMinute << 5) +
-			 st.wSecond / 2;
-		buf_ptr[22] = (s & 0xff00) >> 8;
-		buf_ptr[23] = s & 0xff;
-		s =((st.wYear - 1980) << 9) +
-			(st.wMonth << 5) +
-			 st.wDay;
-		buf_ptr[24] = (s & 0xff00) >> 8;
-		buf_ptr[25] = s & 0xff;
-	}
-	/* FILELENをセット */
-	buf_ptr[26] = (unsigned char)((f_data.nFileSizeLow & 0xff000000) >> 24);
-	buf_ptr[27] = (unsigned char)((f_data.nFileSizeLow & 0x00ff0000) >> 16);
-	buf_ptr[28] = (unsigned char)((f_data.nFileSizeLow & 0x0000ff00) >> 8);
-	buf_ptr[29] = (unsigned char)(f_data.nFileSizeLow & 0x000000ff);
-	/* PACKEDNAMEをセット */
-	strncpy(&buf_ptr[30], f_data.cFileName, 22);
-	buf_ptr[30+22] = 0;
+  /* 最初にマッチするファイルを探す。*/
+  /* FindFirstFileEx()はWindowsNTにしかないのでボツ
+handle = FindFirstFileEx
+             (name_ptr,
+              FindExInfoStandard,
+              (LPVOID)&f_data,
+              FindExSearchNameMatch,
+              NULL,
+              0);
+   */
+  /* 最初のファイルを検索する。*/
+  handle = FindFirstFile(name_ptr, &f_data);
+  /* 予約領域をセット */
+  buf_ptr[0] = atr;                  /* ファイルの属性 */
+  buf_ptr[1] = 0;                    /* ドライブ番号(not used) */
+  *((HANDLE *)&buf_ptr[2]) = handle; /* サーチハンドル */
+  {
+    BOOL b = handle != INVALID_HANDLE_VALUE;
+    /* 属性の一致するファイルが見つかるまで繰返し検索する。*/
+    while (b == TRUE) {
+      unsigned char fatr;
+      fatr = f_data.dwFileAttributes & FILE_ATTRIBUTE_READONLY ? 0x01 : 0;
+      fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN ? 0x02 : 0;
+      fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM ? 0x04 : 0;
+      /*			fatr |= f_data.dwFileAttributes &
+       * FILE_ATTRIBUTE_VOLUMEID ? 0x08 : 0; */
+      fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ? 0x10 : 0;
+      fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE ? 0x20 : 0;
+      if (fatr & buf_ptr[0] || (fatr == 0 && (buf_ptr[0] & 0x20))) {
+        /* ATRをセット */
+        buf_ptr[21] = fatr;
+        break; /* 指定された属性のファイルが見つかった。*/
+      }
+      b = FindNextFile(handle, &f_data);
+    }
+    if (!b) return (-2);
+  }
+  /* DATEとTIMEをセット */
+  {
+    SYSTEMTIME st;
+    unsigned short s;
+    FileTimeToSystemTime(&f_data.ftLastWriteTime, &st);
+    s = (st.wHour << 11) + (st.wMinute << 5) + st.wSecond / 2;
+    buf_ptr[22] = (s & 0xff00) >> 8;
+    buf_ptr[23] = s & 0xff;
+    s = ((st.wYear - 1980) << 9) + (st.wMonth << 5) + st.wDay;
+    buf_ptr[24] = (s & 0xff00) >> 8;
+    buf_ptr[25] = s & 0xff;
+  }
+  /* FILELENをセット */
+  buf_ptr[26] = (unsigned char)((f_data.nFileSizeLow & 0xff000000) >> 24);
+  buf_ptr[27] = (unsigned char)((f_data.nFileSizeLow & 0x00ff0000) >> 16);
+  buf_ptr[28] = (unsigned char)((f_data.nFileSizeLow & 0x0000ff00) >> 8);
+  buf_ptr[29] = (unsigned char)(f_data.nFileSizeLow & 0x000000ff);
+  /* PACKEDNAMEをセット */
+  strncpy(&buf_ptr[30], f_data.cFileName, 22);
+  buf_ptr[30 + 22] = 0;
 
-	
 #else
-	char        *name_ptr;
-	char        *buf_ptr;
-	name_ptr = prog_ptr + name;
-	buf_ptr  = prog_ptr + buf;
-	
-	{
-		FILE* fp = fopen( name_ptr, "rb" );
-		if (fp != NULL) {
-			fclose(fp);
-			
-			/* 予約領域をセット */
-			buf_ptr[0] = atr;  /* ファイルの属性 */
-			buf_ptr[1] = 0;    /* ドライブ番号(not used) */
-//			*((HANDLE*)&buf_ptr[2]) = handle; /* サーチハンドル */
-			{
-//				BOOL b = handle != INVALID_HANDLE_VALUE;
-			}
-			/* DATEとTIMEをセット */
-			{
-/*
-				SYSTEMTIME st;
-				unsigned short s;
-				FileTimeToSystemTime(&f_data.ftLastWriteTime, &st);
-				s = (st.wHour << 11) +
-				(st.wMinute << 5) +
-				st.wSecond / 2;
-				buf_ptr[22] = (s & 0xff00) >> 8;
-				buf_ptr[23] = s & 0xff;
-				s =((st.wYear - 1980) << 9) +
-				(st.wMonth << 5) +
-				st.wDay;
-				buf_ptr[24] = (s & 0xff00) >> 8;
-				buf_ptr[25] = s & 0xff;
-*/
-			}
-			// FILELENをセット
-			size_t size = 64;
-			buf_ptr[26] = (unsigned char)((size & 0xff000000) >> 24);
-			buf_ptr[27] = (unsigned char)((size & 0x00ff0000) >> 16);
-			buf_ptr[28] = (unsigned char)((size & 0x0000ff00) >> 8);
-			buf_ptr[29] = (unsigned char)(size & 0x000000ff);
-			/* PACKEDNAMEをセット */
-			strncpy(&buf_ptr[30], name_ptr, 22);
-			buf_ptr[30+22] = 0;
+  char *name_ptr;
+  char *buf_ptr;
+  name_ptr = prog_ptr + name;
+  buf_ptr = prog_ptr + buf;
 
-			return 0;
-		}
-	}
+  {
+    FILE *fp = fopen(name_ptr, "rb");
+    if (fp != NULL) {
+      fclose(fp);
 
-	char *path = name_ptr;
-	DIR *dir;
-	struct dirent *dent;
+      /* 予約領域をセット */
+      buf_ptr[0] = atr; /* ファイルの属性 */
+      buf_ptr[1] = 0;   /* ドライブ番号(not used) */
+                        //			*((HANDLE*)&buf_ptr[2]) = handle; /*
+                        //サーチハンドル */
+      {
+          //				BOOL b = handle != INVALID_HANDLE_VALUE;
+      } /* DATEとTIMEをセット */
+      {
+        /*
+                                        SYSTEMTIME st;
+                                        unsigned short s;
+                                        FileTimeToSystemTime(&f_data.ftLastWriteTime,
+           &st); s = (st.wHour << 11) + (st.wMinute << 5) + st.wSecond / 2;
+                                        buf_ptr[22] = (s & 0xff00) >> 8;
+                                        buf_ptr[23] = s & 0xff;
+                                        s =((st.wYear - 1980) << 9) +
+                                        (st.wMonth << 5) +
+                                        st.wDay;
+                                        buf_ptr[24] = (s & 0xff00) >> 8;
+                                        buf_ptr[25] = s & 0xff;
+        */
+      }
+      // FILELENをセット
+      size_t size = 64;
+      buf_ptr[26] = (unsigned char)((size & 0xff000000) >> 24);
+      buf_ptr[27] = (unsigned char)((size & 0x00ff0000) >> 16);
+      buf_ptr[28] = (unsigned char)((size & 0x0000ff00) >> 8);
+      buf_ptr[29] = (unsigned char)(size & 0x000000ff);
+      /* PACKEDNAMEをセット */
+      strncpy(&buf_ptr[30], name_ptr, 22);
+      buf_ptr[30 + 22] = 0;
 
+      return 0;
+    }
+  }
 
-	
-	dir = opendir(path);
-	printf("opendir(%s)=%p\n", path, dir );
-	if (dir == NULL) {
-//		perror(path);
-	} else {
-		while ((dent = readdir(dir)) != NULL) {
-			printf("%s\n", dent->d_name);
-		}
-		closedir(dir);
-	}
-	printf("DOSCALL FILES:not defined yet %s %d\n", __FILE__, __LINE__ );
+  char *path = name_ptr;
+  DIR *dir;
+  struct dirent *dent;
+
+  dir = opendir(path);
+  printf("opendir(%s)=%p\n", path, dir);
+  if (dir == NULL) {
+    //		perror(path);
+  } else {
+    while ((dent = readdir(dir)) != NULL) {
+      printf("%s\n", dent->d_name);
+    }
+    closedir(dir);
+  }
+  printf("DOSCALL FILES:not defined yet %s %d\n", __FILE__, __LINE__);
 #endif
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL NFILESを実行する
  戻り値：エラーコード
  */
-static Long Nfiles( Long buf )
-{
+static Long Nfiles(Long buf) {
 #if defined(WIN32)
-	WIN32_FIND_DATA f_data;
-	HANDLE handle;
-	unsigned int i;
-	char        *buf_ptr;
-	short atr;
+  WIN32_FIND_DATA f_data;
+  HANDLE handle;
+  unsigned int i;
+  char *buf_ptr;
+  short atr;
 
-	buf_ptr = prog_ptr + buf;
-	atr = buf_ptr[0]; /* 検索すべきファイルの属性 */
-	{
-		/* todo:buf_ptrの指す領域から必要な情報を取り出して、f_dataにコピーする。*/
-		/* DOSXの処理を参考にする。*/
-		/* 2秒→100nsに変換する。*/
-		SYSTEMTIME st;
-		BOOL b;
-		unsigned short s;
+  buf_ptr = prog_ptr + buf;
+  atr = buf_ptr[0]; /* 検索すべきファイルの属性 */
+  {
+    /* todo:buf_ptrの指す領域から必要な情報を取り出して、f_dataにコピーする。*/
+    /* DOSXの処理を参考にする。*/
+    /* 2秒→100nsに変換する。*/
+    SYSTEMTIME st;
+    BOOL b;
+    unsigned short s;
 
-		s = *((unsigned short*)&buf_ptr[24]);
-		st.wYear  = ((s & 0xfe00) >> 9) + 1980;
-		st.wMonth = (s & 0x01e0) >> 5;
-		st.wDay   = (s & 0x1f);
-		s = *((unsigned short*)&buf_ptr[22]);
-		st.wHour   = (s & 0xf800) >> 11;
-		st.wMinute = (s & 0x07e0) >> 5;
-		st.wSecond = (s & 0x001f);
-		st.wMilliseconds = 0;
-		b = SystemTimeToFileTime(&st, &f_data.ftLastWriteTime);
-		/* ファイル名 */
-		/* ファイル名をbufから取り出してf_dataにコピーする必要はないと思う。
-   この部分のコードが原因で誤動作していたと考えられるので、リリース後
-   1ヶ月待って削除する。  Y.Fujii 2000/1/19
-        {
-            char *p;
-            int i;
-            p = (char*)&buf_ptr[30];
-            for (i = 0; i < 19; i++)
-            {
-                if (*p == ' ' || *p == 0)
-                {
-                    f_data.cFileName[i] = 0;
-                    break;
-                }
-                f_data.cFileName[i] = *p++;
-            }
-            p = (char*)&buf_ptr[30+19];
-            if (*p != ' ')
-            {
-                strcat(f_data.cFileName, ".");
-            }
-            for (i = strlen(f_data.cFileName); i < 22; i++)
-            {
-                if (*p == ' ' || *p == 0)
-                {
-                    f_data.cFileName[i] = 0;
-                    break;
-                }
-                f_data.cFileName[i] = *p++;
-            }
-            strncpy(f_data.cFileName, (char*)&buf_ptr[30], 22);
-            f_data.cFileName[21] = '\0';
-        }
-		 */
-		f_data.nFileSizeHigh = 0;
-		f_data.nFileSizeLow = *((ULong*)&buf_ptr[29]);
-		/* ファイルのハンドルをバッファから取得する。*/
-		handle = *((HANDLE*)&buf_ptr[2]);
-		b = FindNextFile(handle, &f_data);
-		/* 属性の一致するファイルが見つかるまで繰返し検索する。*/
-		while(b == TRUE) {
-			unsigned char fatr;
-			fatr  = f_data.dwFileAttributes & FILE_ATTRIBUTE_READONLY ? 0x01 : 0;
-			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN ? 0x02 : 0;
-			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM ? 0x04 : 0;
-/*			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_VOLUMEID ? 0x08 : 0; */
-			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ? 0x10 : 0;
-			fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE ? 0x20 : 0;
-			if (fatr & buf_ptr[0] || (fatr == 0 && (buf_ptr[0] & 0x20))) {
-				/* ATRをセット */
-				buf_ptr[21] = fatr;
-				break;  /* 指定された属性のファイルが見つかった。*/
-			}
-			b = FindNextFile(handle, &f_data);
-		}
-		if (!b) {
-			return -2;
-		}
-	}
-	/* buf_ptr領域に発見したファイルの情報をセットし直す。*/
-	/* 予約領域をセット(4バイトしか使わない。*/
-	*((HANDLE*)&buf_ptr[2]) = handle; /* DIRCLS, DIRFATの領域を使った。*/
-	for (i = 6; i < 21; i ++)
-		buf_ptr[i] = 0;
-	/* DATEとTIMEをセット */
-	{
-		SYSTEMTIME st;
-		unsigned short s;
-		FileTimeToSystemTime(&f_data.ftLastWriteTime, &st);
-		s = (st.wHour << 11) +
-		  (st.wMinute << 5) +
-			st.wSecond / 2;
-		buf_ptr[22] = (s & 0xff00) >> 8;
-		buf_ptr[23] = s & 0xff;
-		s =((st.wYear - 1980) << 9) +
-		  (st.wMonth << 5) +
-			st.wDay;
-		buf_ptr[24] = (s & 0xff00) >> 8;
-		buf_ptr[25] = s & 0xff;
-	}
-	/* FILELENをセット */
-	buf_ptr[26] = (unsigned char)((f_data.nFileSizeLow & 0xff000000) >> 24);
-	buf_ptr[27] = (unsigned char)((f_data.nFileSizeLow & 0x00ff0000) >> 16);
-	buf_ptr[28] = (unsigned char)((f_data.nFileSizeLow & 0x0000ff00) >> 8);
-	buf_ptr[29] = (unsigned char)(f_data.nFileSizeLow & 0x000000ff);
-	/* PACKEDNAMEをセット */
-	strncpy(&buf_ptr[30], f_data.cFileName, 22);
-	buf_ptr[30+22] = 0;
+    s = *((unsigned short *)&buf_ptr[24]);
+    st.wYear = ((s & 0xfe00) >> 9) + 1980;
+    st.wMonth = (s & 0x01e0) >> 5;
+    st.wDay = (s & 0x1f);
+    s = *((unsigned short *)&buf_ptr[22]);
+    st.wHour = (s & 0xf800) >> 11;
+    st.wMinute = (s & 0x07e0) >> 5;
+    st.wSecond = (s & 0x001f);
+    st.wMilliseconds = 0;
+    b = SystemTimeToFileTime(&st, &f_data.ftLastWriteTime);
+    /* ファイル名 */
+    /* ファイル名をbufから取り出してf_dataにコピーする必要はないと思う。
+この部分のコードが原因で誤動作していたと考えられるので、リリース後
+1ヶ月待って削除する。  Y.Fujii 2000/1/19
+{
+char *p;
+int i;
+p = (char*)&buf_ptr[30];
+for (i = 0; i < 19; i++)
+{
+    if (*p == ' ' || *p == 0)
+    {
+        f_data.cFileName[i] = 0;
+        break;
+    }
+    f_data.cFileName[i] = *p++;
+}
+p = (char*)&buf_ptr[30+19];
+if (*p != ' ')
+{
+    strcat(f_data.cFileName, ".");
+}
+for (i = strlen(f_data.cFileName); i < 22; i++)
+{
+    if (*p == ' ' || *p == 0)
+    {
+        f_data.cFileName[i] = 0;
+        break;
+    }
+    f_data.cFileName[i] = *p++;
+}
+strncpy(f_data.cFileName, (char*)&buf_ptr[30], 22);
+f_data.cFileName[21] = '\0';
+}
+     */
+    f_data.nFileSizeHigh = 0;
+    f_data.nFileSizeLow = *((ULong *)&buf_ptr[29]);
+    /* ファイルのハンドルをバッファから取得する。*/
+    handle = *((HANDLE *)&buf_ptr[2]);
+    b = FindNextFile(handle, &f_data);
+    /* 属性の一致するファイルが見つかるまで繰返し検索する。*/
+    while (b == TRUE) {
+      unsigned char fatr;
+      fatr = f_data.dwFileAttributes & FILE_ATTRIBUTE_READONLY ? 0x01 : 0;
+      fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN ? 0x02 : 0;
+      fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM ? 0x04 : 0;
+      /*			fatr |= f_data.dwFileAttributes &
+       * FILE_ATTRIBUTE_VOLUMEID ? 0x08 : 0; */
+      fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ? 0x10 : 0;
+      fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE ? 0x20 : 0;
+      if (fatr & buf_ptr[0] || (fatr == 0 && (buf_ptr[0] & 0x20))) {
+        /* ATRをセット */
+        buf_ptr[21] = fatr;
+        break; /* 指定された属性のファイルが見つかった。*/
+      }
+      b = FindNextFile(handle, &f_data);
+    }
+    if (!b) {
+      return -2;
+    }
+  }
+  /* buf_ptr領域に発見したファイルの情報をセットし直す。*/
+  /* 予約領域をセット(4バイトしか使わない。*/
+  *((HANDLE *)&buf_ptr[2]) = handle; /* DIRCLS, DIRFATの領域を使った。*/
+  for (i = 6; i < 21; i++) buf_ptr[i] = 0;
+  /* DATEとTIMEをセット */
+  {
+    SYSTEMTIME st;
+    unsigned short s;
+    FileTimeToSystemTime(&f_data.ftLastWriteTime, &st);
+    s = (st.wHour << 11) + (st.wMinute << 5) + st.wSecond / 2;
+    buf_ptr[22] = (s & 0xff00) >> 8;
+    buf_ptr[23] = s & 0xff;
+    s = ((st.wYear - 1980) << 9) + (st.wMonth << 5) + st.wDay;
+    buf_ptr[24] = (s & 0xff00) >> 8;
+    buf_ptr[25] = s & 0xff;
+  }
+  /* FILELENをセット */
+  buf_ptr[26] = (unsigned char)((f_data.nFileSizeLow & 0xff000000) >> 24);
+  buf_ptr[27] = (unsigned char)((f_data.nFileSizeLow & 0x00ff0000) >> 16);
+  buf_ptr[28] = (unsigned char)((f_data.nFileSizeLow & 0x0000ff00) >> 8);
+  buf_ptr[29] = (unsigned char)(f_data.nFileSizeLow & 0x000000ff);
+  /* PACKEDNAMEをセット */
+  strncpy(&buf_ptr[30], f_data.cFileName, 22);
+  buf_ptr[30 + 22] = 0;
 
 #else
-	printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__ );
+  printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__);
 #endif
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL FILEDATEを実行する
  戻り値：エラーコード
  */
-static Long Filedate( short hdl, Long dt )
-{
+static Long Filedate(short hdl, Long dt) {
 #if !defined(WIN32) && !defined(DOSX)
-	printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
+  printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__);
 #else
 #if defined(WIN32)
-	FILETIME ctime, atime, wtime;
-	__int64 ll_wtime;
-	HANDLE hFile;
-	BOOL b;
+  FILETIME ctime, atime, wtime;
+  __int64 ll_wtime;
+  HANDLE hFile;
+  BOOL b;
 #elif defined(DOSX)
-	int     dosfh;
-	unsigned fd;
-	unsigned ft;
-	UShort     fdate;
-	UShort     ftime;
+  int dosfh;
+  unsigned fd;
+  unsigned ft;
+  UShort fdate;
+  UShort ftime;
 #endif
-	if ( finfo [ hdl ].fh == NULL )
-		return( -6 );        /* オープンされていない */
+  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
 #if defined(DOSX)
-	dosfh = fileno( finfo [ hdl ].fh );
+  dosfh = fileno(finfo[hdl].fh);
 #endif
-	if ( dt != 0 ) {    /* 設定 */
+  if (dt != 0) { /* 設定 */
 #if defined(WIN32)
-		hFile = finfo [ hdl ].fh;
-		GetFileTime(hFile, &ctime, &atime, &wtime);
-		ll_wtime = (dt >> 16)*86400*10000000 + (dt & 0xFFFF)*10000000;
-		wtime.dwLowDateTime = (DWORD)(ll_wtime & 0xFFFFFFFF);
-		wtime.dwHighDateTime = (DWORD)(ll_wtime >> 32);
-		b = SetFileTime(hFile, &ctime, &atime, &wtime);
-		if (b)
-			return( -19 );    /* 書き込み不可 */
-		finfo [ hdl ].date = (ULong)(ll_wtime / 10000000 / 86400);
-		finfo [ hdl ].time = (ULong)((ll_wtime / 10000000) % 86400);
+    hFile = finfo[hdl].fh;
+    GetFileTime(hFile, &ctime, &atime, &wtime);
+    ll_wtime = (dt >> 16) * 86400 * 10000000 + (dt & 0xFFFF) * 10000000;
+    wtime.dwLowDateTime = (DWORD)(ll_wtime & 0xFFFFFFFF);
+    wtime.dwHighDateTime = (DWORD)(ll_wtime >> 32);
+    b = SetFileTime(hFile, &ctime, &atime, &wtime);
+    if (b) return (-19); /* 書き込み不可 */
+    finfo[hdl].date = (ULong)(ll_wtime / 10000000 / 86400);
+    finfo[hdl].time = (ULong)((ll_wtime / 10000000) % 86400);
 #elif defined(DOSX)
-		fdate = (unsigned short)(dt >> 16);
-		ftime = (unsigned short)(dt & 0xFFFF);
-		get_jtime( &fdate, &ftime, -1 );
-		fd = fdate;
-		ft = ftime;
-		if ( dos_setftime( dosfh, fd, ft ) != 0 )
-			return( -19 );    /* 書き込み不可 */
-		finfo [ hdl ].date = fd;
-		finfo [ hdl ].time = ft;
+    fdate = (unsigned short)(dt >> 16);
+    ftime = (unsigned short)(dt & 0xFFFF);
+    get_jtime(&fdate, &ftime, -1);
+    fd = fdate;
+    ft = ftime;
+    if (dos_setftime(dosfh, fd, ft) != 0) return (-19); /* 書き込み不可 */
+    finfo[hdl].date = fd;
+    finfo[hdl].time = ft;
 #endif
-		return( 0 );
-	}
+    return (0);
+  }
 
 #if defined(WIN32)
-	hFile = finfo [ hdl ].fh;
-	GetFileTime(hFile, &ctime, &atime, &wtime);
-	ll_wtime = (((__int64)wtime.dwLowDateTime) << 32) + (__int64)wtime.dwLowDateTime;
-	return (Long)(((ll_wtime / 86400 / 10000000) << 16)
-					+ (ll_wtime / 10000000) % 86400);
+  hFile = finfo[hdl].fh;
+  GetFileTime(hFile, &ctime, &atime, &wtime);
+  ll_wtime =
+      (((__int64)wtime.dwLowDateTime) << 32) + (__int64)wtime.dwLowDateTime;
+  return (Long)(((ll_wtime / 86400 / 10000000) << 16) +
+                (ll_wtime / 10000000) % 86400);
 #else
-	if ( dos_getftime( dosfh, &fd, &ft ) != 0 )
-		return( 0 );
+  if (dos_getftime(dosfh, &fd, &ft) != 0) return (0);
 
-	fdate = fd;
-	ftime = ft;
-	get_jtime( &fdate, &ftime, 1 );
-	return( (fdate << 16) | ftime );
+  fdate = fd;
+  ftime = ft;
+  get_jtime(&fdate, &ftime, 1);
+  return ((fdate << 16) | ftime);
 #endif
 #endif
 }
@@ -2730,196 +2579,182 @@ static Long Filedate( short hdl, Long dt )
  　機能：DOSCALL GETDATEを実行する
  戻り値：現在の日付
  */
-static Long Getdate()
-{
-	Long       ret;
+static Long Getdate() {
+  Long ret;
 
 #if defined(WIN32)
-	SYSTEMTIME stime;
-	//GetSystemTime(&stime);
-	GetLocalTime(&stime);
-	ret = ((Long)(stime.wDayOfWeek) << 16) + (((Long)(stime.wYear) - 1980) << 9) +
-		((Long)(stime.wMonth) << 5) + (Long)(stime.wDay);
+  SYSTEMTIME stime;
+  // GetSystemTime(&stime);
+  GetLocalTime(&stime);
+  ret = ((Long)(stime.wDayOfWeek) << 16) + (((Long)(stime.wYear) - 1980) << 9) +
+        ((Long)(stime.wMonth) << 5) + (Long)(stime.wDay);
 #elif defined(DOSX)
-	struct dos_date_t ddate;
-	dos_getdate( &ddate );
-	ret = (ddate.dayofweek << 16) + ((ddate.year -1980) << 9) +
-		(ddate.month << 5) + ddate.day;
+  struct dos_date_t ddate;
+  dos_getdate(&ddate);
+  ret = (ddate.dayofweek << 16) + ((ddate.year - 1980) << 9) +
+        (ddate.month << 5) + ddate.day;
 #else
-	struct tm tm;
-	time_t t = time(NULL);
-	localtime_r(&t, &tm);
-	//	printf("%04d/%02d/%02d %d %02d:%02d:%02d\n",
-	//		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-	//		   tm.tm_wday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	ret = (tm.tm_wday << 16) + ((tm.tm_year + (1980 - 1900)) << 9) +
-			(tm.tm_mon << 5) + tm.tm_mday;
+  struct tm tm;
+  time_t t = time(NULL);
+  localtime_r(&t, &tm);
+  //	printf("%04d/%02d/%02d %d %02d:%02d:%02d\n",
+  //		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+  //		   tm.tm_wday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+  ret = (tm.tm_wday << 16) + ((tm.tm_year + (1980 - 1900)) << 9) +
+        (tm.tm_mon << 5) + tm.tm_mday;
 
 #endif
-	return( ret );
+  return (ret);
 }
 
 /*
  　機能：DOSCALL SETDATEを実行する
  戻り値：エラーコード
  */
-static Long Setdate( short dt )
-{
-
+static Long Setdate(short dt) {
 #if defined(WIN32)
-	SYSTEMTIME stime;
-	BOOL b;
-	stime.wYear  = (dt >> 9) & 0x7F + 1980;
-	stime.wMonth = (dt >> 5) & 0xF;
-	stime.wDay   = dt & 0x1f;
-	stime.wSecond = 0;
-	stime.wMilliseconds = 0;
-	// b = SetSystemTime(&stime);
-	b = SetLocalTime(&stime);
-	if (!b)
-		return -14;     /* パラメータ不正 */
-#elif(DOSX)
-	struct dos_date_t ddate;
+  SYSTEMTIME stime;
+  BOOL b;
+  stime.wYear = (dt >> 9) & 0x7F + 1980;
+  stime.wMonth = (dt >> 5) & 0xF;
+  stime.wDay = dt & 0x1f;
+  stime.wSecond = 0;
+  stime.wMilliseconds = 0;
+  // b = SetSystemTime(&stime);
+  b = SetLocalTime(&stime);
+  if (!b) return -14; /* パラメータ不正 */
+#elif (DOSX)
+  struct dos_date_t ddate;
 
-	ddate.year  = ((dt >> 9) & 0x7F) + 1980;
-	ddate.month = ((dt >> 5) & 0xF);
-	ddate.day   = (dt & 0x1F);
+  ddate.year = ((dt >> 9) & 0x7F) + 1980;
+  ddate.month = ((dt >> 5) & 0xF);
+  ddate.day = (dt & 0x1F);
 
-	if ( dos_setdate( &ddate ) != 0 )
-		return( -14 );        /* パラメータ不正 */
+  if (dos_setdate(&ddate) != 0) return (-14); /* パラメータ不正 */
 #else
-	printf("DOSCALL SETDATE:not defined yet %s %d\n", __FILE__, __LINE__ );
+  printf("DOSCALL SETDATE:not defined yet %s %d\n", __FILE__, __LINE__);
 #endif
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL GETTIME / GETTIME2を実行する
  戻り値：現在の時刻
  */
-static Long Gettime( int flag )
-{
-	Long       ret;
+static Long Gettime(int flag) {
+  Long ret;
 #if defined(WIN32)
-	SYSTEMTIME stime;
-	// GetSystemTime(&stime);
-	GetLocalTime(&stime);
-	if ( flag == 0 )
-		// ret = stime.wHour << 11 + stime.wMinute << 5 + stime.wSecond >> 1;
-		ret = ((Long)(stime.wHour) << 11) + ((Long)(stime.wMinute) << 5) + ((Long)(stime.wSecond) >> 1);
-	else
-		// ret = stime.wHour << 16 + stime.wMinute << 8 + stime.wSecond;
-		ret = ((Long)(stime.wHour) << 16) + ((Long)(stime.wMinute) << 8) + (Long)(stime.wSecond);
+  SYSTEMTIME stime;
+  // GetSystemTime(&stime);
+  GetLocalTime(&stime);
+  if (flag == 0)
+    // ret = stime.wHour << 11 + stime.wMinute << 5 + stime.wSecond >> 1;
+    ret = ((Long)(stime.wHour) << 11) + ((Long)(stime.wMinute) << 5) +
+          ((Long)(stime.wSecond) >> 1);
+  else
+    // ret = stime.wHour << 16 + stime.wMinute << 8 + stime.wSecond;
+    ret = ((Long)(stime.wHour) << 16) + ((Long)(stime.wMinute) << 8) +
+          (Long)(stime.wSecond);
 #elif defined(DOSX)
-	struct dos_time_t dtime;
-	dos_gettime( &dtime );
+  struct dos_time_t dtime;
+  dos_gettime(&dtime);
 
-	if ( flag == 0 )
-		ret = (dtime.hour << 11) + (dtime.minute << 5) + (dtime.second >> 1);
-	else
-		ret = (dtime.hour << 16) + (dtime.minute << 8) + dtime.second;
+  if (flag == 0)
+    ret = (dtime.hour << 11) + (dtime.minute << 5) + (dtime.second >> 1);
+  else
+    ret = (dtime.hour << 16) + (dtime.minute << 8) + dtime.second;
 #else
-	
-	struct tm tm;
-	time_t t = time(NULL);
-	localtime_r(&t, &tm);
-//	printf("%04d/%02d/%02d %d %02d:%02d:%02d\n",
-//		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-//		   tm.tm_wday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	
-	if ( flag == 0 )
-		ret = (tm.tm_hour << 11) + (tm.tm_min << 5) + (tm.tm_sec >> 1);
-	else
-		ret = (tm.tm_hour << 16) + (tm.tm_min << 8) + tm.tm_sec;
+
+  struct tm tm;
+  time_t t = time(NULL);
+  localtime_r(&t, &tm);
+  //	printf("%04d/%02d/%02d %d %02d:%02d:%02d\n",
+  //		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+  //		   tm.tm_wday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+  if (flag == 0)
+    ret = (tm.tm_hour << 11) + (tm.tm_min << 5) + (tm.tm_sec >> 1);
+  else
+    ret = (tm.tm_hour << 16) + (tm.tm_min << 8) + tm.tm_sec;
 
 #endif
-	return( ret );
+  return (ret);
 }
 
 /*
  　機能：DOSCALL SETTIM2を実行する
  戻り値：エラーコード
  */
-static Long Settim2( Long tim )
-{
-
+static Long Settim2(Long tim) {
 #if defined(WIN32)
-	SYSTEMTIME stime;
-	BOOL b;
-	stime.wYear  = (tim >> 16) & 0x1F;
-	stime.wMonth = (tim >> 8) & 0x3F;
-	stime.wDay   = tim & 0x3f;
-	stime.wSecond = 0;
-	stime.wMilliseconds = 0;
-	b = SetSystemTime(&stime);
-	if (!b)
-		return -14;     /* パラメータ不正 */
+  SYSTEMTIME stime;
+  BOOL b;
+  stime.wYear = (tim >> 16) & 0x1F;
+  stime.wMonth = (tim >> 8) & 0x3F;
+  stime.wDay = tim & 0x3f;
+  stime.wSecond = 0;
+  stime.wMilliseconds = 0;
+  b = SetSystemTime(&stime);
+  if (!b) return -14; /* パラメータ不正 */
 #elif defined(DOSX)
-	struct dos_time_t dtime;
+  struct dos_time_t dtime;
 
-	dtime.hour    = ((tim >> 16) & 0x1F);
-	dtime.minute  = ((tim >> 8) & 0x3F);
-	dtime.second  = (tim & 0x3F);
-	dtime.hsecond = 0;
-	if ( dos_settime( &dtime ) != 0 )
-		return( -14 );        /* パラメータ不正 */
+  dtime.hour = ((tim >> 16) & 0x1F);
+  dtime.minute = ((tim >> 8) & 0x3F);
+  dtime.second = (tim & 0x3F);
+  dtime.hsecond = 0;
+  if (dos_settime(&dtime) != 0) return (-14); /* パラメータ不正 */
 #else
-	printf("DOSCALL SETTIM2:not defined yet %s %d\n", __FILE__, __LINE__ );
+  printf("DOSCALL SETTIM2:not defined yet %s %d\n", __FILE__, __LINE__);
 #endif
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL GETENVを実行する
  戻り値：エラーコード
  */
-static Long Getenv( Long name, Long env, Long buf )
-{
-	Long ret;
-	if ( env != 0 )
-		return( -10 );
-	ret = Getenv_common(prog_ptr + name, prog_ptr + buf);
-	return ret;
+static Long Getenv(Long name, Long env, Long buf) {
+  Long ret;
+  if (env != 0) return (-10);
+  ret = Getenv_common(prog_ptr + name, prog_ptr + buf);
+  return ret;
 }
 
-Long Getenv_common(const char *name_p, char *buf_p)
-{
-	unsigned char *mem_ptr;
-	/*
-	WIN32の環境変数領域からrun68のエミュレーション領域に複製してある
-	値を検索する仕様にする。
-	 */
-	/*
-	環境エリアの先頭(ENV_TOP)から順に環境変数名を検索する。
-	 */
-	for (mem_ptr = prog_ptr + ENV_TOP + 4;
-		 *mem_ptr != 0;
-		 mem_ptr ++) {
-		char ename[256];
-		int i;
-		/* 環境変数名を取得する。*/
-		for (i = 0; *mem_ptr != '\0' && *mem_ptr != '='; i ++) {
-			ename[i] = *(mem_ptr ++);
-		}
-		ename[i] = '\0';
-		if (_stricmp(name_p, ename) == 0) {
-			/* 環境変数が見つかった。*/
-			while (*mem_ptr == '=' || *mem_ptr == ' ') {
-				mem_ptr ++;
-			}
-			/* 空文字列の場合もある。*/
-			/*            *buf_p = (Long)((char*)mem_ptr - prog_ptr);*/
-			strcpy(buf_p, mem_ptr);
-			return 0;
-		}
-		/* 変数名が一致しなかったら、変数の値をスキップする。*/
-		while (*mem_ptr)
-			mem_ptr ++;
-		/* '\0'の後にもう一つ'\0'が続く場合は、環境変数領域の終りである。*/
-	}
-	/* 変数が見つからなかったらNULLポインタを返す。*/
-	(*buf_p) = 0;
-	return -10;
+Long Getenv_common(const char *name_p, char *buf_p) {
+  unsigned char *mem_ptr;
+  /*
+  WIN32の環境変数領域からrun68のエミュレーション領域に複製してある
+  値を検索する仕様にする。
+   */
+  /*
+  環境エリアの先頭(ENV_TOP)から順に環境変数名を検索する。
+   */
+  for (mem_ptr = prog_ptr + ENV_TOP + 4; *mem_ptr != 0; mem_ptr++) {
+    char ename[256];
+    int i;
+    /* 環境変数名を取得する。*/
+    for (i = 0; *mem_ptr != '\0' && *mem_ptr != '='; i++) {
+      ename[i] = *(mem_ptr++);
+    }
+    ename[i] = '\0';
+    if (_stricmp(name_p, ename) == 0) {
+      /* 環境変数が見つかった。*/
+      while (*mem_ptr == '=' || *mem_ptr == ' ') {
+        mem_ptr++;
+      }
+      /* 空文字列の場合もある。*/
+      /*            *buf_p = (Long)((char*)mem_ptr - prog_ptr);*/
+      strcpy(buf_p, mem_ptr);
+      return 0;
+    }
+    /* 変数名が一致しなかったら、変数の値をスキップする。*/
+    while (*mem_ptr) mem_ptr++;
+    /* '\0'の後にもう一つ'\0'が続く場合は、環境変数領域の終りである。*/
+  }
+  /* 変数が見つからなかったらNULLポインタを返す。*/
+  (*buf_p) = 0;
+  return -10;
 }
 
 /*
@@ -2928,811 +2763,746 @@ Long Getenv_common(const char *name_p, char *buf_p)
    戻り値：
      エラーコード
  */
-static Long Namests( Long name, Long buf )
-{
-	char     nbuf [ 256 ];
-	char     cud [ 67 ];
-	char     *name_ptr;
-	char     *buf_ptr;
+static Long Namests(Long name, Long buf) {
+  char nbuf[256];
+  char cud[67];
+  char *name_ptr;
+  char *buf_ptr;
 #if !defined(WIN32)
-	unsigned getdrv;
+  unsigned getdrv;
 #endif
-	UChar    drv;
-	int      wild = 0;
-	int      len;
-	int      i;
+  UChar drv;
+  int wild = 0;
+  int len;
+  int i;
 
-	name_ptr = prog_ptr + name;
-	buf_ptr  = prog_ptr + buf;
-	memset( buf_ptr, 0x00, 88 );
-	if ( (len=strlen( name_ptr )) > 88 )
-		return( -13 );        /* ファイル名の指定誤り */
-	strcpy( nbuf, name_ptr );
+  name_ptr = prog_ptr + name;
+  buf_ptr = prog_ptr + buf;
+  memset(buf_ptr, 0x00, 88);
+  if ((len = strlen(name_ptr)) > 88) return (-13); /* ファイル名の指定誤り */
+  strcpy(nbuf, name_ptr);
 
-	/* 拡張子をセット */
-	for( i = len - 1; i >= 0 && nbuf [ i ] != '.'; i-- ) {
-		if ( nbuf [ i ] == '*' || nbuf [ i ] == '?' )
-			wild = 1;
-	}
-	if ( strlen( &(nbuf [ i ]) ) > 4 )
-		return( -13 );
-	memset( buf_ptr + 75, ' ', 3 );
-	if ( i < 0 ) {
-		/* 拡張子なし */
-		i = len;
-	} else {
-		memcpy( buf_ptr + 75, &(nbuf [ i + 1 ]), strlen(&(nbuf [ i + 1 ])) );
-		nbuf [ i ] = '\0';
-	}
+  /* 拡張子をセット */
+  for (i = len - 1; i >= 0 && nbuf[i] != '.'; i--) {
+    if (nbuf[i] == '*' || nbuf[i] == '?') wild = 1;
+  }
+  if (strlen(&(nbuf[i])) > 4) return (-13);
+  memset(buf_ptr + 75, ' ', 3);
+  if (i < 0) {
+    /* 拡張子なし */
+    i = len;
+  } else {
+    memcpy(buf_ptr + 75, &(nbuf[i + 1]), strlen(&(nbuf[i + 1])));
+    nbuf[i] = '\0';
+  }
 
-	/* ファイル名をセット */
-	for( i --; i >= 0; i-- ) {
-		if ( nbuf [ i ] == '\\' || nbuf[ i ] == '/' || nbuf [ i ] == ':' )
-			break;
-		if ( nbuf [ i ] == '*' || nbuf [ i ] == '?' )
-			wild = 1;
-	}
-	i ++;
-	if ( strlen( &(nbuf [ i ]) ) > 18 )
-		return( -13 );
-	if ( strlen( &(nbuf [ i ]) ) > 8 )    /* 本当はエラーではない */
-		return( -13 );
-	memset( buf_ptr + 67, ' ', 8 );
-	memcpy( buf_ptr + 67, &(nbuf [ i ]), strlen(&(nbuf [ i ])) );
-	nbuf [ i ] = '\0';
+  /* ファイル名をセット */
+  for (i--; i >= 0; i--) {
+    if (nbuf[i] == '\\' || nbuf[i] == '/' || nbuf[i] == ':') break;
+    if (nbuf[i] == '*' || nbuf[i] == '?') wild = 1;
+  }
+  i++;
+  if (strlen(&(nbuf[i])) > 18) return (-13);
+  if (strlen(&(nbuf[i])) > 8) /* 本当はエラーではない */
+    return (-13);
+  memset(buf_ptr + 67, ' ', 8);
+  memcpy(buf_ptr + 67, &(nbuf[i]), strlen(&(nbuf[i])));
+  nbuf[i] = '\0';
 
-	if ( wild != 0 )
-		mem_set( buf, 0x01, S_BYTE );
+  if (wild != 0) mem_set(buf, 0x01, S_BYTE);
 
-	/* パス名をセット */
-	if ( i == 0 ) {
-		/* カレントディレクトリをセット */
-		if (Curdir(0, cud) != 0)
-			return( 13 );
-		strcpy( buf_ptr + 2, &(cud [ 2 ]) );
-		if ( cud [ strlen( cud ) - 1 ] != '\\' )
-			strcat( buf_ptr + 2, "\\" );
-		nbuf [ 0 ] = cud [ 0 ];
-		i = 1;
-	} else {
-		for( i --; i >= 0; i-- ) {
-			if ( nbuf [ i ] == ':' )
-				break;
-		}
-		i ++;
-		if ( strlen( &(nbuf [ i ]) ) > 64 )
-			return( -13 );
-		strcpy( buf_ptr + 2, &(nbuf [ i ]) );
-	}
+  /* パス名をセット */
+  if (i == 0) {
+    /* カレントディレクトリをセット */
+    if (Curdir(0, cud) != 0) return (13);
+    strcpy(buf_ptr + 2, &(cud[2]));
+    if (cud[strlen(cud) - 1] != '\\') strcat(buf_ptr + 2, "\\");
+    nbuf[0] = cud[0];
+    i = 1;
+  } else {
+    for (i--; i >= 0; i--) {
+      if (nbuf[i] == ':') break;
+    }
+    i++;
+    if (strlen(&(nbuf[i])) > 64) return (-13);
+    strcpy(buf_ptr + 2, &(nbuf[i]));
+  }
 
-	/* ドライブ名をセット */
-	if ( i == 0 ) {
-		/* カレントドライブをセット */
+  /* ドライブ名をセット */
+  if (i == 0) {
+    /* カレントドライブをセット */
 #if defined(WIN32)
-		char path[MAX_PATH];
-		GetCurrentDirectory(strlen(path), path);
-		mem_set( buf + 1, path[0] - 'A', S_BYTE );
+    char path[MAX_PATH];
+    GetCurrentDirectory(strlen(path), path);
+    mem_set(buf + 1, path[0] - 'A', S_BYTE);
 #else /* DOSX */
-		dos_getdrive( &getdrv );
-		mem_set( buf + 1, getdrv - 1, S_BYTE );
+    dos_getdrive(&getdrv);
+    mem_set(buf + 1, getdrv - 1, S_BYTE);
 #endif
-	} else {
-		drv = toupper(nbuf[ 0 ]) - 'A';
-		if ( drv >= 26 )
-			return( -13 );
-		mem_set( buf + 1, drv, S_BYTE );
-	}
+  } else {
+    drv = toupper(nbuf[0]) - 'A';
+    if (drv >= 26) return (-13);
+    mem_set(buf + 1, drv, S_BYTE);
+  }
 
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL NAMECKを実行する
  戻り値：エラーコード
- 
+
  $ff37	_NAMECK		ファイル名の展開
- 
+
  引数	FILE.l		ファイル名のポインタ
-		BUFFER.l	バッファのポインタ
- 
+                BUFFER.l	バッファのポインタ
+
  返値	d0.l = $ff	ファイル指定なし
-		d0.l =   0	ワイルドカード指定なし
-		d0.l <   0	エラーコード(BUFFER の内容は意味がない)
-		d0.l = その他	ワイルドカード指定あり(d0.l はワイルドカードの文字数)
- 
-	FILE で指定したファイルを、BUFFER で指定した 91 バイトのバッファに展開する.
- 
+                d0.l =   0	ワイルドカード指定なし
+                d0.l <   0	エラーコード(BUFFER の内容は意味がない)
+                d0.l = その他	ワイルドカード指定あり(d0.l
+ はワイルドカードの文字数)
+
+        FILE で指定したファイルを、BUFFER で指定した 91
+ バイトのバッファに展開する.
+
  offset	size
  0	  1+1.b	ドライブ名＋':'
  2	 64+1.b	パス名＋0
  67	 18+1.b	ファイル名＋0
  86	1+3+1.b	拡張子('.'＋拡張子＋0)
- 
+
  */
-static Long Nameck( Long name, Long buf )
-{
-	char     nbuf [ 89 ];
-	char     *name_ptr;
-	char     *buf_ptr;
-	unsigned int drv;
-	int     ret = 0;
-	int     len;
-	int     i;
+static Long Nameck(Long name, Long buf) {
+  char nbuf[89];
+  char *name_ptr;
+  char *buf_ptr;
+  unsigned int drv;
+  int ret = 0;
+  int len;
+  int i;
 
-	name_ptr = prog_ptr + name;
-	buf_ptr  = prog_ptr + buf;
-	memset( buf_ptr, 0x00, 91 );
-	if ( (len=strlen( name_ptr )) > 88 )
-		return( -13 );        /* ファイル名の指定誤り */
-	strcpy( nbuf, name_ptr );
+  name_ptr = prog_ptr + name;
+  buf_ptr = prog_ptr + buf;
+  memset(buf_ptr, 0x00, 91);
+  if ((len = strlen(name_ptr)) > 88) return (-13); /* ファイル名の指定誤り */
+  strcpy(nbuf, name_ptr);
 
-	/* 拡張子をセット */
-	for( i = len - 1; i >= 0 && nbuf [ i ] != '.'; i-- ) {
-		if ( nbuf [ i ] == '*' || nbuf [ i ] == '?' )
-		  ret = 1;
-	}
-	if ( strlen( &(nbuf [ i ]) ) > 4 )
-		return( -13 );
-	if ( i < 0 ) {    /* 拡張子なし */
-		i = len;
-	} else {
-		strcpy( buf_ptr + 86, &(nbuf [ i ]) );
-		nbuf [ i ] = '\0';
-	}
+  /* 拡張子をセット */
+  for (i = len - 1; i >= 0 && nbuf[i] != '.'; i--) {
+    if (nbuf[i] == '*' || nbuf[i] == '?') ret = 1;
+  }
+  if (strlen(&(nbuf[i])) > 4) return (-13);
+  if (i < 0) { /* 拡張子なし */
+    i = len;
+  } else {
+    strcpy(buf_ptr + 86, &(nbuf[i]));
+    nbuf[i] = '\0';
+  }
 
-	/* ファイル名をセット */
-	for( i --; i >= 0; i-- ) {
-		if ( nbuf [ i ] == '\\' || nbuf[ i ] == '/' || nbuf [ i ] == ':' )
-			break;
-		if ( nbuf [ i ] == '*' || nbuf [ i ] == '?' )
-			ret = 1;
-	}
-	i ++;
-	if ( strlen( &(nbuf [ i ]) ) > 18 )
-		return( -13 );
-	strcpy( buf_ptr + 67, &(nbuf [ i ]) );
-	nbuf [ i ] = '\0';
+  /* ファイル名をセット */
+  for (i--; i >= 0; i--) {
+    if (nbuf[i] == '\\' || nbuf[i] == '/' || nbuf[i] == ':') break;
+    if (nbuf[i] == '*' || nbuf[i] == '?') ret = 1;
+  }
+  i++;
+  if (strlen(&(nbuf[i])) > 18) return (-13);
+  strcpy(buf_ptr + 67, &(nbuf[i]));
+  nbuf[i] = '\0';
 
-	/* パス名をセット */
-	if ( i == 0 ) {
-		strcpy( buf_ptr + 2, ".\\" );
-	} else {
-		for( i --; i >= 0; i-- ) {
-			if ( nbuf [ i ] == ':' )
-				break;
-		}
-		i ++;
-		if ( strlen( &(nbuf [ i ]) ) > 64 )
-			return( -13 );
-		strcpy( buf_ptr + 2, &(nbuf [ i ]) );
-	}
+  /* パス名をセット */
+  if (i == 0) {
+    strcpy(buf_ptr + 2, ".\\");
+  } else {
+    for (i--; i >= 0; i--) {
+      if (nbuf[i] == ':') break;
+    }
+    i++;
+    if (strlen(&(nbuf[i])) > 64) return (-13);
+    strcpy(buf_ptr + 2, &(nbuf[i]));
+  }
 
-	/* ドライブ名をセット */
-	if ( i == 0 ) {
-		/* カレントドライブをセット */
+  /* ドライブ名をセット */
+  if (i == 0) {
+    /* カレントドライブをセット */
 #if defined(WIN32)
-		char path[MAX_PATH];
-		BOOL b;
-		b = GetCurrentDirectoryA(sizeof(path), path);
-		drv = path[0] - 'A' + 1;
-		buf_ptr [ 0 ] = drv - 1 + 'A';
-		buf_ptr [ 1 ] = ':';
+    char path[MAX_PATH];
+    BOOL b;
+    b = GetCurrentDirectoryA(sizeof(path), path);
+    drv = path[0] - 'A' + 1;
+    buf_ptr[0] = drv - 1 + 'A';
+    buf_ptr[1] = ':';
 #elif defined(DOSX)
-		dos_getdrive( &drv );
-		buf_ptr [ 0 ] = drv - 1 + 'A';
-		buf_ptr [ 1 ] = ':';
+    dos_getdrive(&drv);
+    buf_ptr[0] = drv - 1 + 'A';
+    buf_ptr[1] = ':';
 #else
-		dos_getdrive( &drv );
-		buf_ptr [ 0 ] = drv - 1 + 'A';
-		buf_ptr [ 1 ] = ':';
+    dos_getdrive(&drv);
+    buf_ptr[0] = drv - 1 + 'A';
+    buf_ptr[1] = ':';
 #endif
-	} else {
-		memcpy( buf_ptr, nbuf, 2 );
-	}
-//	printf("NAMECK=%s\n", buf_ptr);
-	return( ret );
+  } else {
+    memcpy(buf_ptr, nbuf, 2);
+  }
+  //	printf("NAMECK=%s\n", buf_ptr);
+  return (ret);
 }
 
 /*
  　機能：DOSCALL CONCTRLを実行する
  戻り値：modeによって異なる
  */
-static Long Conctrl( short mode, Long adr )
-{
-	char   *p;
-	Long   mes;
-	UShort usrt;
-	short  srt;
-	short  x, y;
+static Long Conctrl(short mode, Long adr) {
+  char *p;
+  Long mes;
+  UShort usrt;
+  short srt;
+  short x, y;
 
-	switch( mode ) {
-	case  0:
-		usrt = (unsigned short)mem_get( adr, S_WORD );
-		if ( usrt >= 0x0100 )
-			putchar( usrt >> 8 );
-		putchar( usrt );
+  switch (mode) {
+    case 0:
+      usrt = (unsigned short)mem_get(adr, S_WORD);
+      if (usrt >= 0x0100) putchar(usrt >> 8);
+      putchar(usrt);
 #if defined(WIN32)
-		FlushFileBuffers(finfo[ 1 ].fh);
+      FlushFileBuffers(finfo[1].fh);
 #else
-		fflush( stdout );
+      fflush(stdout);
 #endif
-		break;
-	case  1:
-		mes = mem_get( adr, S_LONG );
-		p = prog_ptr + mes;
-		printf( "%s", p );
-		break;
-	case  2:    /* 属性 */
-		srt = (short)mem_get( adr, S_WORD );
-		text_color( srt );
-		break;
-	case  3:    /* locate */
-		x = (short)mem_get( adr, S_WORD );
-		y = (short)mem_get( adr + 2, S_WORD );
-		printf( "%c[%d;%dH", 0x1B, y + 1, x + 1 );
-		break;
-	case  4:    /* １行下にカーソル移動(スクロール有り) */
-		printf( "%c[s\n%c[u%c[1B", 0x1B, 0x1B, 0x1B );
-		break;
-	case  5:    /* １行上にカーソル移動(スクロール未サポート) */
-		printf( "%c[1A", 0x1B );
-		break;
-	case  6:    /* srt行上にカーソル移動 */
-		srt = (short)mem_get( adr, S_WORD );
-		printf( "%c[%dA", 0x1B, srt );
-		break;
-	case  7:    /* srt行下にカーソル移動 */
-		srt = (short)mem_get( adr, S_WORD );
-		printf( "%c[%dB", 0x1B, srt );
-		break;
-	case  8:    /* srt文字右にカーソル移動 */
-		srt = (short)mem_get( adr, S_WORD );
-		printf( "%c[%dC", 0x1B, srt );
-		break;
-	case  9:    /* srt文字左にカーソル移動 */
-		srt = (short)mem_get( adr, S_WORD );
-		printf( "%c[%dD", 0x1B, srt );
-		break;
-	case 10:
-		srt = (short)mem_get( adr, S_WORD );
-		switch ( srt ) {
-		case 0:    /* 最終行左端まで消去 */
-			printf( "%c[0J", 0x1B );
-			break;
-		case 1:    /* ホームからカーソル位置まで消去 */
-			printf( "%c[1J", 0x1B );
-			break;
-		case 2:    /* 画面を消去 */
-			printf( "%c[2J", 0x1B );
-			break;
-		}
-		break;
-	case 11:
-		srt = (short)mem_get( adr, S_WORD );
-		switch ( srt ) {
-		case 0:    /* 右端まで消去 */
-			printf( "%c[K", 0x1B );
-			break;
-		case 1:    /* 左端からカーソル位置まで消去 */
-			printf( "%c[1K", 0x1B );
-			break;
-		case 2:    /* 1行消去 */
-			printf( "%c[s", 0x1B );    /* 位置保存 */
-			printf( "%c[999D", 0x1B ); /* 左端に移動 */
-			printf( "%c[K", 0x1B );    /* 右端まで消去 */
-			printf( "%c[u", 0x1B );    /* 位置再設定 */
-			break;
-		}
-		break;
-	case 12:    /* カーソル行にsrt行挿入 */
-		srt = (short)mem_get( adr, S_WORD );
-		printf( "%c[%dL", 0x1B, srt );
-		break;
-	case 13:    /* カーソル行からsrt行削除 */
-		srt = (short)mem_get( adr, S_WORD );
-		printf( "%c[%dM", 0x1B, srt );
-		break;
-	case 17:    /* カーソル表示 */
-		printf( "%c[>5l", 0x1B );
-		break;
-	case 18:    /* カーソル消去 */
-		printf( "%c[>5h", 0x1B );
-		break;
-	}
+      break;
+    case 1:
+      mes = mem_get(adr, S_LONG);
+      p = prog_ptr + mes;
+      printf("%s", p);
+      break;
+    case 2: /* 属性 */
+      srt = (short)mem_get(adr, S_WORD);
+      text_color(srt);
+      break;
+    case 3: /* locate */
+      x = (short)mem_get(adr, S_WORD);
+      y = (short)mem_get(adr + 2, S_WORD);
+      printf("%c[%d;%dH", 0x1B, y + 1, x + 1);
+      break;
+    case 4: /* １行下にカーソル移動(スクロール有り) */
+      printf("%c[s\n%c[u%c[1B", 0x1B, 0x1B, 0x1B);
+      break;
+    case 5: /* １行上にカーソル移動(スクロール未サポート) */
+      printf("%c[1A", 0x1B);
+      break;
+    case 6: /* srt行上にカーソル移動 */
+      srt = (short)mem_get(adr, S_WORD);
+      printf("%c[%dA", 0x1B, srt);
+      break;
+    case 7: /* srt行下にカーソル移動 */
+      srt = (short)mem_get(adr, S_WORD);
+      printf("%c[%dB", 0x1B, srt);
+      break;
+    case 8: /* srt文字右にカーソル移動 */
+      srt = (short)mem_get(adr, S_WORD);
+      printf("%c[%dC", 0x1B, srt);
+      break;
+    case 9: /* srt文字左にカーソル移動 */
+      srt = (short)mem_get(adr, S_WORD);
+      printf("%c[%dD", 0x1B, srt);
+      break;
+    case 10:
+      srt = (short)mem_get(adr, S_WORD);
+      switch (srt) {
+        case 0: /* 最終行左端まで消去 */
+          printf("%c[0J", 0x1B);
+          break;
+        case 1: /* ホームからカーソル位置まで消去 */
+          printf("%c[1J", 0x1B);
+          break;
+        case 2: /* 画面を消去 */
+          printf("%c[2J", 0x1B);
+          break;
+      }
+      break;
+    case 11:
+      srt = (short)mem_get(adr, S_WORD);
+      switch (srt) {
+        case 0: /* 右端まで消去 */
+          printf("%c[K", 0x1B);
+          break;
+        case 1: /* 左端からカーソル位置まで消去 */
+          printf("%c[1K", 0x1B);
+          break;
+        case 2:                    /* 1行消去 */
+          printf("%c[s", 0x1B);    /* 位置保存 */
+          printf("%c[999D", 0x1B); /* 左端に移動 */
+          printf("%c[K", 0x1B);    /* 右端まで消去 */
+          printf("%c[u", 0x1B);    /* 位置再設定 */
+          break;
+      }
+      break;
+    case 12: /* カーソル行にsrt行挿入 */
+      srt = (short)mem_get(adr, S_WORD);
+      printf("%c[%dL", 0x1B, srt);
+      break;
+    case 13: /* カーソル行からsrt行削除 */
+      srt = (short)mem_get(adr, S_WORD);
+      printf("%c[%dM", 0x1B, srt);
+      break;
+    case 17: /* カーソル表示 */
+      printf("%c[>5l", 0x1B);
+      break;
+    case 18: /* カーソル消去 */
+      printf("%c[>5h", 0x1B);
+      break;
+  }
 
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL KEYCTRLを実行する
  戻り値：キーコード等(modeによって異なる)
  */
-static Long Keyctrl( short mode, Long stack_adr )
-{
-	UChar    c;
+static Long Keyctrl(short mode, Long stack_adr) {
+  UChar c;
 
-	switch( mode ) {
-	case 0:
-		c = _getch();
-		if ( c == 0x00 ) {
-			c = _getch();
-			if ( c == 0x85 )    /* F11 */
-				c = 0x03;    /* break */
-		} else {
-			if ( ini_info.pc98_key == TRUE )
-				c = cnv_key98( c );
-		}
-		return( c );
+  switch (mode) {
+    case 0:
+      c = _getch();
+      if (c == 0x00) {
+        c = _getch();
+        if (c == 0x85) /* F11 */
+          c = 0x03;    /* break */
+      } else {
+        if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
+      }
+      return (c);
 #if defined(WIN32) || defined(DOSX)
-		//#if defined(WIN32)
-		//#elif defined(DOSX)
-	case 1:        /* キーの先読み */
-		if ( _kbhit() == 0 )
-		  return( 0 );
-		c = _getch();
-		if ( c == 0x00 ) {
-			c = _getch();
-			if ( c == 0x85 )    /* F11 */
-				c = 0x03;    /* break */
-		} else {
-			if ( ini_info.pc98_key == TRUE )
-				c = cnv_key98( c );
-		}
-		_ungetch( c );
-		return( c );
+      // #if defined(WIN32)
+      // #elif defined(DOSX)
+    case 1: /* キーの先読み */
+      if (_kbhit() == 0) return (0);
+      c = _getch();
+      if (c == 0x00) {
+        c = _getch();
+        if (c == 0x85) /* F11 */
+          c = 0x03;    /* break */
+      } else {
+        if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
+      }
+      _ungetch(c);
+      return (c);
 #endif
-	default:
-		return( 0 );
-	}
+    default:
+      return (0);
+  }
 }
 
 /*
  　機能：DOSCALL FNCKEYを実行する
  戻り値：なし
  */
-static void Fnckey( short mode, Long buf )
-{
-	char    *buf_ptr;
+static void Fnckey(short mode, Long buf) {
+  char *buf_ptr;
 
-	buf_ptr = prog_ptr + buf;
+  buf_ptr = prog_ptr + buf;
 
-	if ( mode < 256 )
-		get_fnckey( mode, buf_ptr );
-	else
-		put_fnckey( mode - 256, buf_ptr );
+  if (mode < 256)
+    get_fnckey(mode, buf_ptr);
+  else
+    put_fnckey(mode - 256, buf_ptr);
 }
 
 /*
  　機能：DOSCALL INTVCGを実行する
  戻り値：ベクタの値
  */
-static Long Intvcg( UShort intno )
-{
-	Long  adr2;
-	Long  mae;
-	short save_s;
+static Long Intvcg(UShort intno) {
+  Long adr2;
+  Long mae;
+  short save_s;
 
-	if ( intno >= 0xFF00 ) {    /* DOSCALL */
-		intno &= 0xFF;
-		adr2 = 0x1800 + intno * 4;
-		save_s = SR_S_REF();
-		SR_S_ON();
-		mae = mem_get( adr2, S_LONG );
-		if ( save_s == 0 )
-			SR_S_OFF();
-		return( mae );
-	}
+  if (intno >= 0xFF00) { /* DOSCALL */
+    intno &= 0xFF;
+    adr2 = 0x1800 + intno * 4;
+    save_s = SR_S_REF();
+    SR_S_ON();
+    mae = mem_get(adr2, S_LONG);
+    if (save_s == 0) SR_S_OFF();
+    return (mae);
+  }
 
-	intno &= 0xFF;
-	adr2 = intno * 4;
-	save_s = SR_S_REF();
-	SR_S_ON();
-	mae = mem_get( adr2, S_LONG );
-	if ( save_s == 0 )
-		SR_S_OFF();
-	return( mae );
+  intno &= 0xFF;
+  adr2 = intno * 4;
+  save_s = SR_S_REF();
+  SR_S_ON();
+  mae = mem_get(adr2, S_LONG);
+  if (save_s == 0) SR_S_OFF();
+  return (mae);
 }
 
 /*
  　機能：DOSCALL INTVCSを実行する
  戻り値：設定前のベクタ
  */
-static Long Intvcs( UShort intno, Long adr )
-{
-	Long adr2;
-	Long mae;
-	short    save_s;
+static Long Intvcs(UShort intno, Long adr) {
+  Long adr2;
+  Long mae;
+  short save_s;
 
-	if ( intno >= 0xFF00 ) {    /* DOSCALL */
-		intno &= 0xFF;
-		adr2 = 0x1800 + intno * 4;
-		save_s = SR_S_REF();
-		SR_S_ON();
-		mae = mem_get( adr2, S_LONG );
-		mem_set( adr2, adr, S_LONG );
-		if ( save_s == 0 )
-			SR_S_OFF();
-		return( mae );
-	}
+  if (intno >= 0xFF00) { /* DOSCALL */
+    intno &= 0xFF;
+    adr2 = 0x1800 + intno * 4;
+    save_s = SR_S_REF();
+    SR_S_ON();
+    mae = mem_get(adr2, S_LONG);
+    mem_set(adr2, adr, S_LONG);
+    if (save_s == 0) SR_S_OFF();
+    return (mae);
+  }
 
-	return( 0 );
+  return (0);
 }
 
 /*
  　機能：DOSCALL ASSIGNを実行する
  戻り値：エラーコード他
  */
-static Long Assign( short mode, Long stack_adr )
-{
-	Long drv;
-	Long buf;
-	char    *drv_ptr;
-	char    *buf_ptr;
+static Long Assign(short mode, Long stack_adr) {
+  Long drv;
+  Long buf;
+  char *drv_ptr;
+  char *buf_ptr;
 
-	switch( mode ) {
-	case 0:
-		drv = mem_get( stack_adr, S_LONG );
-		buf = mem_get( stack_adr + 4, S_LONG );
-		drv_ptr = prog_ptr + drv;
-		if ( drv_ptr[ 1 ] != ':' || drv_ptr[ 2 ] != '\0' )
-			return( -14 );
-		drv = toupper( drv_ptr[ 0 ] ) - 'A' + 1;
-		if ( drv < 1 || drv > 26 )
-			return( -14 );
-		if (Curdir((short)drv, prog_ptr + buf) != 0)
-			return( -14 );
-		if (func_trace_f) {
-			buf_ptr = prog_ptr + buf;
-			printf( " drv=%s cudir=%s\n", drv_ptr, buf_ptr );
-		}
-		return( 0x40 );
-	default:
-		return( -14 );
-	  }
+  switch (mode) {
+    case 0:
+      drv = mem_get(stack_adr, S_LONG);
+      buf = mem_get(stack_adr + 4, S_LONG);
+      drv_ptr = prog_ptr + drv;
+      if (drv_ptr[1] != ':' || drv_ptr[2] != '\0') return (-14);
+      drv = toupper(drv_ptr[0]) - 'A' + 1;
+      if (drv < 1 || drv > 26) return (-14);
+      if (Curdir((short)drv, prog_ptr + buf) != 0) return (-14);
+      if (func_trace_f) {
+        buf_ptr = prog_ptr + buf;
+        printf(" drv=%s cudir=%s\n", drv_ptr, buf_ptr);
+      }
+      return (0x40);
+    default:
+      return (-14);
+  }
 }
 
 /*
  　機能：DOSCALL GETFCBを実行する
  戻り値：FCBのアドレス
  */
-static Long Getfcb( short fhdl )
-{
-	static unsigned char fcb [ 4 ] [ 0x60 ] = {
-		{0x01,0xC1,0x00,0x02,0xC6,0x04,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x43,0x4F,0x4E,0x20,
-		 0x20,0x20,0x20,0x20,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00},
-		{0x01,0xC2,0x00,0x02,0xC6,0x04,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x43,0x4F,0x4E,0x20,
-		 0x20,0x20,0x20,0x20,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00},
-		{0x01,0xC2,0x00,0x02,0xC6,0x04,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x43,0x4F,0x4E,0x20,
-		 0x20,0x20,0x20,0x20,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00},
-		{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-		 0x00,0x00,0x00,0x00,0x00,0x00}
-	};
-	char    *fcb_ptr;
-	fcb_ptr = prog_ptr + FCB_WORK;
-	switch( fhdl ) {
-	case 0:
-	case 1:
-	case 2:
-		memcpy( fcb_ptr, fcb [ fhdl ], 0x60 );
-		return( FCB_WORK );
-	default:
-		fcb [ 3 ] [ 14 ] = (unsigned char)fhdl;
-		memcpy( fcb_ptr, fcb [ 3 ], 0x60 );
-		return( FCB_WORK );
-	}
+static Long Getfcb(short fhdl) {
+  static unsigned char fcb[4][0x60] = {
+      {0x01, 0xC1, 0x00, 0x02, 0xC6, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x43, 0x4F, 0x4E, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+      {0x01, 0xC2, 0x00, 0x02, 0xC6, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x43, 0x4F, 0x4E, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+      {0x01, 0xC2, 0x00, 0x02, 0xC6, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x43, 0x4F, 0x4E, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+      {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
+  char *fcb_ptr;
+  fcb_ptr = prog_ptr + FCB_WORK;
+  switch (fhdl) {
+    case 0:
+    case 1:
+    case 2:
+      memcpy(fcb_ptr, fcb[fhdl], 0x60);
+      return (FCB_WORK);
+    default:
+      fcb[3][14] = (unsigned char)fhdl;
+      memcpy(fcb_ptr, fcb[3], 0x60);
+      return (FCB_WORK);
+  }
 }
 
 /*
  　機能：DOSCALL EXEC(mode=0,1)を実行する
  戻り値：エラーコード等
  */
-static Long Exec01( Long nm, Long cmd, Long env, int md )
-{
-	FILE *fp;
-	char fname [ 89 ];
-	char *name_ptr;
-	int  loadmode;
-	Long mem;
-	Long prev_adr;
-	Long end_adr;
-	Long pc1;
-	Long size;
-	Long prog_size;
-	Long prog_size2;
+static Long Exec01(Long nm, Long cmd, Long env, int md) {
+  FILE *fp;
+  char fname[89];
+  char *name_ptr;
+  int loadmode;
+  Long mem;
+  Long prev_adr;
+  Long end_adr;
+  Long pc1;
+  Long size;
+  Long prog_size;
+  Long prog_size2;
 
-	loadmode = ((nm >> 24) & 0x03);
-	nm &= 0xFFFFFF;
-	name_ptr = prog_ptr + nm;
-	if ( strlen( name_ptr ) > 88 )
-		return( -13 );        /* ファイル名指定誤り */
+  loadmode = ((nm >> 24) & 0x03);
+  nm &= 0xFFFFFF;
+  name_ptr = prog_ptr + nm;
+  if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
-	strcpy( fname, name_ptr );
-	if ( (fp=prog_open( fname, FALSE )) == NULL )
-		return( -2 );
+  strcpy(fname, name_ptr);
+  if ((fp = prog_open(fname, FALSE)) == NULL) return (-2);
 
-	if ( nest_cnt + 1 >= NEST_MAX )
-		return( -8 );
+  if (nest_cnt + 1 >= NEST_MAX) return (-8);
 
-	mem = Malloc( mem_aloc );
-	if ( (mem=Malloc( mem_aloc )) == (Long)0x82000000 ) {
-		fclose( fp );
-		return( -8 );        /* メモリが確保できない */
-	}
-	mem &= 0xFFFFFF;
-	size = mem;
-	if ( (mem=Malloc( mem )) > 0xFFFFFF ) {
-		fclose( fp );
-		return( -8 );
-	}
-	prev_adr = mem_get( mem - 0x10, S_LONG );
-	end_adr  = mem_get( mem - 0x08, S_LONG );
-	memset( prog_ptr + mem, 0, size );
+  mem = Malloc(mem_aloc);
+  if ((mem = Malloc(mem_aloc)) == (Long)0x82000000) {
+    fclose(fp);
+    return (-8); /* メモリが確保できない */
+  }
+  mem &= 0xFFFFFF;
+  size = mem;
+  if ((mem = Malloc(mem)) > 0xFFFFFF) {
+    fclose(fp);
+    return (-8);
+  }
+  prev_adr = mem_get(mem - 0x10, S_LONG);
+  end_adr = mem_get(mem - 0x08, S_LONG);
+  memset(prog_ptr + mem, 0, size);
 
-	prog_size2 = ((loadmode << 24) | end_adr);
-	pc1 = prog_read( fp, fname, mem - MB_SIZE + PSP_SIZE, &prog_size,
-					 &prog_size2, FALSE );
-	if ( pc1 < 0 ) {
-		Mfree( mem );
-		return( pc1 );
-	}
+  prog_size2 = ((loadmode << 24) | end_adr);
+  pc1 = prog_read(fp, fname, mem - MB_SIZE + PSP_SIZE, &prog_size, &prog_size2,
+                  FALSE);
+  if (pc1 < 0) {
+    Mfree(mem);
+    return (pc1);
+  }
 
-	nest_pc [ nest_cnt ] = pc;
-	nest_sp [ nest_cnt ] = ra [ 7 ];
-	ra [ 0 ] = mem - MB_SIZE;
-	ra [ 1 ] = mem - MB_SIZE + PSP_SIZE + prog_size;
-	ra [ 2 ] = cmd;
-	if ( env == 0 )
-		ra [ 3 ] = mem_get( psp [ nest_cnt ] + 0x10, S_LONG );
-	else
-		ra [ 3 ] = env;
-	ra [ 4 ] = pc1;
-	nest_cnt ++;
-	if ( make_psp( fname, prev_adr, end_adr, psp [ nest_cnt - 1 ], prog_size2 )
-		 == FALSE ) {
-		nest_cnt --;
-		Mfree( mem );
-		return( -13 );
-	}
+  nest_pc[nest_cnt] = pc;
+  nest_sp[nest_cnt] = ra[7];
+  ra[0] = mem - MB_SIZE;
+  ra[1] = mem - MB_SIZE + PSP_SIZE + prog_size;
+  ra[2] = cmd;
+  if (env == 0)
+    ra[3] = mem_get(psp[nest_cnt] + 0x10, S_LONG);
+  else
+    ra[3] = env;
+  ra[4] = pc1;
+  nest_cnt++;
+  if (make_psp(fname, prev_adr, end_adr, psp[nest_cnt - 1], prog_size2) ==
+      FALSE) {
+    nest_cnt--;
+    Mfree(mem);
+    return (-13);
+  }
 
-	if ( md == 0 ) {
-		pc = ra [ 4 ];
-		return( rd [ 0 ] );
-	} else {
-		nest_cnt --;
-		return( ra [ 4 ] );
-	}
+  if (md == 0) {
+    pc = ra[4];
+    return (rd[0]);
+  } else {
+    nest_cnt--;
+    return (ra[4]);
+  }
 }
 
 /*
  　機能：DOSCALL EXEC(mode=2)を実行する
  戻り値：エラーコード
  */
-static Long Exec2( Long nm, Long cmd, Long env )
-{
-	FILE *fp;
-	char *name_ptr;
-	char *cmd_ptr;
-	char *p;
-	int  len;
+static Long Exec2(Long nm, Long cmd, Long env) {
+  FILE *fp;
+  char *name_ptr;
+  char *cmd_ptr;
+  char *p;
+  int len;
 
-	name_ptr = prog_ptr + nm;
-	cmd_ptr  = prog_ptr + cmd;
-	p = name_ptr;
-	while( *p != '\0' && *p != ' ' )
-		p ++;
-	if ( *p != '\0' ) {    /* コマンドラインあり */
-		*p = '\0';
-		p ++;
-		len = strlen( p );
-		*((UChar *)cmd_ptr) = (UChar)len;
-		strcpy( cmd_ptr + 1, p );
-	}
+  name_ptr = prog_ptr + nm;
+  cmd_ptr = prog_ptr + cmd;
+  p = name_ptr;
+  while (*p != '\0' && *p != ' ') p++;
+  if (*p != '\0') { /* コマンドラインあり */
+    *p = '\0';
+    p++;
+    len = strlen(p);
+    *((UChar *)cmd_ptr) = (UChar)len;
+    strcpy(cmd_ptr + 1, p);
+  }
 
-	/* 環境変数PATHに従ってファイルを検索し、オープンする。*/
-	fp = prog_open(name_ptr, TRUE);
-	if (fp == NULL)
-	{
-		return 0;
-	} else {
-		fclose(fp);
-	}
-	return( 0 );
+  /* 環境変数PATHに従ってファイルを検索し、オープンする。*/
+  fp = prog_open(name_ptr, TRUE);
+  if (fp == NULL) {
+    return 0;
+  } else {
+    fclose(fp);
+  }
+  return (0);
 }
 
 /*
  　機能：DOSCALL EXEC(mode=3)を実行する
  戻り値：エラーコード等
  */
-static Long Exec3( Long nm, Long adr1, Long adr2 )
-{
-	FILE *fp;
-	char fname [ 89 ];
-	char *name_ptr;
-	int  loadmode;
-	Long ret;
-	Long prog_size;
-	Long prog_size2;
+static Long Exec3(Long nm, Long adr1, Long adr2) {
+  FILE *fp;
+  char fname[89];
+  char *name_ptr;
+  int loadmode;
+  Long ret;
+  Long prog_size;
+  Long prog_size2;
 
-	loadmode = ((nm >> 24) & 0x03);
-	nm   &= 0xFFFFFF;
-	adr1 &= 0xFFFFFF;
-	adr2 &= 0xFFFFFF;
-	name_ptr = prog_ptr + nm;
-	if ( strlen( name_ptr ) > 88 )
-		return( -13 );        /* ファイル名指定誤り */
+  loadmode = ((nm >> 24) & 0x03);
+  nm &= 0xFFFFFF;
+  adr1 &= 0xFFFFFF;
+  adr2 &= 0xFFFFFF;
+  name_ptr = prog_ptr + nm;
+  if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
-	strcpy( fname, name_ptr );
-	if ( (fp=prog_open( fname, FALSE )) == NULL )
-		return( -2 );
+  strcpy(fname, name_ptr);
+  if ((fp = prog_open(fname, FALSE)) == NULL) return (-2);
 
-	prog_size2 = ((loadmode << 24) | adr2);
-	ret = prog_read( fp, fname, adr1, &prog_size, &prog_size2, FALSE );
-	if ( ret < 0 )
-		return( ret );
+  prog_size2 = ((loadmode << 24) | adr2);
+  ret = prog_read(fp, fname, adr1, &prog_size, &prog_size2, FALSE);
+  if (ret < 0) return (ret);
 
-	return( prog_size );
+  return (prog_size);
 }
 
 /*
  　機能：DOSCALL EXEC(mode=4)を実行する
  戻り値：エラーコード等
  */
-static void Exec4( Long adr )
-{
-	nest_pc [ nest_cnt ] = pc;
-	nest_sp [ nest_cnt ] = ra [ 7 ];
-	nest_cnt ++;
-	pc = adr;
+static void Exec4(Long adr) {
+  nest_pc[nest_cnt] = pc;
+  nest_sp[nest_cnt] = ra[7];
+  nest_cnt++;
+  pc = adr;
 }
 
 /*
  　機能：標準時間を日本時間に変換する
  戻り値：なし
  */
-static void get_jtime( UShort *d, UShort *t, int offset )
-{
-	static int month_day [ 13 ] = {
-		31, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-	};
-	short    year;
-	short    month;
-	short    day;
-	short    hour;
+static void get_jtime(UShort *d, UShort *t, int offset) {
+  static int month_day[13] = {31, 31, 28, 31, 30, 31, 30,
+                              31, 31, 30, 31, 30, 31};
+  short year;
+  short month;
+  short day;
+  short hour;
 
-	hour = (*t >> 11);
-	if ( hour + offset * 9 >= 0 && hour + offset * 9 <= 23 ) {
-		*t += (0x4800 * offset);
-		return;
-	}
+  hour = (*t >> 11);
+  if (hour + offset * 9 >= 0 && hour + offset * 9 <= 23) {
+    *t += (0x4800 * offset);
+    return;
+  }
 
-	if ( offset > 0 )
-		hour -= 15;
-	else
-		hour += 15;
-	*t = (*t & 0x7FF) + (0x800 * hour);
+  if (offset > 0)
+    hour -= 15;
+  else
+    hour += 15;
+  *t = (*t & 0x7FF) + (0x800 * hour);
 
-	year  = (*d >> 9);
-	month = ((*d >> 5) & 0xF);
-	day   = (*d & 0x1F);
+  year = (*d >> 9);
+  month = ((*d >> 5) & 0xF);
+  day = (*d & 0x1F);
 
-	/* 2月の日数の判定 */
-	if ( (year % 4) == 0 ) {
-		if ( (year % 100) == 0 ) {
-			if ( (year % 400) == 0 )
-				month_day [ 2 ] = 29;
-			else
-				month_day [ 2 ] = 28;
-		} else {
-			month_day [ 2 ] = 29;
-		}
-	} else {
-		month_day [ 2 ] = 28;
-	}
+  /* 2月の日数の判定 */
+  if ((year % 4) == 0) {
+    if ((year % 100) == 0) {
+      if ((year % 400) == 0)
+        month_day[2] = 29;
+      else
+        month_day[2] = 28;
+    } else {
+      month_day[2] = 29;
+    }
+  } else {
+    month_day[2] = 28;
+  }
 
-	if ( day + offset >= 1 && day + offset <= month_day [ month ] ) {
-		*d += offset;            /* 日±1 */
-		return;
-	}
-	if ( offset > 0 )
-		*d = (*d & 0xFFE0) + 1;            /* 1日 */
-	else
-		*d = (*d & 0xFFE0) + month_day [ month - 1 ];    /* 前月最終日 */
+  if (day + offset >= 1 && day + offset <= month_day[month]) {
+    *d += offset; /* 日±1 */
+    return;
+  }
+  if (offset > 0)
+    *d = (*d & 0xFFE0) + 1; /* 1日 */
+  else
+    *d = (*d & 0xFFE0) + month_day[month - 1]; /* 前月最終日 */
 
-	if ( month + offset >= 1 && month + offset <= 12 ) {
-		*d += (0x20 * offset);        /* 月±1 */
-		return;
-	}
-	if ( offset > 0 )
-		*d = (*d & 0xFE1F) + 0x200 + 0x20;    /* 翌年1月 */
-	else
-		*d = (*d & 0xFE1F) - 0x200 + 0x180;    /* 前年12月 */
+  if (month + offset >= 1 && month + offset <= 12) {
+    *d += (0x20 * offset); /* 月±1 */
+    return;
+  }
+  if (offset > 0)
+    *d = (*d & 0xFE1F) + 0x200 + 0x20; /* 翌年1月 */
+  else
+    *d = (*d & 0xFE1F) - 0x200 + 0x180; /* 前年12月 */
 }
 
 /*
  　機能：getsの代わりをする
  戻り値：なし
  */
-static Long gets2( char *str, int max )
-{
-	int    c;
-	int    cnt;
-	unsigned dmy;
+static Long gets2(char *str, int max) {
+  int c;
+  int cnt;
+  unsigned dmy;
 
-	cnt = 0;
-	c = getchar();
-	if ( c == EOF )
-		fseek( stdin, 0, 0 );
-	while( c != EOF && c != '\n' ) {
-		if ( cnt < max )
-			str [ cnt ++ ] = c;
-		c = getchar();
-	}
-	if ( c == EOF )
-		str[ cnt ++ ] = EOF;
+  cnt = 0;
+  c = getchar();
+  if (c == EOF) fseek(stdin, 0, 0);
+  while (c != EOF && c != '\n') {
+    if (cnt < max) str[cnt++] = c;
+    c = getchar();
+  }
+  if (c == EOF) str[cnt++] = EOF;
 #if defined(WIN32)
-	WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "\x01B[1A", 4, &dmy, NULL);
+  WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "\x01B[1A", 4, &dmy, NULL);
 #elif defined(DOSX)
-	_dos_write( fileno(stdout), "\x01B[1A", 4, &dmy );
+  _dos_write(fileno(stdout), "\x01B[1A", 4, &dmy);
 #endif
-	/* printf("%c[1A", 0x1B); */    /* カーソルを１行上に */
-	str[ cnt ] = '\0';
+  /* printf("%c[1A", 0x1B); */ /* カーソルを１行上に */
+  str[cnt] = '\0';
 
-	return( strlen( str ) );
+  return (strlen(str));
 }
 
 /*
-	$fff7	_BUS_ERR	Check for bus errors
-		
-		Arg	SIZE.w		アクセスサイズ(1:バイト 2:ワード 4:ロングワード)
-		P1.l		読み込みポインタ
-		P2.l		書き込みポインタ
-		
-		Ret	d0.l =  0	読み書き可能
-		d0.l =  1	P2 に書き込んだ時にバスエラーが発生
-		d0.l =  2	P1 から読み込んだ時にバスエラーが発生
-		d0.l = -1	エラー(Argが異常)
-		
-		SIZE で指定されたサイズで P1 で指定したアドレスから読み込み、そのデータ
-		を P2 で指定したアドレスに書き込んでバスエラーが発生するかどうか調べる.
-		SIZE の値が異常な場合や SIZE = 2,4 で P1,P2 に奇数アドレスを指定した場
-		合はRetが -1 になる.
-		
-		move	SIZE,-(sp)
-		pea	(P2)
-		pea	(P1)
-		DOS	_BUS_ERR
-		lea	(10,sp),sp
+        $fff7	_BUS_ERR	Check for bus errors
+
+                Arg	SIZE.w		アクセスサイズ(1:バイト 2:ワード
+   4:ロングワード) P1.l		読み込みポインタ P2.l		書き込みポインタ
+
+                Ret	d0.l =  0	読み書き可能
+                d0.l =  1	P2 に書き込んだ時にバスエラーが発生
+                d0.l =  2	P1 から読み込んだ時にバスエラーが発生
+                d0.l = -1	エラー(Argが異常)
+
+                SIZE で指定されたサイズで P1
+   で指定したアドレスから読み込み、そのデータ を P2
+   で指定したアドレスに書き込んでバスエラーが発生するかどうか調べる. SIZE
+   の値が異常な場合や SIZE = 2,4 で P1,P2 に奇数アドレスを指定した場 合はRetが
+   -1 になる.
+
+                move	SIZE,-(sp)
+                pea	(P2)
+                pea	(P1)
+                DOS	_BUS_ERR
+                lea	(10,sp),sp
 */
-	

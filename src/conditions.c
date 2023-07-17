@@ -6,7 +6,8 @@
  * Some Bug fix, and implemented some instruction
  * Following Modification contributed by TRAP.
  *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show word size.
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
  * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
  * Add: Nbcd, Sbcd.
  *
@@ -25,82 +26,82 @@
 // /* conditions.c */
 
 // void general_conditions(Long result, int size);
-// void add_conditions(Long src , Long dest, Long result, int size, BOOL zero_flag);
-// void cmp_conditions(Long src , Long dest, Long result, int size);
-// void sub_conditions(Long src , Long dest, Long result, int size, BOOL zero_flag);
-// void neg_conditions(Long dest, Long result, int size, BOOL zero_flag);
-// void check(char *mode, Long src, Long dest, Long result, int size, short before);
+// void add_conditions(Long src , Long dest, Long result, int size, BOOL
+// zero_flag); void cmp_conditions(Long src , Long dest, Long result, int size);
+// void sub_conditions(Long src , Long dest, Long result, int size, BOOL
+// zero_flag); void neg_conditions(Long dest, Long result, int size, BOOL
+// zero_flag); void check(char *mode, Long src, Long dest, Long result, int
+// size, short before);
 
 #include "run68.h"
 
 static void ccr2bitmap(short ccr, char *bitmap) {
-	int  i;
-	int  flag;
-	int  j = 0;
+  int i;
+  int flag;
+  int j = 0;
 
-	ccr &= 0x1f;
+  ccr &= 0x1f;
 
-	for (i = 6; i >= 0; i--) {
-		flag = (ccr >> i) & 1;
-		if (flag == 1) {
-			bitmap[j++] = '1';
-		} else {
-			bitmap[j++] = '0';
-		}
-	}
-	bitmap[j] = '\0';
+  for (i = 6; i >= 0; i--) {
+    flag = (ccr >> i) & 1;
+    if (flag == 1) {
+      bitmap[j++] = '1';
+    } else {
+      bitmap[j++] = '0';
+    }
+  }
+  bitmap[j] = '\0';
 }
 
-void check(char *mode, Long src, Long dest, Long result, int size, short before) {
-	char  befstr[9];
-	char  aftstr[9];
+void check(char *mode, Long src, Long dest, Long result, int size,
+           short before) {
+  char befstr[9];
+  char aftstr[9];
 
-	ccr2bitmap((short)(before & 0x1f), befstr);
-	ccr2bitmap((short)(sr & 0x1f), aftstr);
+  ccr2bitmap((short)(before & 0x1f), befstr);
+  ccr2bitmap((short)(sr & 0x1f), aftstr);
 
-	printf("%s: 0x%08x 0x%08x 0x%08x %1d %8s %8s\n", mode, src, dest, result, size, befstr, aftstr);
+  printf("%s: 0x%08x 0x%08x 0x%08x %1d %8s %8s\n", mode, src, dest, result,
+         size, befstr, aftstr);
 }
 
 Long getMSB(Long num, int size) {
+  Long ret;
 
-	Long ret;
+  switch (size) {
+    case S_BYTE:
+      ret = ((num >> 7) & 1);
+      break;
+    case S_WORD:
+      ret = ((num >> 15) & 1);
+      break;
+    case S_LONG:
+      ret = ((num >> 31) & 1);
+      break;
+    default:
+      err68a("不正なデータサイズです。", __FILE__, __LINE__);
+  }
 
-	switch (size) {
-		case S_BYTE:
-			ret = ((num >> 7) & 1);
-			break;
-		case S_WORD:
-			ret = ((num >> 15) & 1);
-			break;
-		case S_LONG:
-			ret = ((num >> 31) & 1);
-			break;
-		default:
-			err68a("不正なデータサイズです。", __FILE__, __LINE__);
-	}
-
-	return(ret);
+  return (ret);
 }
 
 Long getBitsByDataSize(Long num, int size) {
-	Long ret;
-	switch (size) {
-		case S_BYTE:
-			ret = num & 0xff;
-			break;
-		case S_WORD:
-			ret = num & 0xffff;
-			break;
-		case S_LONG:
-			ret = num;
-			break;
-		default:
-			err68a("不正なデータサイズです。", __FILE__, __LINE__);
-	}
-	return(ret);
+  Long ret;
+  switch (size) {
+    case S_BYTE:
+      ret = num & 0xff;
+      break;
+    case S_WORD:
+      ret = num & 0xffff;
+      break;
+    case S_LONG:
+      ret = num;
+      break;
+    default:
+      err68a("不正なデータサイズです。", __FILE__, __LINE__);
+  }
+  return (ret);
 }
-
-
 
 /*
  * 【説明】
@@ -126,31 +127,30 @@ Long getBitsByDataSize(Long num, int size) {
  */
 
 void general_conditions(Long result, int size) {
+  int Rm;
 
-	int 	Rm;
+  Rm = (getMSB(result, size) != (Long)0);
 
-	Rm = (getMSB(result, size) != (Long)0);
+  /* Overflow Flag */
+  CCR_V_OFF();
 
-	/* Overflow Flag */
-	CCR_V_OFF();
+  /* Carry Flag & Extend Flag */
+  CCR_C_OFF();
+  //	CCR_X_OFF();
 
-	/* Carry Flag & Extend Flag */
-	CCR_C_OFF();
-//	CCR_X_OFF();
+  /* Zero Flag */
+  if (getBitsByDataSize(result, size) == 0) {
+    CCR_Z_ON();
+  } else {
+    CCR_Z_OFF();
+  }
 
-	/* Zero Flag */
-	if (getBitsByDataSize(result, size) == 0) {
-		CCR_Z_ON();
-	} else {
-		CCR_Z_OFF();
-	}
-
-	/* Negative Flag */
-	if (Rm != 0) {
-		CCR_N_ON();
-	} else {
-		CCR_N_OFF();
-	}
+  /* Negative Flag */
+  if (Rm != 0) {
+    CCR_N_ON();
+  } else {
+    CCR_N_OFF();
+  }
 }
 
 /*
@@ -173,45 +173,44 @@ void general_conditions(Long result, int size) {
  *
  */
 
-void add_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag) {
+void add_conditions(Long src, Long dest, Long result, int size,
+                    BOOL zero_flag) {
+  int Sm, Dm, Rm;
 
-	int 	Sm, Dm, Rm;
+  Sm = (getMSB(src, size) != (Long)0);
+  Dm = (getMSB(dest, size) != (Long)0);
+  Rm = (getMSB(result, size) != (Long)0);
 
-	Sm = (getMSB(src,    size) != (Long)0);
-	Dm = (getMSB(dest,   size) != (Long)0);
-	Rm = (getMSB(result, size) != (Long)0);
+  /* Overflow Flag */
+  if ((Sm && Dm && !Rm) || (!Sm && !Dm && Rm)) {
+    CCR_V_ON();
+  } else {
+    CCR_V_OFF();
+  }
 
-	/* Overflow Flag */
-	if ((Sm && Dm && !Rm) || (!Sm && !Dm && Rm)) {
-		CCR_V_ON();
-	} else {
-		CCR_V_OFF();
-	}
+  /* Carry Flag & Extend Flag */
+  if ((Sm && Dm) || (Dm && !Rm) || (Sm && !Rm)) {
+    CCR_C_ON();
+    CCR_X_ON();
+  } else {
+    CCR_C_OFF();
+    CCR_X_OFF();
+  }
 
-	/* Carry Flag & Extend Flag */
-	if ((Sm && Dm) || (Dm && !Rm) || (Sm && !Rm)) {
-		CCR_C_ON();
-		CCR_X_ON();
-	} else {
-		CCR_C_OFF();
-		CCR_X_OFF();
-	}
+  /* Zero Flag */
+  if (zero_flag && getBitsByDataSize(result, size) == 0) {
+    CCR_Z_ON();
+  } else {
+    CCR_Z_OFF();
+  }
 
-	/* Zero Flag */
-	if (zero_flag && getBitsByDataSize(result, size) == 0) {
-		CCR_Z_ON();
-	} else {
-		CCR_Z_OFF();
-	}
-
-	/* Negative Flag */
-	if (Rm != 0) {
-		CCR_N_ON();
-	} else {
-		CCR_N_OFF();
-	}
+  /* Negative Flag */
+  if (Rm != 0) {
+    CCR_N_ON();
+  } else {
+    CCR_N_OFF();
+  }
 }
-
 
 /*
  * 【説明】
@@ -234,42 +233,40 @@ void add_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag) 
  */
 
 void cmp_conditions(Long src, Long dest, Long result, int size) {
+  int Sm, Dm, Rm;
 
-	int 	Sm, Dm, Rm;
+  Sm = (getMSB(src, size) != (Long)0);
+  Dm = (getMSB(dest, size) != (Long)0);
+  Rm = (getMSB(result, size) != (Long)0);
 
-	Sm = (getMSB(src,    size) != (Long)0);
-	Dm = (getMSB(dest,   size) != (Long)0);
-	Rm = (getMSB(result, size) != (Long)0);
+  /* Overflow Flag */
+  if ((!Sm && Dm && !Rm) || (Sm && !Dm && Rm)) {
+    CCR_V_ON();
+  } else {
+    CCR_V_OFF();
+  }
 
-	/* Overflow Flag */
-	if ((!Sm && Dm && !Rm) || (Sm && !Dm && Rm)) {
-		CCR_V_ON();
-	} else {
-		CCR_V_OFF();
-	}
+  /* Carry Flag & Extend Flag */
+  if ((Sm && !Dm) || (!Dm && Rm) || (Sm && Rm)) {
+    CCR_C_ON();
+  } else {
+    CCR_C_OFF();
+  }
 
-	/* Carry Flag & Extend Flag */
-	if ((Sm && !Dm) || (!Dm && Rm) || (Sm && Rm)) {
-		CCR_C_ON();
-	} else {
-		CCR_C_OFF();
-	}
+  /* Zero Flag */
+  if (getBitsByDataSize(result, size) == 0) {
+    CCR_Z_ON();
+  } else {
+    CCR_Z_OFF();
+  }
 
-	/* Zero Flag */
-	if (getBitsByDataSize(result, size) == 0) {
-		CCR_Z_ON();
-	} else {
-		CCR_Z_OFF();
-	}
-
-	/* Negative Flag */
-	if (Rm != 0) {
-		CCR_N_ON();
-	} else {
-		CCR_N_OFF();
-	}
+  /* Negative Flag */
+  if (Rm != 0) {
+    CCR_N_ON();
+  } else {
+    CCR_N_OFF();
+  }
 }
-
 
 /*
  * 【説明】
@@ -291,23 +288,22 @@ void cmp_conditions(Long src, Long dest, Long result, int size) {
  *
  */
 
-void sub_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag) {
+void sub_conditions(Long src, Long dest, Long result, int size,
+                    BOOL zero_flag) {
+  cmp_conditions(src, dest, result, size);
 
-	cmp_conditions(src, dest, result, size);
+  if (CCR_C_REF()) {
+    CCR_X_ON();
+  } else {
+    CCR_X_OFF();
+  }
 
-	if (CCR_C_REF()) {
-		CCR_X_ON();
-	} else {
-		CCR_X_OFF();
-	}
-
-	/* Zero Flag */
-	if ((zero_flag == 1) && (CCR_Z_REF() != 0)) {
-		CCR_Z_ON();
-	} else {
-		CCR_Z_OFF();
-	}
-	
+  /* Zero Flag */
+  if ((zero_flag == 1) && (CCR_Z_REF() != 0)) {
+    CCR_Z_ON();
+  } else {
+    CCR_Z_OFF();
+  }
 }
 
 /*
@@ -324,45 +320,44 @@ void sub_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag) 
  *   BOOL zero_flag; <in>  negx用演算前 zero flag 値。
  *                         その他の場合は常に 1 を指定のこと。
  *
- * 【返値】 
+ * 【返値】
  *   なし
  *
  */
 
 void neg_conditions(Long dest, Long result, int size, BOOL zero_flag) {
+  int Dm, Rm;
 
-	int 	Dm, Rm;
+  Dm = (getMSB(dest, size) != (Long)0);
+  Rm = (getMSB(result, size) != (Long)0);
 
-	Dm = (getMSB(dest,   size) != (Long)0);
-	Rm = (getMSB(result, size) != (Long)0);
+  /* Overflow Flag */
+  if (Dm && Rm) {
+    CCR_V_ON();
+  } else {
+    CCR_V_OFF();
+  }
 
-	/* Overflow Flag */
-	if (Dm && Rm) {
-		CCR_V_ON();
-	} else {
-		CCR_V_OFF();
-	}
+  /* Carry Flag & Extend Flag */
+  if (Dm || Rm) {
+    CCR_C_ON();
+    CCR_X_ON();
+  } else {
+    CCR_C_OFF();
+    CCR_X_OFF();
+  }
 
-	/* Carry Flag & Extend Flag */
-	if (Dm || Rm) {
-		CCR_C_ON();
-		CCR_X_ON();
-	} else {
-		CCR_C_OFF();
-		CCR_X_OFF();
-	}
+  /* Zero Flag */
+  if (getBitsByDataSize(result, size) == 0) {
+    CCR_Z_ON();
+  } else {
+    CCR_Z_OFF();
+  }
 
-	/* Zero Flag */
-	if (getBitsByDataSize(result, size) == 0) {
-		CCR_Z_ON();
-	} else {
-		CCR_Z_OFF();
-	}
-
-	/* Negative Flag */
-	if (Rm != 0) {
-		CCR_N_ON();
-	} else {
-		CCR_N_OFF();
-	}
+  /* Negative Flag */
+  if (Rm != 0) {
+    CCR_N_ON();
+  } else {
+    CCR_N_OFF();
+  }
 }

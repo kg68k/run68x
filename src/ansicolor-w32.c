@@ -4,23 +4,24 @@
 // original : https://github.com/mattn/ansicolor-w32.c
 // auther   : mattn
 // license  : MIT
-// 
+//
 
 #ifdef _WIN32
-#include <windows.h>
-#include <stdio.h>
-#include <mbstring.h>
 #include <io.h>
+#include <mbstring.h>
+#include <stdio.h>
+#include <windows.h>
 
 #ifndef FOREGROUND_MASK
-# define FOREGROUND_MASK (FOREGROUND_RED|FOREGROUND_BLUE|FOREGROUND_GREEN|FOREGROUND_INTENSITY)
+#define FOREGROUND_MASK \
+  (FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_INTENSITY)
 #endif
 #ifndef BACKGROUND_MASK
-# define BACKGROUND_MASK (BACKGROUND_RED|BACKGROUND_BLUE|BACKGROUND_GREEN|BACKGROUND_INTENSITY)
+#define BACKGROUND_MASK \
+  (BACKGROUND_RED | BACKGROUND_BLUE | BACKGROUND_GREEN | BACKGROUND_INTENSITY)
 #endif
 
-int
-WriteW32(short _type, HANDLE handle, const char* _buf, size_t _len) {
+int WriteW32(short _type, HANDLE handle, const char *_buf, size_t _len) {
   static WORD attr_olds[2] = {-1, -1}, attr_old;
   static int first = 1;
   size_t len;
@@ -31,7 +32,7 @@ WriteW32(short _type, HANDLE handle, const char* _buf, size_t _len) {
   CONSOLE_SCREEN_BUFFER_INFO csbi;
   COORD coord;
   const char *ptr;
- 
+
   if (_type == 1) {
     type = 0;
   } else if (_type == 2) {
@@ -43,7 +44,7 @@ WriteW32(short _type, HANDLE handle, const char* _buf, size_t _len) {
   GetConsoleScreenBufferInfo(handle, &csbi);
   attr = csbi.wAttributes;
 
-  if (attr_olds[type] == (WORD) -1) {
+  if (attr_olds[type] == (WORD)-1) {
     attr_olds[type] = attr;
   }
   attr_old = attr;
@@ -57,11 +58,13 @@ WriteW32(short _type, HANDLE handle, const char* _buf, size_t _len) {
       int i, n = 0, m, v[6], w, h;
       for (i = 0; i < 6; i++) v[i] = -1;
       ptr++;
-retry:
+    retry:
       if ((c = *ptr++) == 0) break;
       if (isdigit(c)) {
-        if (v[n] == -1) v[n] = c - '0';
-        else v[n] = v[n] * 10 + c - '0';
+        if (v[n] == -1)
+          v[n] = c - '0';
+        else
+          v[n] = v[n] * 10 + c - '0';
         goto retry;
       }
       if (c == '[') {
@@ -88,8 +91,10 @@ retry:
                   csize = w * (h + 1);
                   coord.X = 0;
                   coord.Y = csbi.srWindow.Top;
-                  FillConsoleOutputCharacter(handle, ' ', csize, coord, &written);
-                  FillConsoleOutputAttribute(handle, csbi.wAttributes, csize, coord, &written);
+                  FillConsoleOutputCharacter(handle, ' ', csize, coord,
+                                             &written);
+                  FillConsoleOutputAttribute(handle, csbi.wAttributes, csize,
+                                             coord, &written);
                   SetConsoleCursorPosition(handle, csbi.dwCursorPosition);
                   csbi.dwSize.X = 132;
                   SetConsoleScreenBufferSize(handle, csbi.dwSize);
@@ -97,9 +102,8 @@ retry:
                   SetConsoleWindowInfo(handle, TRUE, &csbi.srWindow);
                   break;
                 case 5:
-                  attr =
-                    ((attr & FOREGROUND_MASK) << 4) |
-                    ((attr & BACKGROUND_MASK) >> 4);
+                  attr = ((attr & FOREGROUND_MASK) << 4) |
+                         ((attr & BACKGROUND_MASK) >> 4);
                   SetConsoleTextAttribute(handle, attr);
                   break;
                 case 9:
@@ -135,8 +139,10 @@ retry:
                   csize = w * (h + 1);
                   coord.X = 0;
                   coord.Y = csbi.srWindow.Top;
-                  FillConsoleOutputCharacter(handle, ' ', csize, coord, &written);
-                  FillConsoleOutputAttribute(handle, csbi.wAttributes, csize, coord, &written);
+                  FillConsoleOutputCharacter(handle, ' ', csize, coord,
+                                             &written);
+                  FillConsoleOutputAttribute(handle, csbi.wAttributes, csize,
+                                             coord, &written);
                   SetConsoleCursorPosition(handle, csbi.dwCursorPosition);
                   csbi.srWindow.Right = csbi.srWindow.Left + 79;
                   SetConsoleWindowInfo(handle, TRUE, &csbi.srWindow);
@@ -144,9 +150,8 @@ retry:
                   SetConsoleScreenBufferSize(handle, csbi.dwSize);
                   break;
                 case 5:
-                  attr =
-                    ((attr & FOREGROUND_MASK) << 4) |
-                    ((attr & BACKGROUND_MASK) >> 4);
+                  attr = ((attr & FOREGROUND_MASK) << 4) |
+                         ((attr & BACKGROUND_MASK) >> 4);
                   SetConsoleTextAttribute(handle, attr);
                   break;
                 case 25:
@@ -158,8 +163,7 @@ retry:
                   break;
               }
             }
-          }
-          else if (m == '>' && v[0] == 5) {
+          } else if (m == '>' && v[0] == 5) {
             GetConsoleCursorInfo(handle, &cci);
             cci.bVisible = TRUE;
             SetConsoleCursorInfo(handle, &cci);
@@ -177,13 +181,12 @@ retry:
             else if (v[i] == 5)
               attr |= FOREGROUND_INTENSITY;
             else if (v[i] == 7)
-              attr =
-                ((attr & FOREGROUND_MASK) << 4) |
-                ((attr & BACKGROUND_MASK) >> 4);
+              attr = ((attr & FOREGROUND_MASK) << 4) |
+                     ((attr & BACKGROUND_MASK) >> 4);
             else if (v[i] == 10)
-              ; // symbol on
+              ;  // symbol on
             else if (v[i] == 11)
-              ; // symbol off
+              ;  // symbol off
             else if (v[i] == 22)
               attr &= ~FOREGROUND_INTENSITY;
             else if (v[i] == 24)
@@ -191,12 +194,11 @@ retry:
             else if (v[i] == 25)
               attr &= ~FOREGROUND_INTENSITY;
             else if (v[i] == 27)
-              attr =
-                ((attr & FOREGROUND_MASK) << 4) |
-                ((attr & BACKGROUND_MASK) >> 4);
+              attr = ((attr & FOREGROUND_MASK) << 4) |
+                     ((attr & BACKGROUND_MASK) >> 4);
             else if (v[i] >= 30 && v[i] <= 37) {
               attr = (attr & BACKGROUND_MASK);
-              switch( (v[i] - 30) & 3 ) {
+              switch ((v[i] - 30) & 3) {
                 case 0:
                 default:
                   break;
@@ -210,14 +212,13 @@ retry:
                   attr |= FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN;
                   break;
               }
-              if ((v[i] - 30) & 4)
-                attr |= FOREGROUND_INTENSITY;
+              if ((v[i] - 30) & 4) attr |= FOREGROUND_INTENSITY;
             }
-            //else if (v[i] == 39)
-            //attr = (~attr & BACKGROUND_MASK);
+            // else if (v[i] == 39)
+            // attr = (~attr & BACKGROUND_MASK);
             else if (v[i] >= 40 && v[i] <= 47) {
               attr = (attr & FOREGROUND_MASK);
-              switch( (v[i] - 40) & 3 ) {
+              switch ((v[i] - 40) & 3) {
                 case 0:
                 default:
                   break;
@@ -231,11 +232,10 @@ retry:
                   attr |= BACKGROUND_BLUE | BACKGROUND_RED | BACKGROUND_GREEN;
                   break;
               }
-              if ((v[i] - 40) & 4)
-                attr |= BACKGROUND_INTENSITY;
+              if ((v[i] - 40) & 4) attr |= BACKGROUND_INTENSITY;
             }
-            //else if (v[i] == 49)
-            //attr = (~attr & FOREGROUND_MASK);
+            // else if (v[i] == 49)
+            // attr = (~attr & FOREGROUND_MASK);
             else if (v[i] == 100)
               attr = attr_old;
           }
@@ -246,7 +246,7 @@ retry:
           coord = csbi.dwCursorPosition;
           switch (v[0]) {
             default:
-              case 0:
+            case 0:
               csize = csbi.dwSize.X - coord.X;
               break;
             case 1:
@@ -259,7 +259,8 @@ retry:
               break;
           }
           FillConsoleOutputCharacter(handle, ' ', csize, coord, &written);
-          FillConsoleOutputAttribute(handle, csbi.wAttributes, csize, coord, &written);
+          FillConsoleOutputAttribute(handle, csbi.wAttributes, csize, coord,
+                                     &written);
           SetConsoleCursorPosition(handle, csbi.dwCursorPosition);
           break;
         case 'J':
@@ -285,7 +286,8 @@ retry:
               break;
           }
           FillConsoleOutputCharacter(handle, ' ', csize, coord, &written);
-          FillConsoleOutputAttribute(handle, csbi.wAttributes, csize, coord, &written);
+          FillConsoleOutputAttribute(handle, csbi.wAttributes, csize, coord,
+                                     &written);
           SetConsoleCursorPosition(handle, csbi.dwCursorPosition);
           break;
         case 'H':
@@ -319,14 +321,14 @@ retry:
       const unsigned char *uptr = (const unsigned char *)ptr;
       if (_ismbslead((const unsigned char *)_buf, uptr)) {
         // X68000固有文字の変換
-        if ((uptr[0] == 0x80) || // 半角
-            (uptr[0] == 0xf0) || // 上付き1/4(カタカナ)
-            (uptr[0] == 0xf1) || // 上付き1/4(ひらがな)
-            (uptr[0] == 0xf2) || // 下付き1/4(カタカナ)
-            (uptr[0] == 0xf3) )  // 下付き1/4(ひらがな)
+        if ((uptr[0] == 0x80) ||  // 半角
+            (uptr[0] == 0xf0) ||  // 上付き1/4(カタカナ)
+            (uptr[0] == 0xf1) ||  // 上付き1/4(ひらがな)
+            (uptr[0] == 0xf2) ||  // 下付き1/4(カタカナ)
+            (uptr[0] == 0xf3))    // 下付き1/4(ひらがな)
         {
-            // 前半をスキップして半角ASCII化
-            ptr++;
+          // 前半をスキップして半角ASCII化
+          ptr++;
         }
       }
       putchar(*ptr);

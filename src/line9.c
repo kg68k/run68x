@@ -6,7 +6,8 @@
  * Some Bug fix, and implemented some instruction
  * Following Modification contributed by TRAP.
  *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show word size.
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
  * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
  * Add: Nbcd, Sbcd.
  *
@@ -30,93 +31,93 @@
  *
  */
 
-#undef	MAIN
+#undef MAIN
 
 #include <stdio.h>
+
 #include "run68.h"
 
-static	int	Suba( char, char );
-static	int	Subx( char, char );
-static	int	Sub1( char, char );
-static	int	Sub2( char, char );
+static int Suba(char, char);
+static int Subx(char, char);
+static int Sub1(char, char);
+static int Sub2(char, char);
 
 /*
  　機能：9ライン命令を実行する
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-int	line9( char *pc_ptr )
-{
-	char	code1, code2;
+int line9(char *pc_ptr) {
+  char code1, code2;
 
-	code1 = *(pc_ptr++);
-	code2 = *pc_ptr;
-	pc += 2;
+  code1 = *(pc_ptr++);
+  code2 = *pc_ptr;
+  pc += 2;
 
-	if ( (code2 & 0xC0) == 0xC0 ) {
-		return( Suba( code1, code2 ) );
-	} else {
-		if ( (code1 & 0x01) == 1 ) {
-			if ( (code2 & 0x30) == 0x00 )
-				return( Subx( code1, code2 ) );
-			else
-				return( Sub1( code1, code2 ) );
-		} else {
-			return( Sub2( code1, code2 ) );
-		}
-	}
+  if ((code2 & 0xC0) == 0xC0) {
+    return (Suba(code1, code2));
+  } else {
+    if ((code1 & 0x01) == 1) {
+      if ((code2 & 0x30) == 0x00)
+        return (Subx(code1, code2));
+      else
+        return (Sub1(code1, code2));
+    } else {
+      return (Sub2(code1, code2));
+    }
+  }
 }
 
-static	int	Suba( char code1, char code2 )
-{
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	char	size;
-	Long	src_data;
-	Long	save_pc;
-	Long	dest_data;
+static int Suba(char code1, char code2) {
+  char mode;
+  char src_reg;
+  char dst_reg;
+  char size;
+  Long src_data;
+  Long save_pc;
+  Long dest_data;
 
-	save_pc = pc;
-	dst_reg = ((code1 & 0x0E) >> 1);
-	if ( (code1 & 0x01) == 0x01 )
-		size = S_LONG;
-	else
-		size = S_WORD;
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = (code2 & 0x07);
+  save_pc = pc;
+  dst_reg = ((code1 & 0x0E) >> 1);
+  if ((code1 & 0x01) == 0x01)
+    size = S_LONG;
+  else
+    size = S_WORD;
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = (code2 & 0x07);
 
-	/* ソースのアドレッシングモードに応じた処理 */
-	if (size == S_BYTE) {
-		err68a( "不正な命令: suba.b <ea>, An を実行しようとしました。", __FILE__, __LINE__ );
-		return(TRUE);
-	} else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  /* ソースのアドレッシングモードに応じた処理 */
+  if (size == S_BYTE) {
+    err68a("不正な命令: suba.b <ea>, An を実行しようとしました。", __FILE__,
+           __LINE__);
+    return (TRUE);
+  } else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	if ( size == S_WORD ) {
-		if ( (src_data & 0x8000) != 0 ) {
-			src_data |= 0xFFFF0000;
-		} else {
-			src_data &= 0x0000FFFF;
-		}
-	}
+  if (size == S_WORD) {
+    if ((src_data & 0x8000) != 0) {
+      src_data |= 0xFFFF0000;
+    } else {
+      src_data &= 0x0000FFFF;
+    }
+  }
 
-	dest_data = ra[dst_reg];
+  dest_data = ra[dst_reg];
 
-	// sub演算
-	ra[dst_reg] = sub_long(src_data, dest_data, S_LONG);
-	// ra [ dst_reg ] -= src_data;
+  // sub演算
+  ra[dst_reg] = sub_long(src_data, dest_data, S_LONG);
+  // ra [ dst_reg ] -= src_data;
 
-#ifdef	TRACE
-	printf( "trace: suba.%c   src=%d PC=%06lX\n",
-		size_char [ size ], src_data, save_pc );
+#ifdef TRACE
+  printf("trace: suba.%c   src=%d PC=%06lX\n", size_char[size], src_data,
+         save_pc);
 #endif
 
-	/* フラグの変化はなし */
-	// sub_conditions(src_data, dest_data, ra[dst_reg], size, 1);
+  /* フラグの変化はなし */
+  // sub_conditions(src_data, dest_data, ra[dst_reg], size, 1);
 
-	return( FALSE );
+  return (FALSE);
 }
 
 /*
@@ -124,73 +125,71 @@ static	int	Suba( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Subx( char code1, char code2 )
-{
-	char	size;
-	char	src_reg;
-	char	dst_reg;
-	short	save_z;
-	short	save_x;
-	Long	dest_data;
+static int Subx(char code1, char code2) {
+  char size;
+  char src_reg;
+  char dst_reg;
+  short save_z;
+  short save_x;
+  Long dest_data;
 
 #ifdef TEST_CCR
-	short	before;
+  short before;
 #endif
 
-	src_reg = (code2 & 0x07);
-	dst_reg = ((code1 & 0x0E) >> 1);
-	size = ((code2 >> 6) & 0x03);
+  src_reg = (code2 & 0x07);
+  dst_reg = ((code1 & 0x0E) >> 1);
+  size = ((code2 >> 6) & 0x03);
 
-	if ( (code2 & 0x08) != 0 ) {
-		/* -(An), -(An) */
-		err68a( "未定義命令を実行しました", __FILE__, __LINE__ );
-		return( TRUE );
-	}
+  if ((code2 & 0x08) != 0) {
+    /* -(An), -(An) */
+    err68a("未定義命令を実行しました", __FILE__, __LINE__);
+    return (TRUE);
+  }
 
 #ifdef TEST_CCR
-	before = sr & 0x1f;
+  before = sr & 0x1f;
 #endif
-	dest_data = rd [ dst_reg ];
+  dest_data = rd[dst_reg];
 
-	save_z = CCR_Z_REF() != 0 ? 1 : 0;
-	save_x = CCR_X_REF() != 0 ? 1 : 0;
-//	if ( CCR_X_REF() == 0 ) {
-//		//rd [ dst_reg ] = sub_rd( dst_reg, rd [ src_reg ], size );
-//		rd [ dst_reg ] = sub_long(rd [ src_reg ], dest_data, size );
-//	} else {
-		//rd [ dst_reg ] = sub_rd( dst_reg, rd [ src_reg ] + 1, size );
-		rd [ dst_reg ] = sub_long(rd [ src_reg ] + save_x, dest_data , size );
-//	}
+  save_z = CCR_Z_REF() != 0 ? 1 : 0;
+  save_x = CCR_X_REF() != 0 ? 1 : 0;
+  //	if ( CCR_X_REF() == 0 ) {
+  //		//rd [ dst_reg ] = sub_rd( dst_reg, rd [ src_reg ], size );
+  //		rd [ dst_reg ] = sub_long(rd [ src_reg ], dest_data, size );
+  //	} else {
+  // rd [ dst_reg ] = sub_rd( dst_reg, rd [ src_reg ] + 1, size );
+  rd[dst_reg] = sub_long(rd[src_reg] + save_x, dest_data, size);
+  //	}
 
-//	if ( rd [ dst_reg ] == 0 ) {
-//		if ( save_z == 0 )
-//			CCR_Z_OFF();
-//	}
+  //	if ( rd [ dst_reg ] == 0 ) {
+  //		if ( save_z == 0 )
+  //			CCR_Z_OFF();
+  //	}
 
-	/* フラグの変化 */
-	sub_conditions(rd[src_reg], dest_data, rd[dst_reg], size, save_z);
+  /* フラグの変化 */
+  sub_conditions(rd[src_reg], dest_data, rd[dst_reg], size, save_z);
 
 #ifdef TEST_CCR
-	check("subx", rd[src_reg], dest_data, rd[dst_reg], size, before);
+  check("subx", rd[src_reg], dest_data, rd[dst_reg], size, before);
 #endif
 
-#ifdef	TRACE
-	switch( size ) {
-		case S_BYTE:
-			rd [ 8 ] = ( rd [ src_reg ] & 0xFF );
-			break;
-		case S_WORD:
-			rd [ 8 ] = ( rd [ src_reg ] & 0xFFFF);
-			break;
-		default:	/* S_LONG */
-			rd [ 8 ] = rd [ src_reg ];
-			break;
-	}
-	printf( "trace: subx.%c   src=%d PC=%06lX\n",
-		size_char [ size ], rd [ 8 ], pc );
+#ifdef TRACE
+  switch (size) {
+    case S_BYTE:
+      rd[8] = (rd[src_reg] & 0xFF);
+      break;
+    case S_WORD:
+      rd[8] = (rd[src_reg] & 0xFFFF);
+      break;
+    default: /* S_LONG */
+      rd[8] = rd[src_reg];
+      break;
+  }
+  printf("trace: subx.%c   src=%d PC=%06lX\n", size_char[size], rd[8], pc);
 #endif
 
-	return( FALSE );
+  return (FALSE);
 }
 
 /*
@@ -198,89 +197,88 @@ static	int	Subx( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Sub1( char code1, char code2 )
-{
-	char	size;
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	short	disp = 0;
-	Long	save_pc;
-	int	work_mode;
-	Long	src_data;
-	Long	dest_data;
+static int Sub1(char code1, char code2) {
+  char size;
+  char mode;
+  char src_reg;
+  char dst_reg;
+  short disp = 0;
+  Long save_pc;
+  int work_mode;
+  Long src_data;
+  Long dest_data;
 
 #ifdef TEST_CCR
-	short	before;
+  short before;
 #endif
 
-	save_pc = pc;
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = ((code1 & 0x0E) >> 1);
-	dst_reg = (code2 & 0x07);
-	size = ((code2 >> 6) & 0x03);
+  save_pc = pc;
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = ((code1 & 0x0E) >> 1);
+  dst_reg = (code2 & 0x07);
+  size = ((code2 >> 6) & 0x03);
 
-	if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	/* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
-	if (mode == EA_AIPI) {
-		work_mode = EA_AI;
-	} else {
-		work_mode = mode;
-	}
+  /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
+  if (mode == EA_AIPI) {
+    work_mode = EA_AI;
+  } else {
+    work_mode = mode;
+  }
 
-	if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, dst_reg, size, &dest_data)) {
-		return(TRUE);
-	}
+  if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, dst_reg, size,
+                           &dest_data)) {
+    return (TRUE);
+  }
 
 #ifdef TEST_CCR
-	before = sr & 0x1f;
+  before = sr & 0x1f;
 #endif
 
-	/* ワークレジスタへコピー */
-	rd [ 8 ] = dest_data;
+  /* ワークレジスタへコピー */
+  rd[8] = dest_data;
 
-	/* Sub演算 */
-	// rd [ 8 ] = sub_rd( 8, src_data, size );
-	rd [ 8 ] = sub_long(src_data, dest_data, size );
+  /* Sub演算 */
+  // rd [ 8 ] = sub_rd( 8, src_data, size );
+  rd[8] = sub_long(src_data, dest_data, size);
 
-	/* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
-	if (mode == EA_AIPD) {
-		work_mode = EA_AI;
-	} else {
-		work_mode = mode;
-	}
+  /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
+  if (mode == EA_AIPD) {
+    work_mode = EA_AI;
+  } else {
+    work_mode = mode;
+  }
 
-	if (set_data_at_ea(EA_VariableMemory, work_mode, dst_reg, size, rd[8])) {
-		return(TRUE);
-	}
+  if (set_data_at_ea(EA_VariableMemory, work_mode, dst_reg, size, rd[8])) {
+    return (TRUE);
+  }
 
-	/* フラグの変化 */
-	sub_conditions(src_data, dest_data, rd[ 8 ], size, 1);
+  /* フラグの変化 */
+  sub_conditions(src_data, dest_data, rd[8], size, 1);
 
 #ifdef TEST_CCR
-	check("sub", src_data, dest_data, rd[8], size, before);
+  check("sub", src_data, dest_data, rd[8], size, before);
 #endif
 
-#ifdef	TRACE
-	switch( size ) {
-		case S_BYTE:
-			rd [ 8 ] = ( rd [ src_reg ] & 0xFF );
-			break;
-		case S_WORD:
-			rd [ 8 ] = ( rd [ src_reg ] & 0xFFFF);
-			break;
-		default:	/* S_LONG */
-			rd [ 8 ] = rd [ src_reg ];
-			break;
-	}
-	printf( "trace: sub.%c    src=%d PC=%06lX\n",
-		size_char [ size ], rd [ 8 ], save_pc );
+#ifdef TRACE
+  switch (size) {
+    case S_BYTE:
+      rd[8] = (rd[src_reg] & 0xFF);
+      break;
+    case S_WORD:
+      rd[8] = (rd[src_reg] & 0xFFFF);
+      break;
+    default: /* S_LONG */
+      rd[8] = rd[src_reg];
+      break;
+  }
+  printf("trace: sub.%c    src=%d PC=%06lX\n", size_char[size], rd[8], save_pc);
 #endif
 
-	return( FALSE );
+  return (FALSE);
 }
 
 /*
@@ -288,67 +286,68 @@ static	int	Sub1( char code1, char code2 )
  戻り値： TRUE = 実行終了
          FALSE = 実行継続
 */
-static	int	Sub2( char code1, char code2 )
-{
-	char	size;
-	char	mode;
-	char	src_reg;
-	char	dst_reg;
-	Long	src_data;
-	Long	save_pc;
-	Long	dest_data;
+static int Sub2(char code1, char code2) {
+  char size;
+  char mode;
+  char src_reg;
+  char dst_reg;
+  Long src_data;
+  Long save_pc;
+  Long dest_data;
 
 #ifdef TEST_CCR
-	short	before;
+  short before;
 #endif
 
-	save_pc = pc;
-	mode = ((code2 & 0x38) >> 3);
-	src_reg = (code2 & 0x07);
-	dst_reg = ((code1 & 0x0E) >> 1);
-	size = ((code2 >> 6) & 0x03);
+  save_pc = pc;
+  mode = ((code2 & 0x38) >> 3);
+  src_reg = (code2 & 0x07);
+  dst_reg = ((code1 & 0x0E) >> 1);
+  size = ((code2 >> 6) & 0x03);
 
-	if (mode == EA_AD && size == S_BYTE) {
-		err68a( "不正な命令: sub.b An, Dn を実行しようとしました。", __FILE__, __LINE__ );
-		return(TRUE);
-	} else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-		return(TRUE);
-	}
+  if (mode == EA_AD && size == S_BYTE) {
+    err68a("不正な命令: sub.b An, Dn を実行しようとしました。", __FILE__,
+           __LINE__);
+    return (TRUE);
+  } else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
+    return (TRUE);
+  }
 
-	/* レジスタへの格納である為、Long で値を得ておかないと、格納時に上位ワードを破壊してしまう */
-	if (get_data_at_ea(EA_All, EA_DD, dst_reg, S_LONG /*size*/, &dest_data)) {
-		return(TRUE);
-	}
+  /* レジスタへの格納である為、Long
+   * で値を得ておかないと、格納時に上位ワードを破壊してしまう */
+  if (get_data_at_ea(EA_All, EA_DD, dst_reg, S_LONG /*size*/, &dest_data)) {
+    return (TRUE);
+  }
 
 #ifdef TEST_CCR
-	before = sr & 0x1f;
+  before = sr & 0x1f;
 #endif
 
-	//rd [ dst_reg ] = sub_rd( dst_reg, src_data, size );
-	rd [ dst_reg ] = sub_long(src_data, dest_data, size );
+  // rd [ dst_reg ] = sub_rd( dst_reg, src_data, size );
+  rd[dst_reg] = sub_long(src_data, dest_data, size);
 
-	/* フラグの変化 */
-	sub_conditions(src_data, dest_data, rd[ dst_reg ], size, 1);
+  /* フラグの変化 */
+  sub_conditions(src_data, dest_data, rd[dst_reg], size, 1);
 
 #ifdef TEST_CCR
-	check("sub2", src_data, dest_data, rd[dst_reg], size, before);
+  check("sub2", src_data, dest_data, rd[dst_reg], size, before);
 #endif
 
-#ifdef	TRACE
-	switch( size ) {
-		case S_BYTE:
-			rd [ 8 ] = (rd [ dst_reg ] & 0xFF);
-			break;
-		case S_WORD:
-			rd [ 8 ] = (rd [ dst_reg ] & 0xFFFF);
-			break;
-		default:	/* S_LONG */
-			rd [ 8 ] = rd [ dst_reg ];
-			break;
-	}
-	printf( "trace: sub.%c    src=%d dst=%d PC=%06lX\n",
-		size_char [ size ], src_data, rd [ 8 ], save_pc );
+#ifdef TRACE
+  switch (size) {
+    case S_BYTE:
+      rd[8] = (rd[dst_reg] & 0xFF);
+      break;
+    case S_WORD:
+      rd[8] = (rd[dst_reg] & 0xFFFF);
+      break;
+    default: /* S_LONG */
+      rd[8] = rd[dst_reg];
+      break;
+  }
+  printf("trace: sub.%c    src=%d dst=%d PC=%06lX\n", size_char[size], src_data,
+         rd[8], save_pc);
 #endif
 
-	return( FALSE );
+  return (FALSE);
 }

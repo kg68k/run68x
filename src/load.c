@@ -23,7 +23,7 @@
  *
  */
 
-#undef	MAIN
+#undef MAIN
 
 #include <stdio.h>
 #include <string.h>
@@ -32,12 +32,12 @@
 #endif
 #include "run68.h"
 
-static	UChar	xhead [ XHEAD_SIZE ];
+static UChar xhead[XHEAD_SIZE];
 
-static	Long	xfile_cnv( Long *, Long *, Long, int );
-static	int	xrelocate( Long, Long, Long );
-static	Long	xhead_getl( int );
-static	int	set_fname( char *, Long );
+static Long xfile_cnv(Long *, Long *, Long, int);
+static int xrelocate(Long, Long, Long);
+static Long xhead_getl(int);
+static int set_fname(char *, Long);
 
 /* doscall.c */
 Long Getenv_common(const char *name_p, char *buf_p);
@@ -56,119 +56,99 @@ static char *GetAPath(char **path_p, char *buf);
     NULL = オープンできない
     !NULL = 実行ファイルのファイルポインタ
 */
-FILE    *prog_open(char *fname, int mes_flag)
-{
-    char    dir[MAX_PATH], fullname[MAX_PATH], cwd[MAX_PATH];
-    FILE    *fp = 0;
-    char    *exp = strrchr(fname, '.');
-    char    env_p[4096], *p;
+FILE *prog_open(char *fname, int mes_flag) {
+  char dir[MAX_PATH], fullname[MAX_PATH], cwd[MAX_PATH];
+  FILE *fp = 0;
+  char *exp = strrchr(fname, '.');
+  char env_p[4096], *p;
 #if defined(WIN32) || defined(DOSX)
-    char    sep_chr = '\\';
-    char    sep_str[] = "\\";
+  char sep_chr = '\\';
+  char sep_str[] = "\\";
 #else
-    char    sep_chr = '/';
-    char    sep_str[] = "/";
+  char sep_chr = '/';
+  char sep_str[] = "/";
 #endif
 
-    if (strchr(fname, sep_chr) != NULL || strchr(fname, ':') != NULL)
-    {
-        strcpy(fullname, fname);
-        if ((fp=fopen(fullname, "rb")) != NULL)
-            goto EndOfFunc;
-        // ここから追加(by Yokko氏)
-        strcat(fullname, ".r");
-        if ((fp=fopen(fullname, "rb")) != NULL)
-            goto EndOfFunc;
-        strcpy(fullname, fname);
-        strcat(fullname, ".x");
-        if ((fp=fopen(fullname, "rb")) != NULL)
-            goto EndOfFunc;
-        // ここまで追加(by Yokko氏)
-        goto ErrorRet;
-    }
-    if (exp != NULL && !_stricmp(exp, ".x") && !_stricmp(exp, ".r"))
-        goto ErrorRet; /* 拡張子が違う */
+  if (strchr(fname, sep_chr) != NULL || strchr(fname, ':') != NULL) {
+    strcpy(fullname, fname);
+    if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
+    // ここから追加(by Yokko氏)
+    strcat(fullname, ".r");
+    if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
+    strcpy(fullname, fname);
+    strcat(fullname, ".x");
+    if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
+    // ここまで追加(by Yokko氏)
+    goto ErrorRet;
+  }
+  if (exp != NULL && !_stricmp(exp, ".x") && !_stricmp(exp, ".r"))
+    goto ErrorRet; /* 拡張子が違う */
 #if defined(WIN32)
-    GetCurrentDirectory(sizeof(cwd), cwd);
+  GetCurrentDirectory(sizeof(cwd), cwd);
 #else
-    getcwd(cwd, sizeof(cwd));
+  getcwd(cwd, sizeof(cwd));
 #endif
-    /* PATH環境変数を取得する */
+  /* PATH環境変数を取得する */
 #if defined(WIN32)
-    Getenv_common("PATH", env_p);
-    p = env_p;
+  Getenv_common("PATH", env_p);
+  p = env_p;
 #else
-    p = getenv("PATH");
+  p = getenv("PATH");
 #endif
-    for (strcpy(dir, cwd); strlen(dir) != 0; GetAPath(&p, dir))
-    {
-        if (exp != NULL)
-        {
-            strcpy(fullname, dir);
-            if (dir[strlen(dir)-1] != sep_chr)
-                strcat(fullname, sep_str);
-            strcat(fullname, fname);
-            if ((fp = fopen(fullname, "rb")) != NULL)
-	        	goto EndOfFunc;
-        } else
-        {
-            strcpy(fullname, dir);
-            if (fullname[strlen(fullname)-1] != sep_chr)
-                strcat(fullname, sep_str);
-	        strcat(fullname, fname);
-	        strcat(fullname, ".r");
-    	    if ((fp=fopen(fullname, "rb")) != NULL)
-	        	goto EndOfFunc;
-            strcpy(fullname, dir);
-            if (fullname[strlen(fullname)-1] != sep_chr)
-                strcat(fullname, sep_str);
-	        strcat(fullname, fname);
-            strcat(fullname, ".x");
-            if ((fp=fopen(fullname, "rb")) != NULL)
-	        	goto EndOfFunc;
-        }
+  for (strcpy(dir, cwd); strlen(dir) != 0; GetAPath(&p, dir)) {
+    if (exp != NULL) {
+      strcpy(fullname, dir);
+      if (dir[strlen(dir) - 1] != sep_chr) strcat(fullname, sep_str);
+      strcat(fullname, fname);
+      if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
+    } else {
+      strcpy(fullname, dir);
+      if (fullname[strlen(fullname) - 1] != sep_chr) strcat(fullname, sep_str);
+      strcat(fullname, fname);
+      strcat(fullname, ".r");
+      if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
+      strcpy(fullname, dir);
+      if (fullname[strlen(fullname) - 1] != sep_chr) strcat(fullname, sep_str);
+      strcat(fullname, fname);
+      strcat(fullname, ".x");
+      if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
     }
+  }
 EndOfFunc:
-    strcpy(fname, fullname);
-    return fp;
+  strcpy(fname, fullname);
+  return fp;
 ErrorRet:
-    if (mes_flag == TRUE)
-        fprintf(stderr, "ファイルがオープンできません\n");
-    return NULL;
+  if (mes_flag == TRUE) fprintf(stderr, "ファイルがオープンできません\n");
+  return NULL;
 }
 
 #if !defined(WIN32) && !defined(DOSX)
-  #define PATH_DELIMITER ':'
+#define PATH_DELIMITER ':'
 #else
-  #define PATH_DELIMITER ';'
+#define PATH_DELIMITER ';'
 #endif
 
-static char *GetAPath(char **path_p, char *buf)
-{
-    unsigned int i;
+static char *GetAPath(char **path_p, char *buf) {
+  unsigned int i;
 
-    if (path_p == NULL || *path_p == NULL || strlen(*path_p) == 0)
-    {
-        *buf = '\0';
-        goto ErrorReturn;
-    }
-	for (i = 0; i < strlen(*path_p) && (*path_p)[i] != PATH_DELIMITER; i ++)
-    {
-        /* 2バイトコードのスキップ */
-       ;
-    }
-    strncpy(buf, *path_p, i);
-    buf[i] = '\0';
-    if ((*path_p)[i] == '\0')
-    {
-        *path_p = &((*path_p)[i]);
-    } else
-    {
-        *path_p += i + 1;
-    }
-    return buf;
+  if (path_p == NULL || *path_p == NULL || strlen(*path_p) == 0) {
+    *buf = '\0';
+    goto ErrorReturn;
+  }
+  for (i = 0; i < strlen(*path_p) && (*path_p)[i] != PATH_DELIMITER; i++) {
+    /* 2バイトコードのスキップ */
+    ;
+  }
+  strncpy(buf, *path_p, i);
+  buf[i] = '\0';
+  if ((*path_p)[i] == '\0') {
+    *path_p = &((*path_p)[i]);
+  } else {
+    *path_p += i + 1;
+  }
+  return buf;
 ErrorReturn:
-    return NULL;
+  return NULL;
 }
 
 /*
@@ -176,96 +156,88 @@ ErrorReturn:
  戻り値：正 = 実行開始アドレス
  　　　　負 = エラーコード
 */
-Long	prog_read( FILE *fp, char *fname, Long read_top,
-		   Long *prog_sz, Long *prog_sz2, int mes_flag )
-		/* prog_sz2はロードモード＋リミットアドレスの役割も果たす */
+Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
+               Long *prog_sz2, int mes_flag)
+/* prog_sz2はロードモード＋リミットアドレスの役割も果たす */
 {
-	char	*read_ptr;
-	Long	read_sz;
-	Long	pc_begin;
-	int	x_flag = FALSE;
-	int	loadmode;
-	int	i;
+  char *read_ptr;
+  Long read_sz;
+  Long pc_begin;
+  int x_flag = FALSE;
+  int loadmode;
+  int i;
 
-	loadmode = ((*prog_sz2 >> 24) & 0x03);
-	*prog_sz2 &= 0xFFFFFF;
+  loadmode = ((*prog_sz2 >> 24) & 0x03);
+  *prog_sz2 &= 0xFFFFFF;
 
-	if ( fseek( fp, 0, SEEK_END ) != 0 ) {
-		fclose( fp );
-		if ( mes_flag == TRUE )
-			fprintf(stderr, "ファイルのシークに失敗しました\n");
-		return( -11 );
-	}
-	if ( (*prog_sz=ftell( fp )) <= 0 ) {
-		fclose( fp );
-		if ( mes_flag == TRUE )
-			fprintf(stderr, "ファイルサイズが０です\n");
-		return( -11 );
-	}
-	if ( fseek( fp, 0, SEEK_SET ) != 0 ) {
-		fclose( fp );
-		if ( mes_flag == TRUE )
-			fprintf(stderr, "ファイルのシークに失敗しました\n");
-		return( -11 );
-	}
-	if ( read_top + *prog_sz > *prog_sz2 ) {
-		fclose( fp );
-		if ( mes_flag == TRUE )
-			fprintf(stderr, "ファイルサイズが大きすぎます\n");
-		return( -8 );
-	}
+  if (fseek(fp, 0, SEEK_END) != 0) {
+    fclose(fp);
+    if (mes_flag == TRUE) fprintf(stderr, "ファイルのシークに失敗しました\n");
+    return (-11);
+  }
+  if ((*prog_sz = ftell(fp)) <= 0) {
+    fclose(fp);
+    if (mes_flag == TRUE) fprintf(stderr, "ファイルサイズが０です\n");
+    return (-11);
+  }
+  if (fseek(fp, 0, SEEK_SET) != 0) {
+    fclose(fp);
+    if (mes_flag == TRUE) fprintf(stderr, "ファイルのシークに失敗しました\n");
+    return (-11);
+  }
+  if (read_top + *prog_sz > *prog_sz2) {
+    fclose(fp);
+    if (mes_flag == TRUE) fprintf(stderr, "ファイルサイズが大きすぎます\n");
+    return (-8);
+  }
 
-	read_sz  = *prog_sz;
-	read_ptr = prog_ptr + read_top;
-	pc_begin = read_top;
+  read_sz = *prog_sz;
+  read_ptr = prog_ptr + read_top;
+  pc_begin = read_top;
 
-	/* XHEAD_SIZEバイト読み込む */
-	if ( *prog_sz >= XHEAD_SIZE ) {
-		if ( fread( read_ptr, 1, XHEAD_SIZE, fp ) != XHEAD_SIZE ) {
-			fclose( fp );
-			if ( mes_flag == TRUE )
-				fprintf(stderr, "ファイルの読み込みに失敗しました\n");
-			return( -11 );
-		}
-		read_sz -= XHEAD_SIZE;
-		if ( loadmode == 1 )
-			i = 0;		/* Rファイル */
-		else if ( loadmode == 3 )
-			i = 1;		/* Xファイル */
-		else
-			i = strlen( fname ) - 2;
-		if ( mem_get( read_top, S_WORD ) == 0x4855 && i > 0 )
-		{
-			if ( loadmode == 3 ||
-			     strcmp( &(fname [ i ]), ".x" ) == 0 ||
-			     strcmp( &(fname [ i ]), ".X" ) == 0 ) {
-				x_flag = TRUE;
-				memcpy( xhead, read_ptr, XHEAD_SIZE );
-				*prog_sz = read_sz;
-			}
-		}
-		if ( x_flag == FALSE )
-			read_ptr += XHEAD_SIZE;
-	}
+  /* XHEAD_SIZEバイト読み込む */
+  if (*prog_sz >= XHEAD_SIZE) {
+    if (fread(read_ptr, 1, XHEAD_SIZE, fp) != XHEAD_SIZE) {
+      fclose(fp);
+      if (mes_flag == TRUE)
+        fprintf(stderr, "ファイルの読み込みに失敗しました\n");
+      return (-11);
+    }
+    read_sz -= XHEAD_SIZE;
+    if (loadmode == 1)
+      i = 0; /* Rファイル */
+    else if (loadmode == 3)
+      i = 1; /* Xファイル */
+    else
+      i = strlen(fname) - 2;
+    if (mem_get(read_top, S_WORD) == 0x4855 && i > 0) {
+      if (loadmode == 3 || strcmp(&(fname[i]), ".x") == 0 ||
+          strcmp(&(fname[i]), ".X") == 0) {
+        x_flag = TRUE;
+        memcpy(xhead, read_ptr, XHEAD_SIZE);
+        *prog_sz = read_sz;
+      }
+    }
+    if (x_flag == FALSE) read_ptr += XHEAD_SIZE;
+  }
 
-	if ( fread( read_ptr, 1, read_sz, fp ) != (size_t)read_sz ) {
-		fclose( fp );
-		if ( mes_flag == TRUE )
-			fprintf(stderr, "ファイルの読み込みに失敗しました\n");
-		return( -11 );
-	}
+  if (fread(read_ptr, 1, read_sz, fp) != (size_t)read_sz) {
+    fclose(fp);
+    if (mes_flag == TRUE) fprintf(stderr, "ファイルの読み込みに失敗しました\n");
+    return (-11);
+  }
 
-	/* 実行ファイルのクローズ */
-	fclose( fp );
+  /* 実行ファイルのクローズ */
+  fclose(fp);
 
-	/* Xファイルの処理 */
-	*prog_sz2 = *prog_sz;
-	if ( x_flag == TRUE ) {
-		if ( (pc_begin=xfile_cnv( prog_sz, prog_sz2, read_top, mes_flag )) == 0 )
-			return( -11 );
-	}
+  /* Xファイルの処理 */
+  *prog_sz2 = *prog_sz;
+  if (x_flag == TRUE) {
+    if ((pc_begin = xfile_cnv(prog_sz, prog_sz2, read_top, mes_flag)) == 0)
+      return (-11);
+  }
 
-	return( pc_begin );
+  return (pc_begin);
 }
 
 /*
@@ -273,39 +245,37 @@ Long	prog_read( FILE *fp, char *fname, Long read_top,
  戻り値： 0 = エラー
  　　　　!0 = プログラム開始アドレス
 */
-static	Long	xfile_cnv( Long *prog_size, Long *prog_sz2, Long read_top, int mes_flag )
-{
-	Long	pc_begin;
-	Long	code_size;
-	Long	data_size;
-	Long	bss_size;
-	Long	reloc_size;
+static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
+                      int mes_flag) {
+  Long pc_begin;
+  Long code_size;
+  Long data_size;
+  Long bss_size;
+  Long reloc_size;
 
-	if ( xhead_getl( 0x3C ) != 0 ) {
-		if ( mes_flag == TRUE )
-			fprintf(stderr, "BINDされているファイルです\n");
-		return( 0 );
-	}
-	pc_begin   = xhead_getl( 0x08 );
-	code_size  = xhead_getl( 0x0C );
-	data_size  = xhead_getl( 0x10 );
-	bss_size   = xhead_getl( 0x14 );
-	reloc_size = xhead_getl( 0x18 );
+  if (xhead_getl(0x3C) != 0) {
+    if (mes_flag == TRUE) fprintf(stderr, "BINDされているファイルです\n");
+    return (0);
+  }
+  pc_begin = xhead_getl(0x08);
+  code_size = xhead_getl(0x0C);
+  data_size = xhead_getl(0x10);
+  bss_size = xhead_getl(0x14);
+  reloc_size = xhead_getl(0x18);
 
-	if ( reloc_size != 0 ) {
-		if ( xrelocate( code_size + data_size, reloc_size, read_top )
-		     == FALSE ) {
-			if ( mes_flag == TRUE )
-				fprintf(stderr, "未対応のリロケート情報があります\n");
-			return( 0 );
-		}
-	}
+  if (reloc_size != 0) {
+    if (xrelocate(code_size + data_size, reloc_size, read_top) == FALSE) {
+      if (mes_flag == TRUE)
+        fprintf(stderr, "未対応のリロケート情報があります\n");
+      return (0);
+    }
+  }
 
-	memset( prog_ptr + read_top + code_size + data_size, 0, bss_size );
-	*prog_size = code_size + data_size + bss_size;
-	*prog_sz2 = code_size + data_size;
+  memset(prog_ptr + read_top + code_size + data_size, 0, bss_size);
+  *prog_size = code_size + data_size + bss_size;
+  *prog_sz2 = code_size + data_size;
 
-	return( read_top + pc_begin );
+  return (read_top + pc_begin);
 }
 
 /*
@@ -313,41 +283,38 @@ static	Long	xfile_cnv( Long *prog_size, Long *prog_sz2, Long read_top, int mes_f
  戻り値： TRUE = 正常終了
  　　　　FALSE = 異常終了
 */
-static	int	xrelocate( Long reloc_adr, Long reloc_size, Long read_top )
-{
-	Long	prog_adr;
-	Long	data;
-	UShort	disp;
+static int xrelocate(Long reloc_adr, Long reloc_size, Long read_top) {
+  Long prog_adr;
+  Long data;
+  UShort disp;
 
-	prog_adr = read_top;
-	for(; reloc_size > 0; reloc_size -= 2, reloc_adr += 2 ) {
-		disp = (UShort)mem_get( read_top + reloc_adr, S_WORD );
-		if ( disp == 1 )
-			return ( FALSE );
-		prog_adr += disp;
-		data = mem_get( prog_adr, S_LONG ) + read_top;
-		mem_set( prog_adr, data, S_LONG );
-	}
+  prog_adr = read_top;
+  for (; reloc_size > 0; reloc_size -= 2, reloc_adr += 2) {
+    disp = (UShort)mem_get(read_top + reloc_adr, S_WORD);
+    if (disp == 1) return (FALSE);
+    prog_adr += disp;
+    data = mem_get(prog_adr, S_LONG) + read_top;
+    mem_set(prog_adr, data, S_LONG);
+  }
 
-	return( TRUE );
+  return (TRUE);
 }
 
 /*
  　機能：xheadからロングデータをゲットする
  戻り値：データの値
 */
-static	Long	xhead_getl( int adr )
-{
-	UChar	*p;
-	Long	d;
+static Long xhead_getl(int adr) {
+  UChar *p;
+  Long d;
 
-	p = &( xhead [ adr ] );
+  p = &(xhead[adr]);
 
-	d = *(p++);
-	d = ((d << 8) | *(p++));
-	d = ((d << 8) | *(p++));
-	d = ((d << 8) | *p);
-	return( d );
+  d = *(p++);
+  d = ((d << 8) | *(p++));
+  d = ((d << 8) | *(p++));
+  d = ((d << 8) | *p);
+  return (d);
 }
 
 /*
@@ -355,30 +322,28 @@ static	Long	xhead_getl( int adr )
  戻り値： TRUE = 正常終了
  　　　　FALSE = 異常終了
 */
-int	make_psp( char *fname, Long prev_adr, Long end_adr, Long process_id,
-		  Long prog_size2 )
-{
-	char	*mem_ptr;
+int make_psp(char *fname, Long prev_adr, Long end_adr, Long process_id,
+             Long prog_size2) {
+  char *mem_ptr;
 
-	mem_ptr = prog_ptr + ra [ 0 ];
-	memset( mem_ptr, 0, PSP_SIZE );
-	mem_set( ra [ 0 ],        prev_adr,   S_LONG );		/* 前 */
-	mem_set( ra [ 0 ] + 0x04, process_id, S_LONG );		/* 確保プロセス */
-	mem_set( ra [ 0 ] + 0x08, end_adr,    S_LONG );		/* 終わり+1 */
-	mem_set( ra [ 0 ] + 0x0c, 0,          S_LONG );		/* 次 */
+  mem_ptr = prog_ptr + ra[0];
+  memset(mem_ptr, 0, PSP_SIZE);
+  mem_set(ra[0], prev_adr, S_LONG);          /* 前 */
+  mem_set(ra[0] + 0x04, process_id, S_LONG); /* 確保プロセス */
+  mem_set(ra[0] + 0x08, end_adr, S_LONG);    /* 終わり+1 */
+  mem_set(ra[0] + 0x0c, 0, S_LONG);          /* 次 */
 
-	mem_set( ra [ 0 ] + 0x10, ra [ 3 ], S_LONG );
-	mem_set( ra [ 0 ] + 0x20, ra [ 2 ], S_LONG );
-	mem_set( ra [ 0 ] + 0x30, ra [ 0 ] + PSP_SIZE + prog_size2, S_LONG );
-	mem_set( ra [ 0 ] + 0x34, ra [ 0 ] + PSP_SIZE + prog_size2, S_LONG );
-	mem_set( ra [ 0 ] + 0x38, ra [ 1 ], S_LONG );
-	mem_set( ra [ 0 ] + 0x44, sr, S_WORD );	/* 親のSRの値 */
-	mem_set( ra [ 0 ] + 0x60, 0, S_LONG );		/* 親あり */
-	if ( set_fname( fname, ra [ 0 ] ) == FALSE )
-		return( FALSE );
+  mem_set(ra[0] + 0x10, ra[3], S_LONG);
+  mem_set(ra[0] + 0x20, ra[2], S_LONG);
+  mem_set(ra[0] + 0x30, ra[0] + PSP_SIZE + prog_size2, S_LONG);
+  mem_set(ra[0] + 0x34, ra[0] + PSP_SIZE + prog_size2, S_LONG);
+  mem_set(ra[0] + 0x38, ra[1], S_LONG);
+  mem_set(ra[0] + 0x44, sr, S_WORD); /* 親のSRの値 */
+  mem_set(ra[0] + 0x60, 0, S_LONG);  /* 親あり */
+  if (set_fname(fname, ra[0]) == FALSE) return (FALSE);
 
-	psp [ nest_cnt ] = ra [ 0 ];
-	return( TRUE );
+  psp[nest_cnt] = ra[0];
+  return (TRUE);
 }
 
 /*
@@ -386,75 +351,69 @@ int	make_psp( char *fname, Long prev_adr, Long end_adr, Long process_id,
  戻り値： TRUE = 正常終了
  　　　　FALSE = 異常終了
 */
-static	int	set_fname( char *p, Long psp_adr )
-{
-	char	 cud [ 67 ];
-	char	 *mem_ptr;
-	int	 i;
+static int set_fname(char *p, Long psp_adr) {
+  char cud[67];
+  char *mem_ptr;
+  int i;
 
-	for( i = strlen( p ) - 1; i >= 0; i-- ) {
-		if ( p [ i ] == '\\' || p [ i ] == '/' || p [ i ] == ':' )
-			break;
-	}
-	i ++;
-	if ( strlen( &(p [ i ]) ) > 22 )
-		return( FALSE );
-	mem_ptr = prog_ptr + psp_adr + 0xC4;
-	strcpy( mem_ptr, &(p [ i ]) );
+  for (i = strlen(p) - 1; i >= 0; i--) {
+    if (p[i] == '\\' || p[i] == '/' || p[i] == ':') break;
+  }
+  i++;
+  if (strlen(&(p[i])) > 22) return (FALSE);
+  mem_ptr = prog_ptr + psp_adr + 0xC4;
+  strcpy(mem_ptr, &(p[i]));
 
-	mem_ptr = prog_ptr + psp_adr + 0x82;
-	if ( i == 0 ) {
-		/* カレントディレクトリをセット */
+  mem_ptr = prog_ptr + psp_adr + 0x82;
+  if (i == 0) {
+    /* カレントディレクトリをセット */
 #if defined(WIN32)
-        {
-        BOOL b;
-        b = GetCurrentDirectoryA(sizeof(cud), cud);
-        cud[sizeof(cud)-1] = '\0';
-        }
-        if (FALSE) {
+    {
+      BOOL b;
+      b = GetCurrentDirectoryA(sizeof(cud), cud);
+      cud[sizeof(cud) - 1] = '\0';
+    }
+    if (FALSE) {
 #else
-		if ( getcwd( cud, 66 ) == NULL ) {
+    if (getcwd(cud, 66) == NULL) {
 #endif
-            strcpy( mem_ptr, ".\\" );
-		} else {
-			mem_ptr -= 2;
-			strcpy( mem_ptr, cud );
-			if ( cud [ strlen( cud ) - 1 ] != '\\' )
-				strcat( mem_ptr, "\\" );
-			return( TRUE );
-		}
-	} else {
-		p [ i ] = '\0';
-		for( i--; i >= 0; i-- ) {
-			if ( p [ i ] == ':' )
-				break;
-		}
-		i ++;
-		if ( strlen( &(p [ i ]) ) > 64 )
-			return( FALSE );
-		strcpy( mem_ptr, &(p [ i ]) );
-	}
+      strcpy(mem_ptr, ".\\");
+    } else {
+      mem_ptr -= 2;
+      strcpy(mem_ptr, cud);
+      if (cud[strlen(cud) - 1] != '\\') strcat(mem_ptr, "\\");
+      return (TRUE);
+    }
+  } else {
+    p[i] = '\0';
+    for (i--; i >= 0; i--) {
+      if (p[i] == ':') break;
+    }
+    i++;
+    if (strlen(&(p[i])) > 64) return (FALSE);
+    strcpy(mem_ptr, &(p[i]));
+  }
 
-	mem_ptr = prog_ptr + psp_adr + 0x80;
-	if ( i == 0 ) {
-		/* カレントドライブをセット */
+  mem_ptr = prog_ptr + psp_adr + 0x80;
+  if (i == 0) {
+    /* カレントドライブをセット */
 #if defined(WIN32)
-        {
-        char cpath[MAX_PATH];
-        BOOL b;
-        b = GetCurrentDirectoryA(sizeof(cpath), cpath);
-        mem_ptr[0] = cpath[0];
-        }
+    {
+      char cpath[MAX_PATH];
+      BOOL b;
+      b = GetCurrentDirectoryA(sizeof(cpath), cpath);
+      mem_ptr[0] = cpath[0];
+    }
 #elif defined(DOSX)
-        dos_getdrive( &drv );
-		mem_ptr [ 0 ] = drv - 1 + 'A';
+    dos_getdrive(&drv);
+    mem_ptr[0] = drv - 1 + 'A';
 #else
-	mem_ptr [ 0 ] = 'A';
+  mem_ptr[0] = 'A';
 #endif
-        mem_ptr [ 1 ] = ':';
-	} else {
-		memcpy( mem_ptr, p, 2 );
-	}
+    mem_ptr[1] = ':';
+  } else {
+    memcpy(mem_ptr, p, 2);
+  }
 
-	return( TRUE );
+  return (TRUE);
 }

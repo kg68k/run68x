@@ -20,16 +20,15 @@
 #include <direct.h>
 #include <string.h>
 
-#include "run68.h"
 #include "human68k.h"
+#include "run68.h"
 
 #define DRV_CLN_LEN 2     // "A:"
 #define DRV_CLN_BS_LEN 3  // "A:\\"
 
 // DOS _CURDIR
-Long Curdir_win32(short drv, char* buf_ptr)
-{
-  char buf[DRV_CLN_LEN + HUMAN68K_PATH_MAX] = { 0 };
+Long Curdir_win32(short drv, char* buf_ptr) {
+  char buf[DRV_CLN_LEN + HUMAN68K_PATH_MAX] = {0};
   const char* p = _getdcwd(drv, buf, sizeof(buf));
 
   if (p == NULL) {

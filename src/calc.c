@@ -16,9 +16,10 @@
  *
  */
 
-#undef	MAIN
+#undef MAIN
 
 #include <stdio.h>
+
 #include "run68.h"
 
 // Long add_Long(Long src, Long dest, int size);
@@ -29,22 +30,22 @@
  戻り値：答え
 */
 Long add_long(Long src, Long dest, int size) {
+  Long result;
 
-	Long result;
+  switch (size) {
+    case S_BYTE:
+      result = (dest & 0xffffff00) | (((dest & 0xff) + (src & 0xff)) & 0xff);
+      break;
+    case S_WORD:
+      result =
+          (dest & 0xffff0000) | (((dest & 0xffff) + (src & 0xffff)) & 0xffff);
+      break;
+    case S_LONG:
+      result = dest + src;
+      break;
+  }
 
-	switch(size) {
-		case S_BYTE:
-			result = (dest & 0xffffff00) | (((dest & 0xff) + (src & 0xff)) & 0xff);
-			break;
-		case S_WORD:
-			result = (dest & 0xffff0000) | (((dest & 0xffff) + (src & 0xffff)) & 0xffff);
-			break;
-		case S_LONG:
-			result = dest + src;
-			break;
-	}
-
-	return(result);
+  return (result);
 }
 
 /*
@@ -52,20 +53,20 @@ Long add_long(Long src, Long dest, int size) {
  戻り値：答え
 */
 Long sub_long(Long src, Long dest, int size) {
+  Long result;
 
-	Long result;
+  switch (size) {
+    case S_BYTE:
+      result = (dest & 0xffffff00) | (((dest & 0xff) - (src & 0xff)) & 0xff);
+      break;
+    case S_WORD:
+      result =
+          (dest & 0xffff0000) | (((dest & 0xffff) - (src & 0xffff)) & 0xffff);
+      break;
+    case S_LONG:
+      result = dest - src;
+      break;
+  }
 
-	switch(size) {
-		case S_BYTE:
-			result = (dest & 0xffffff00) | (((dest & 0xff) - (src & 0xff)) & 0xff);
-			break;
-		case S_WORD:
-			result = (dest & 0xffff0000) | (((dest & 0xffff) - (src & 0xffff)) & 0xffff);
-			break;
-		case S_LONG:
-			result = dest - src;
-			break;
-	}
-
-	return(result);
+  return (result);
 }
