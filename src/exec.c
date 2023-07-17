@@ -38,6 +38,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "run68.h"
 #if defined(DOSX)
@@ -177,6 +178,11 @@ int get_cond(char cond) {
   return (FALSE);
 }
 
+static int begin_undefined(const char *s) {
+  const char *u = "未定義";
+  return memcmp(s, u, strlen(u)) == 0;
+}
+
 /*
  　機能：実行時エラーメッセージを表示する
  戻り値：なし
@@ -184,7 +190,7 @@ int get_cond(char cond) {
 void err68(char *mes) {
   OPBuf_insert(&OP_info);
   fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
-  if (memcmp(mes, "未定義", 6) == 0)
+  if (begin_undefined(mes))
     fprintf(stderr, "code = %08X\n", mem_get(pc - 4, S_LONG));
   OPBuf_display(10);
   run68_abort(pc);
@@ -202,7 +208,7 @@ void err68a(char *mes, char *file, int line) {
   OPBuf_insert(&OP_info);
   fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
   fprintf(stderr, "\tAt %s:%d\n", file, line);
-  if (memcmp(mes, "未定義", 6) == 0)
+  if (begin_undefined(mes))
     fprintf(stderr, "code = %08X\n", mem_get(pc - 4, S_LONG));
   OPBuf_display(10);
   run68_abort(pc);
@@ -221,7 +227,7 @@ void err68b(char *mes, Long pc, Long ppc) {
   OPBuf_insert(&OP_info);
   fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
   fprintf(stderr, "PC of previous op code: PC=%06X\n", ppc);
-  if (memcmp(mes, "未定義", 6) == 0)
+  if (begin_undefined(mes))
     fprintf(stderr, "code = %08X\n", mem_get(pc - 4, S_LONG));
   OPBuf_display(10);
   run68_abort(pc);
@@ -431,7 +437,7 @@ const EXEC_INSTRUCTION_INFO *OPBuf_getentry(int no) {
     戻り値：
       なし。
 */
-void OPBuf_display(n) {
+void OPBuf_display(int n) {
   int max = OPBuf_numentries();
   int i;
   if (max < n) n = max;

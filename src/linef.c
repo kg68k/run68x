@@ -34,6 +34,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "run68.h"
 
@@ -596,7 +597,7 @@ static void Dtos(Long d0, Long d1, Long a0) {
   To_dbl(&arg1, d0, d1);
 
   p = prog_ptr + a0;
-  _gcvt(arg1.dbl, 14, p);
+  const char* dummy_result = _gcvt(arg1.dbl, 14, p);
   len = strlen(p);
   if (p[len - 1] == '.') p[len - 1] = '\0';
   ra[0] += strlen(p);
@@ -1123,7 +1124,7 @@ static void Log(Long d0, Long d1) {
 
   To_dbl(&arg, d0, d1);
 
-  if (ans.dbl == 0) {
+  if (arg.dbl == 0) {
     CCR_C_ON();
     CCR_Z_ON();
     return;

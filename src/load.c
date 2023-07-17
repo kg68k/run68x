@@ -29,7 +29,10 @@
 #include <string.h>
 #if defined(WIN32)
 #include <direct.h>
+#else
+#include <unistd.h>
 #endif
+
 #include "run68.h"
 
 static UChar xhead[XHEAD_SIZE];
@@ -86,7 +89,7 @@ FILE *prog_open(char *fname, int mes_flag) {
 #if defined(WIN32)
   GetCurrentDirectory(sizeof(cwd), cwd);
 #else
-  getcwd(cwd, sizeof(cwd));
+  const char* dummy_result = getcwd(cwd, sizeof(cwd));
 #endif
   /* PATH環境変数を取得する */
 #if defined(WIN32)

@@ -35,7 +35,7 @@
  *
  */
 
-#include <assert.h>
+#include <string.h>
 
 #include "run68.h"
 

@@ -25,6 +25,8 @@
  *
  */
 
+#include <string.h>
+
 #include "run68.h"
 
 /* デバッグモードのプロンプト */
