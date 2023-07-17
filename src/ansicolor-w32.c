@@ -20,7 +20,7 @@
 #endif
 
 int
-WriteW32(short _type, HANDLE* handle, const char* _buf, size_t _len) {
+WriteW32(short _type, HANDLE handle, const char* _buf, size_t _len) {
   static WORD attr_olds[2] = {-1, -1}, attr_old;
   static int first = 1;
   size_t len;

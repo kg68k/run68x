@@ -1,5 +1,7 @@
 #pragma once
 
 #ifdef _WIN32
-int WriteW32(short _type, FILE* fp, const char* buf, size_t len);
+#include <windows.h>
+
+int WriteW32(short _type, HANDLE handle, const char* _buf, size_t _len);
 #endif

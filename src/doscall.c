@@ -310,10 +310,9 @@ int dos_call( UChar code )
 		rd [ 0 ] = (_getche() & 0xFF);
 		break;
 	  case 0x02:    /* PUTCHAR */
-		srt = (short)mem_get( stack_adr, S_WORD );
-		c = (unsigned char)srt;
+  	data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
 		if (func_trace_f) {
-			printf("%-10s char='%c'\n", "PUTCHAR", c);
+			printf("%-10s char='%c'\n", "PUTCHAR", *(unsigned char*)data_ptr);
 		}
 #if defined(WIN32)
 		if (GetConsoleMode(finfo[1].fh, &st) != 0) {
@@ -322,13 +321,13 @@ int dos_call( UChar code )
 		} else {
 			Long nwritten;
 			/* Win32API */
-			WriteFile( finfo[ 1 ].fh, &c, 1,
+			WriteFile( finfo[ 1 ].fh, data_ptr, 1,
 					   (LPDWORD)&nwritten, NULL);
 		}
 #elif defined(DOSX)
-		_dos_write( fileno(finfo[ 1 ].fh), &c, 1, &drv );
+		_dos_write( fileno(finfo[ 1 ].fh), data_ptr, 1, &drv );
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-		Write_conv( 1, &c, 1 );
+		Write_conv( 1, data_ptr, 1 );
 #endif
 		rd [ 0 ] = 0;
 		break;
@@ -609,31 +608,31 @@ int dos_call( UChar code )
 		rd [ 0 ] = Fgets( data, fhdl );
 		break;
 	  case 0x1D:    /* FPUTC */
-		srt  = (short)mem_get( stack_adr, S_WORD );
+		data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
 		fhdl = (short)mem_get( stack_adr + 2, S_WORD );
 		if (func_trace_f) {
-			printf("%-10s file_no=%d char=0x%02X\n", "FPUTC", fhdl, srt);
+			printf("%-10s file_no=%d char=0x%02X\n", "FPUTC", fhdl, *(unsigned char*)data_ptr);
 		}
 #if defined(WIN32)
 		if (GetConsoleMode(finfo[fhdl].fh, &st) != 0 &&
 			(fhdl == 1 || fhdl == 2) ) {
 			// 非リダイレクトで標準出力か標準エラー出力
-			WriteW32( fhdl, finfo[fhdl].fh, &srt, 1 );
+			WriteW32( fhdl, finfo[fhdl].fh, data_ptr, 1 );
 			rd [ 0 ] = 0;
 		} else {
-			if (WriteFile(finfo [ fhdl ].fh, &srt,
+			if (WriteFile(finfo [ fhdl ].fh, data_ptr,
 						  1, (LPDWORD)&len, NULL) == FALSE)
 			  rd [ 0 ] = 0;
 			else
 			  rd [ 0 ] = 1;
 		}
 #elif defined(DOSX)
-		if ( fputc( srt, finfo [ fhdl ].fh ) == EOF )
+		if ( fputc( *(unsigned char*)data_ptr, finfo [ fhdl ].fh ) == EOF )
 		  rd [ 0 ] = 0;
 		else
 		  rd [ 0 ] = 1;
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-		if ( Write_conv( fhdl, &srt, 1 ) == EOF )
+		if ( Write_conv( fhdl, data_ptr, 1 ) == EOF )
 		  rd [ 0 ] = 0;
 		else
 		  rd [ 0 ] = 1;
