@@ -1,72 +1,31 @@
-/* $Id: lineb.c,v 1.2 2009/08/08 06:49:44 masamic Exp $ */
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/*
- * $Log: lineb.c,v $
- * Revision 1.2  2009/08/08 06:49:44  masamic
- * Convert Character Encoding Shifted-JIS to UTF-8.
- *
- * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
- * First imported source code and docs
- *
- * Revision 1.7  1999/12/21  10:08:59  yfujii
- * Uptodate source code from Beppu.
- *
- * Revision 1.6  1999/12/07  12:45:26  yfujii
- * *** empty log message ***
- *
- * Revision 1.6  1999/11/22  03:57:08  yfujii
- * Condition code calculations are rewriten.
- *
- * Revision 1.4  1999/10/25  04:22:27  masamichi
- * Full implements EOR instruction.
- *
- * Revision 1.3  1999/10/20  04:14:48  masamichi
- * Added showing more information about errors.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "run68.h"
 
-static int Cmp(char, char);
-static int Cmpa(char, char);
-static int Cmpm(char, char);
-static int Eor(char, char);
-
-/*
- 　機能：Bライン命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
-*/
-int lineb(char *pc_ptr) {
-  char code1, code2;
-
-  code1 = *(pc_ptr++);
-  code2 = *pc_ptr;
-  pc += 2;
-
-  if ((code1 & 0x01) == 0x00) {
-    if ((code2 & 0xC0) == 0xC0) return (Cmpa(code1, code2));
-    return (Cmp(code1, code2));
-  }
-
-  if ((code2 & 0xC0) == 0xC0) return (Cmpa(code1, code2));
-
-  if ((code2 & 0x38) == 0x08) return (Cmpm(code1, code2));
-
-  return (Eor(code1, code2));
-}
-
 /*
  　機能：cmpi命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Cmp(char code1, char code2) {
+static bool Cmp(char code1, char code2) {
   char size;
   char mode;
   char src_reg;
@@ -90,14 +49,14 @@ static int Cmp(char code1, char code2) {
   if (mode == EA_AD && size == S_BYTE) {
     err68a("不正な命令: cmp.b An, Dn を実行しようとしました。", __FILE__,
            __LINE__);
-    return (TRUE);
-  } else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-    return (TRUE);
+  }
+  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
+    return true;
   }
 
   /* ディスティネーションのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dest_data)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TEST_CCR
@@ -129,15 +88,15 @@ static int Cmp(char code1, char code2) {
          rd[8], save_pc);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：cmpa命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Cmpa(char code1, char code2) {
+static bool Cmpa(char code1, char code2) {
   char size;
   char mode;
   char src_reg;
@@ -164,14 +123,14 @@ static int Cmpa(char code1, char code2) {
   if (size == S_BYTE) {
     err68a("不正な命令: cmp.b <ea>, An を実行しようとしました。", __FILE__,
            __LINE__);
-    return (TRUE);
-  } else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-    return (TRUE);
+  }
+  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
+    return true;
   }
 
   /* ディスティネーションのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_All, EA_AD, dst_reg, size, &dest_data)) {
-    return (TRUE);
+    return true;
   }
 
   if (size == S_WORD) {
@@ -196,15 +155,15 @@ static int Cmpa(char code1, char code2) {
   check("cmpa", src_data, dest_data, ans, size, before);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：cmpm命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Cmpm(char code1, char code2) {
+static bool Cmpm(char code1, char code2) {
   char size;
   char src_reg;
   char dst_reg;
@@ -218,12 +177,12 @@ static int Cmpm(char code1, char code2) {
 
   /* ソースのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_All, EA_AIPI, src_reg, size, &src_data)) {
-    return (TRUE);
+    return true;
   }
 
   /* ディスティネーションのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_All, EA_AIPI, dst_reg, size, &dest_data)) {
-    return (TRUE);
+    return true;
   }
 
   rd[8] = dest_data;
@@ -246,15 +205,15 @@ static int Cmpm(char code1, char code2) {
          rd[8], pc);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：eor命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Eor(char code1, char code2) {
+static bool Eor(char code1, char code2) {
   char size;
   char mode;
   char src_reg;
@@ -273,7 +232,7 @@ static int Eor(char code1, char code2) {
 
   /* ソースのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
-    return (TRUE);
+    return true;
   }
 
   /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
@@ -284,7 +243,7 @@ static int Eor(char code1, char code2) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, dst_reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* EOR演算 */
@@ -298,7 +257,7 @@ static int Eor(char code1, char code2) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, dst_reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの変化 */
@@ -309,5 +268,59 @@ static int Eor(char code1, char code2) {
          save_pc);
 #endif
 
-  return (FALSE);
+  return false;
 }
+
+/*
+ 　機能：Bライン命令を実行する
+ 戻り値： true = 実行終了
+         false = 実行継続
+*/
+bool lineb(char *pc_ptr) {
+  char code1, code2;
+
+  code1 = *(pc_ptr++);
+  code2 = *pc_ptr;
+  pc += 2;
+
+  if ((code1 & 0x01) == 0x00) {
+    if ((code2 & 0xC0) == 0xC0) return (Cmpa(code1, code2));
+    return (Cmp(code1, code2));
+  }
+
+  if ((code2 & 0xC0) == 0xC0) return (Cmpa(code1, code2));
+
+  if ((code2 & 0x38) == 0x08) return (Cmpm(code1, code2));
+
+  return (Eor(code1, code2));
+}
+
+/* $Id: lineb.c,v 1.2 2009/08/08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: lineb.c,v $
+ * Revision 1.2  2009/08/08 06:49:44  masamic
+ * Convert Character Encoding Shifted-JIS to UTF-8.
+ *
+ * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.7  1999/12/21  10:08:59  yfujii
+ * Uptodate source code from Beppu.
+ *
+ * Revision 1.6  1999/12/07  12:45:26  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.6  1999/11/22  03:57:08  yfujii
+ * Condition code calculations are rewriten.
+ *
+ * Revision 1.4  1999/10/25  04:22:27  masamichi
+ * Full implements EOR instruction.
+ *
+ * Revision 1.3  1999/10/20  04:14:48  masamichi
+ * Added showing more information about errors.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

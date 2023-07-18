@@ -52,6 +52,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <string.h>
 
 #include "run68.h"
@@ -175,9 +176,9 @@ static void fill_space(char *str, unsigned int n) {
      char   *str       <out> 実効アドレスを文字列にして書き込む
      Long   *next_addr <out> 次のオペランドまたは命令のアドレス
    戻り値：
-     BOOL   FALSEならエラー。エラー時もnext_addrは有効。
+     bool   falseならエラー。エラー時もnext_addrは有効。
 */
-static BOOL effective_address(Long addr, short mode, short reg, char size,
+static bool effective_address(Long addr, short mode, short reg, char size,
                               char *str, Long *next_addr) {
   short disp, ext;
   unsigned short absw;
@@ -281,9 +282,9 @@ static BOOL effective_address(Long addr, short mode, short reg, char size,
           goto ErrorReturn;
       }
   }
-  return TRUE;
+  return true;
 ErrorReturn:
-  return FALSE;
+  return false;
 }
 
 static char *disa0(Long addr, unsigned short code, Long *next_addr,
@@ -486,7 +487,7 @@ ErrorReturn:
 static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr,
                        char *mnemonic) {
   char dstr[64], sstr[64];
-  BOOL b;
+  bool b;
   char size = ' ';
 
   if ((code & 0x1c0) == 0x40) {
@@ -520,10 +521,10 @@ static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr,
   fill_space(mnemonic, 8);
   b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                         (short)(code & 0x7), size, sstr, &addr);
-  if (b == FALSE) goto ErrorReturn;
+  if (!b) goto ErrorReturn;
   b = effective_address(addr, (short)((code & 0x1c0) >> 6),
                         (short)((code & 0xe00) >> 9), size, dstr, next_addr);
-  if (b == FALSE) goto ErrorReturn;
+  if (!b) goto ErrorReturn;
   strcat(mnemonic, sstr);
   strcat(mnemonic, ",");
   strcat(mnemonic, dstr);
@@ -536,7 +537,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
                    char *mnemonic) {
   signed short disp;
   char reg[10], *p, size;
-  BOOL b;
+  bool b;
   short stat, dstat;
   unsigned short regmask;
   int i;
@@ -615,7 +616,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                             (short)(code & 0x7), size, p, next_addr);
       strcat(mnemonic, ",ccr");
-      if (b == FALSE) goto ErrorReturn;
+      if (!b) goto ErrorReturn;
       goto EndOfFunc;
     case 0x46c0:
       strcat(mnemonic, "move.w  ");
@@ -624,7 +625,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                             (short)(code & 0x7), size, p, next_addr);
       strcat(mnemonic, ",sr");
-      if (b == FALSE) goto ErrorReturn;
+      if (!b) goto ErrorReturn;
       goto EndOfFunc;
     case 0x4800:
       strcat(mnemonic, "nbcd    ");
@@ -718,7 +719,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       b = effective_address(addr + 4, (short)((code & 0x38) >> 3),
                             (short)(code & 0x7), size, p, next_addr);
       strcat(mnemonic, ",");
-      if (b == FALSE) goto ErrorReturn;
+      if (!b) goto ErrorReturn;
       goto L1;
     case 0x4880:
       strcat(mnemonic, "movem.w ");
@@ -840,7 +841,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
         p = mnemonic + strlen(mnemonic);
         b = effective_address(addr + 4, (short)((code & 0x38) >> 3),
                               (short)(code & 0x7), size, p, next_addr);
-        if (b == FALSE) goto ErrorReturn;
+        if (!b) goto ErrorReturn;
       }
       goto EndOfFunc;
   }
@@ -853,7 +854,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                             (short)(code & 0x7), size, p, next_addr);
       p = mnemonic + strlen(mnemonic);
-      if (b == FALSE) goto ErrorReturn;
+      if (!b) goto ErrorReturn;
       sprintf(p, ",d%1d", (code & 0xe00) >> 9);
       goto EndOfFunc;
     case 0x41c0:
@@ -863,7 +864,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                             (short)(code & 0x7), size, p, next_addr);
       p = mnemonic + strlen(mnemonic);
-      if (b == FALSE) goto ErrorReturn;
+      if (!b) goto ErrorReturn;
       sprintf(p, ",a%1d", (code & 0xe00) >> 9);
       goto EndOfFunc;
     default:
@@ -875,7 +876,7 @@ AddEA:
   p = mnemonic + strlen(mnemonic);
   b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                         (short)(code & 0x7), size, p, next_addr);
-  if (b == FALSE) goto ErrorReturn;
+  if (!b) goto ErrorReturn;
 EndOfFunc:
   return mnemonic;
 ErrorReturn:
@@ -886,7 +887,7 @@ static char *disa5(Long addr, unsigned short code, Long *next_addr,
                    char *mnemonic) {
   char size = ' ';
   char *p;
-  BOOL b;
+  bool b;
   signed short offset;
 
   if ((code & 0xf8) == 0xc8) {
@@ -987,7 +988,7 @@ AddEA:
   p = mnemonic + strlen(mnemonic);
   b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                         (short)(code & 0x7), size, p, next_addr);
-  if (b == FALSE) goto ErrorReturn;
+  if (!b) goto ErrorReturn;
 EndOfFunc:
   return mnemonic;
 ErrorReturn:
@@ -1085,7 +1086,7 @@ static char *disa7(Long addr, unsigned short code, Long *next_addr,
 
 static char *disa8(Long addr, unsigned short code, Long *next_addr,
                    char *mnemonic) {
-  BOOL b;
+  bool b;
   char *p, size = ' ';
 
   if ((code & 0x1f0) == 0x100) {
@@ -1113,7 +1114,7 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
     p = mnemonic + strlen(mnemonic);
     b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                           (short)(code & 0x7), size, p, &addr);
-    if (b == FALSE) goto ErrorReturn;
+    if (!b) goto ErrorReturn;
     goto EndOfFunc;
   } else {
     char size;
@@ -1134,7 +1135,7 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
       L1:
         b = effective_address(addr, (short)((code & 0x38) >> 3),
                               (short)(code & 0x7), size, ea, &addr);
-        if (b == FALSE) goto ErrorReturn;
+        if (!b) goto ErrorReturn;
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
         sprintf(p, "%s,d%1d", ea, (code & 0xe00) >> 9);
@@ -1153,7 +1154,7 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
       L2:
         b = effective_address(addr, (short)((code & 0x38) >> 3),
                               (short)(code & 0x7), ' ', ea, &addr);
-        if (b == FALSE) goto ErrorReturn;
+        if (!b) goto ErrorReturn;
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
         sprintf(p, "d%1d,%s", (code & 0xe00) >> 9, ea);
@@ -1171,7 +1172,7 @@ ErrorReturn:
 
 static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
                      char *mnemonic) {
-  BOOL b;
+  bool b;
   char *p, size, reg = 'd';
 
   if ((code & 0xf130) == 0x9100 && ((code & 0xc0) >> 6) <= 2) {
@@ -1239,7 +1240,7 @@ static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
         p = mnemonic + strlen(mnemonic);
         b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                               (short)(code & 0x7), size, p, next_addr);
-        if (b == FALSE) goto ErrorReturn;
+        if (!b) goto ErrorReturn;
         p = mnemonic + strlen(mnemonic);
         sprintf(p, ",%c%1d", reg, (code & 0xe00) >> 9);
         break;
@@ -1258,7 +1259,7 @@ static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
         p = mnemonic + strlen(mnemonic);
         b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                               (short)(code & 0x7), ' ', p, next_addr);
-        if (b == FALSE) goto ErrorReturn;
+        if (!b) goto ErrorReturn;
         break;
       default:
         goto ErrorReturn;
@@ -1274,7 +1275,7 @@ static char *disab(Long addr, unsigned short code, Long *next_addr,
                    char *mnemonic) {
   char size, reg = 'd';
   char *p;
-  BOOL b;
+  bool b;
 
   if ((code & 0xf138) == 0xb108 && ((code & 0xc0) >> 6) <= 2) {
     /* CMPM */
@@ -1336,7 +1337,7 @@ static char *disab(Long addr, unsigned short code, Long *next_addr,
   p = mnemonic + strlen(mnemonic);
   b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                         (short)(code & 0x7), size, p, next_addr);
-  if (b == FALSE) goto ErrorReturn;
+  if (!b) goto ErrorReturn;
   if ((code & 0xf100) == 0xb100 && reg != 'a') {
     /* EOR */
     goto EndOfFunc;
@@ -1353,7 +1354,7 @@ static char *disac(Long addr, unsigned short code, Long *next_addr,
                    char *mnemonic) {
   char size;
   char *p;
-  BOOL b;
+  bool b;
 
   /* まず、10ビット固定の命令を処理する */
   switch (code & 0xf1f8) {
@@ -1408,7 +1409,7 @@ static char *disac(Long addr, unsigned short code, Long *next_addr,
           p = mnemonic + strlen(mnemonic);
           b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                                 (short)(code & 0x7), size, p, next_addr);
-          if (b == FALSE) goto ErrorReturn;
+          if (!b) goto ErrorReturn;
           p = mnemonic + strlen(mnemonic);
           sprintf(p, ",d%1d", (code & 0xe00) >> 9);
           goto EndOfFunc;
@@ -1425,7 +1426,7 @@ static char *disac(Long addr, unsigned short code, Long *next_addr,
           p = mnemonic + strlen(mnemonic);
           b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                                 (short)(code & 0x7), size, p, next_addr);
-          if (b == FALSE) goto ErrorReturn;
+          if (!b) goto ErrorReturn;
           goto EndOfFunc;
       }
   }
@@ -1439,7 +1440,7 @@ static char *disae(Long addr, unsigned short code, Long *next_addr,
                    char *mnemonic) {
   char size, dir, count[10];
   char *p;
-  BOOL b;
+  bool b;
 
   if (code & 0x0100) {
     dir = 'l';
@@ -1478,7 +1479,7 @@ static char *disae(Long addr, unsigned short code, Long *next_addr,
     p = mnemonic + strlen(mnemonic);
     b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
                           (short)(code & 0x7), ' ', p, next_addr);
-    if (b == FALSE) goto ErrorReturn;
+    if (!b) goto ErrorReturn;
   } else {
     switch ((code & 0xc0) >> 6) {
       case 0:

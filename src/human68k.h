@@ -20,7 +20,14 @@
 
 // DOSコールエラー番号
 #define DOSE_SUCCESS 0
+#define DOSE_ILGFNC -1
+#define DOSE_NODIR -3
+#define DOSE_BADF -6
+#define DOSE_ILGFNAME -13
 #define DOSE_ILGDRV -15
+#define DOSE_RDONLY -19
+#define DOSE_EXISTDIR -20
+#define DOSE_NOTEMPTY -21
 
 // バッファサイズ定数
 #define HUMAN68K_PATH_MAX 65

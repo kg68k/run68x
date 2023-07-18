@@ -19,16 +19,17 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "run68.h"
 
 /*
  　機能：7ライン命令(moveq)を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-int line7(char *pc_ptr) {
+bool line7(char *pc_ptr) {
   char code;
   char data;
 
@@ -36,7 +37,6 @@ int line7(char *pc_ptr) {
   pc += 2;
   if ((code & 0x01) != 0) {
     err68a("おかしな命令を実行しました", __FILE__, __LINE__);
-    return (TRUE);
   }
   int reg = (code >> 1) & 0x07;
   data = *pc_ptr;
@@ -53,5 +53,5 @@ int line7(char *pc_ptr) {
   printf("trace: moveq    src=%d PC=%06lX\n", data, pc);
 #endif
 
-  return (FALSE);
+  return false;
 }

@@ -22,16 +22,17 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "run68.h"
 
 /*
  　機能：6ライン命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-int line6(char *pc_ptr) {
+bool line6(char *pc_ptr) {
   char cond;
   char disp;
   short disp_w;
@@ -50,10 +51,10 @@ int line6(char *pc_ptr) {
       mem_set(ra[7], pc, S_LONG);
       pc += disp;
     }
-    return (FALSE);
+    return false;
   }
 
-  if (get_cond(cond) == TRUE) {
+  if (get_cond(cond)) {
     if (disp == 0) {
       disp_w = (short)imi_get(S_WORD);
       pc += (disp_w - 2);
@@ -64,5 +65,5 @@ int line6(char *pc_ptr) {
     if (disp == 0) pc += 2;
   }
 
-  return (FALSE);
+  return false;
 }

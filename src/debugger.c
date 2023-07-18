@@ -43,6 +43,7 @@
  */
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "run68.h"
@@ -89,12 +90,12 @@ static unsigned short watchcode(int argc, char **argv);
    機能：
      run68をデバッグモードで起動すると、この関数が呼出される。
    パラメータ：
-     BOOL running  - アプリケーションプログラムの実行中はTRUEで
+     bool running  - アプリケーションプログラムの実行中はtrueで
                      呼出される。
    戻り値：
      COMMAND - 呼び側のコードで実行すべきコマンドを表している。
 */
-RUN68_COMMAND debugger(BOOL running) {
+RUN68_COMMAND debugger(bool running) {
   RUN68_COMMAND cmd;
 
   if (running) {
@@ -137,7 +138,7 @@ RUN68_COMMAND debugger(BOOL running) {
     goto EndOfLoop;
   }
   /* コマンドループ */
-  while (TRUE) {
+  while (true) {
     char line[MAX_LINE];
     char *argv[MAX_LINE];
     int argc;

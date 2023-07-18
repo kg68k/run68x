@@ -162,8 +162,8 @@ void general_conditions(Long result, int size) {
  *   Long dest;      <in>  Destination値
  *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
- *   BOOL zero_flag; <in>  addx用演算前 zero flag 値。
- *                         その他の場合は常に 1 を指定のこと。
+ *   bool zero_flag; <in>  addx用演算前 zero flag 値。
+ *                         その他の場合は常に true を指定のこと。
  *
  * 【返値】
  *   なし
@@ -171,7 +171,7 @@ void general_conditions(Long result, int size) {
  */
 
 void add_conditions(Long src, Long dest, Long result, int size,
-                    BOOL zero_flag) {
+                    bool zero_flag) {
   int Sm, Dm, Rm;
 
   Sm = (getMSB(src, size) != (Long)0);
@@ -214,15 +214,13 @@ void add_conditions(Long src, Long dest, Long result, int size,
  *   cmp系コンディションフラグの設定
  *
  * 【関数書式】
- *   cmp_conditions(src, dest, result, size, zero_flag);
+ *   cmp_conditions(src, dest, result, size);
  *
  * 【引数】
  *   Long src;       <in>  Source値
  *   Long dest;      <in>  Destination値
  *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
- *   BOOL zero_flag; <in>  subx用演算前 zero flag 値。
- *                         その他の場合は常に 1 を指定のこと。
  *
  * 【返値】
  *   なし
@@ -277,8 +275,8 @@ void cmp_conditions(Long src, Long dest, Long result, int size) {
  *   Long dest;      <in>  Destination値
  *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
- *   BOOL zero_flag; <in>  subx用演算前 zero flag 値。
- *                         その他の場合は常に 1 を指定のこと。
+ *   bool zero_flag; <in>  subx用演算前 zero flag 値。
+ *                         その他の場合は常に bool を指定のこと。
  *
  * 【返値】
  *   なし
@@ -286,7 +284,7 @@ void cmp_conditions(Long src, Long dest, Long result, int size) {
  */
 
 void sub_conditions(Long src, Long dest, Long result, int size,
-                    BOOL zero_flag) {
+                    bool zero_flag) {
   cmp_conditions(src, dest, result, size);
 
   if (CCR_C_REF()) {
@@ -296,7 +294,7 @@ void sub_conditions(Long src, Long dest, Long result, int size,
   }
 
   /* Zero Flag */
-  if ((zero_flag == 1) && (CCR_Z_REF() != 0)) {
+  if (zero_flag && (CCR_Z_REF() != 0)) {
     CCR_Z_ON();
   } else {
     CCR_Z_OFF();
@@ -314,15 +312,15 @@ void sub_conditions(Long src, Long dest, Long result, int size,
  *   Long dest;      <in>  Destination値
  *   Long result;    <in>  Result値
  *   int  size;      <in>  アクセスサイズ
- *   BOOL zero_flag; <in>  negx用演算前 zero flag 値。
- *                         その他の場合は常に 1 を指定のこと。
+ *   bool zero_flag; <in>  negx用演算前 zero flag 値。
+ *                         その他の場合は常に true を指定のこと。
  *
  * 【返値】
  *   なし
  *
  */
 
-void neg_conditions(Long dest, Long result, int size, BOOL zero_flag) {
+void neg_conditions(Long dest, Long result, int size, bool zero_flag) {
   int Dm, Rm;
 
   Dm = (getMSB(dest, size) != (Long)0);
@@ -345,7 +343,7 @@ void neg_conditions(Long dest, Long result, int size, BOOL zero_flag) {
   }
 
   /* Zero Flag */
-  if ((zero_flag == 1) && getBitsByDataSize(result, size) == 0) {
+  if (zero_flag && getBitsByDataSize(result, size) == 0) {
     CCR_Z_ON();
   } else {
     CCR_Z_OFF();

@@ -1,130 +1,31 @@
-/* $Id: linee.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
- * First imported source code and docs
- *
- * Revision 1.3  1999/12/07  12:46:06  yfujii
- * *** empty log message ***
- *
- * Revision 1.3  1999/10/20  04:14:48  masamichi
- * Added showing more information about errors.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "run68.h"
 
-static int Asl(char, char);
-static int Asl2(char);
-static int Asr(char, char);
-static int Asr2(char);
-static int Lsl(char, char);
-static int Lsl2(char);
-static int Lsr(char, char);
-static int Lsr2(char);
-static int Rol(char, char);
-static int Rol2(char);
-static int Roxl(char, char);
-static int Roxl2(char);
-static int Ror(char, char);
-static int Ror2(char);
-static int Roxr(char, char);
-static int Roxr2(char);
-
-/*
- 　機能：Eライン命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
-*/
-int linee(char *pc_ptr) {
-  char code1, code2;
-
-  code1 = *(pc_ptr++);
-  code2 = *pc_ptr;
-  pc += 2;
-
-  if ((code1 & 0x01) != 0) {
-    /* 左 */
-    if ((code2 & 0xC0) == 0xC0) {
-      /* xxl{.w} <ea> 形式 */
-      switch (code1 & 0x0e) {
-        case 0x00:
-          return (Asl2(code2)); /* asl{.w} <ea> */
-        case 0x02:
-          return (Lsl2(code2)); /* lsl{.w} <ea> */
-        case 0x04:
-          return (Roxl2(code2)); /* roxl{.w} <ea> */
-        case 0x06:
-          return (Rol2(code2)); /* rol{.w} <ea> */
-        default:
-          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
-          return (TRUE);
-      }
-    } else {
-      switch (code2 & 0x18) {
-        case 0x00:
-          return (Asl(code1, code2));
-        case 0x08:
-          return (Lsl(code1, code2));
-        case 0x10:
-          return (Roxl(code1, code2));
-        case 0x18:
-          return (Rol(code1, code2));
-        default:
-          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
-          return (TRUE);
-      }
-    }
-  } else {
-    /* 右 */
-    if ((code2 & 0xC0) == 0xC0) {
-      /* xxr{.w} <ea> 形式 */
-      switch (code1 & 0x0e) {
-        case 0x00:
-          return (Asr2(code2)); /* asr{.w} <ea> */
-        case 0x02:
-          return (Lsr2(code2)); /* lsr{.w} <ea> */
-        case 0x04:
-          return (Roxr2(code2)); /* roxr{.w} <ea> */
-        case 0x06:
-          return (Ror2(code2)); /* ror{.w} <ea> */
-        default:
-          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
-          return (TRUE);
-      }
-    } else {
-      switch (code2 & 0x18) {
-        case 0x00:
-          return (Asr(code1, code2));
-        case 0x08:
-          return (Lsr(code1, code2));
-        case 0x10:
-          return (Roxr(code1, code2));
-        case 0x18:
-          return (Ror(code1, code2));
-        default:
-          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
-          return (TRUE);
-      }
-    }
-  }
-
-  err68a("未定義命令を実行しました", __FILE__, __LINE__);
-  return (TRUE);
-}
-
 /*
  　機能：asl命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Asl(char code1, char code2) {
+static bool Asl(char code1, char code2) {
   char size;
   ULong top;
   ULong mask;
@@ -199,15 +100,15 @@ static int Asl(char code1, char code2) {
       CCR_Z_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：asl.w <ea> 命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Asl2(char code2) {
+static bool Asl2(char code2) {
   char reg;
   Long src;
   int mode;
@@ -224,7 +125,7 @@ static int Asl2(char code2) {
     work_mode = mode;
   }
   if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, reg, S_WORD, &src)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TRACE
@@ -243,7 +144,7 @@ static int Asl2(char code2) {
     work_mode = mode;
   }
   if (set_data_at_ea(EA_VariableMemory, work_mode, reg, S_WORD, src)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの設定 */
@@ -266,15 +167,15 @@ static int Asl2(char code2) {
     CCR_V_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：asr命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Asr(char code1, char code2) {
+static bool Asr(char code1, char code2) {
   char size;
   char btm;
   ULong mask;
@@ -354,15 +255,15 @@ static int Asr(char code1, char code2) {
       CCR_Z_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：asr.w <ea> 命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Asr2(char code2) {
+static bool Asr2(char code2) {
   char reg;
   Long src;
   int mode;
@@ -380,7 +281,7 @@ static int Asr2(char code2) {
     work_mode = mode;
   }
   if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, reg, S_WORD, &src)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TRACE
@@ -402,7 +303,7 @@ static int Asr2(char code2) {
     work_mode = mode;
   }
   if (set_data_at_ea(EA_VariableMemory, work_mode, reg, S_WORD, src)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの設定 */
@@ -420,15 +321,15 @@ static int Asr2(char code2) {
   /* V フラグは常に0 */
   CCR_V_OFF();
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：lsl命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Lsl(char code1, char code2) {
+static bool Lsl(char code1, char code2) {
   char size;
   ULong mask;
   ULong src;
@@ -497,15 +398,15 @@ static int Lsl(char code1, char code2) {
       CCR_Z_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：lsl.w <ea> 命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Lsl2(char code2) {
+static bool Lsl2(char code2) {
   char reg;
   Long src;
   int mode;
@@ -522,7 +423,7 @@ static int Lsl2(char code2) {
     work_mode = mode;
   }
   if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, reg, S_WORD, &src)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TRACE
@@ -541,7 +442,7 @@ static int Lsl2(char code2) {
     work_mode = mode;
   }
   if (set_data_at_ea(EA_VariableMemory, work_mode, reg, S_WORD, src)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの設定 */
@@ -556,15 +457,15 @@ static int Lsl2(char code2) {
     CCR_C_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：lsr命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Lsr(char code1, char code2) {
+static bool Lsr(char code1, char code2) {
   char size;
   ULong mask;
   ULong src;
@@ -639,15 +540,15 @@ static int Lsr(char code1, char code2) {
       CCR_Z_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：lsr.w <ea> 命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Lsr2(char code2) {
+static bool Lsr2(char code2) {
   char reg;
   Long src;
   int mode;
@@ -664,7 +565,7 @@ static int Lsr2(char code2) {
     work_mode = mode;
   }
   if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, reg, S_WORD, &src)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TRACE
@@ -683,7 +584,7 @@ static int Lsr2(char code2) {
     work_mode = mode;
   }
   if (set_data_at_ea(EA_VariableMemory, work_mode, reg, S_WORD, src)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの設定 */
@@ -698,15 +599,15 @@ static int Lsr2(char code2) {
     CCR_C_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：rol命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Rol(char code1, char code2) {
+static bool Rol(char code1, char code2) {
   char size;
   ULong top;
   ULong mask;
@@ -776,15 +677,15 @@ static int Rol(char code1, char code2) {
       CCR_Z_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：rol.w <ea> 命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Rol2(char code2) {
+static bool Rol2(char code2) {
   char reg;
   Long src;
   int mode;
@@ -801,7 +702,7 @@ static int Rol2(char code2) {
     work_mode = mode;
   }
   if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, reg, S_WORD, &src)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TRACE
@@ -823,7 +724,7 @@ static int Rol2(char code2) {
     work_mode = mode;
   }
   if (set_data_at_ea(EA_VariableMemory, work_mode, reg, S_WORD, src)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの設定 */
@@ -837,15 +738,15 @@ static int Rol2(char code2) {
     CCR_C_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：roxl命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Roxl(char code1, char code2) {
+static bool Roxl(char code1, char code2) {
   char size;
   ULong top;
   ULong mask;
@@ -920,15 +821,15 @@ static int Roxl(char code1, char code2) {
       CCR_Z_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：roxl.w <ea> 命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Roxl2(char code2) {
+static bool Roxl2(char code2) {
   char reg;
   Long src;
   int mode;
@@ -945,7 +846,7 @@ static int Roxl2(char code2) {
     work_mode = mode;
   }
   if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, reg, S_WORD, &src)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TRACE
@@ -974,7 +875,7 @@ static int Roxl2(char code2) {
     work_mode = mode;
   }
   if (set_data_at_ea(EA_VariableMemory, work_mode, reg, S_WORD, src)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの設定 */
@@ -987,15 +888,15 @@ static int Roxl2(char code2) {
     CCR_C_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：ror命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Ror(char code1, char code2) {
+static bool Ror(char code1, char code2) {
   char size;
   char btm;
   ULong mask;
@@ -1071,15 +972,15 @@ static int Ror(char code1, char code2) {
       CCR_Z_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：ror.w <ea> 命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Ror2(char code2) {
+static bool Ror2(char code2) {
   char reg;
   Long src;
   int mode;
@@ -1096,7 +997,7 @@ static int Ror2(char code2) {
     work_mode = mode;
   }
   if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, reg, S_WORD, &src)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TRACE
@@ -1118,7 +1019,7 @@ static int Ror2(char code2) {
     work_mode = mode;
   }
   if (set_data_at_ea(EA_VariableMemory, work_mode, reg, S_WORD, src)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの設定 */
@@ -1132,15 +1033,15 @@ static int Ror2(char code2) {
     CCR_C_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：roxr命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Roxr(char code1, char code2) {
+static bool Roxr(char code1, char code2) {
   char size;
   char btm;
   ULong mask;
@@ -1222,15 +1123,15 @@ static int Roxr(char code1, char code2) {
       CCR_Z_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：roxr.w <ea> 命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Roxr2(char code2) {
+static bool Roxr2(char code2) {
   char reg;
   Long src;
   int mode;
@@ -1247,7 +1148,7 @@ static int Roxr2(char code2) {
     work_mode = mode;
   }
   if (get_data_at_ea_noinc(EA_VariableMemory, work_mode, reg, S_WORD, &src)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TRACE
@@ -1276,7 +1177,7 @@ static int Roxr2(char code2) {
     work_mode = mode;
   }
   if (set_data_at_ea(EA_VariableMemory, work_mode, reg, S_WORD, src)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの設定 */
@@ -1289,5 +1190,100 @@ static int Roxr2(char code2) {
     CCR_C_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
+
+/*
+ 　機能：Eライン命令を実行する
+ 戻り値： true = 実行終了
+         false = 実行継続
+*/
+bool linee(char *pc_ptr) {
+  char code1, code2;
+
+  code1 = *(pc_ptr++);
+  code2 = *pc_ptr;
+  pc += 2;
+
+  if ((code1 & 0x01) != 0) {
+    /* 左 */
+    if ((code2 & 0xC0) == 0xC0) {
+      /* xxl{.w} <ea> 形式 */
+      switch (code1 & 0x0e) {
+        case 0x00:
+          return (Asl2(code2)); /* asl{.w} <ea> */
+        case 0x02:
+          return (Lsl2(code2)); /* lsl{.w} <ea> */
+        case 0x04:
+          return (Roxl2(code2)); /* roxl{.w} <ea> */
+        case 0x06:
+          return (Rol2(code2)); /* rol{.w} <ea> */
+        default:
+          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
+      }
+    } else {
+      switch (code2 & 0x18) {
+        case 0x00:
+          return (Asl(code1, code2));
+        case 0x08:
+          return (Lsl(code1, code2));
+        case 0x10:
+          return (Roxl(code1, code2));
+        case 0x18:
+          return (Rol(code1, code2));
+        default:
+          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
+      }
+    }
+  } else {
+    /* 右 */
+    if ((code2 & 0xC0) == 0xC0) {
+      /* xxr{.w} <ea> 形式 */
+      switch (code1 & 0x0e) {
+        case 0x00:
+          return (Asr2(code2)); /* asr{.w} <ea> */
+        case 0x02:
+          return (Lsr2(code2)); /* lsr{.w} <ea> */
+        case 0x04:
+          return (Roxr2(code2)); /* roxr{.w} <ea> */
+        case 0x06:
+          return (Ror2(code2)); /* ror{.w} <ea> */
+        default:
+          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
+      }
+    } else {
+      switch (code2 & 0x18) {
+        case 0x00:
+          return (Asr(code1, code2));
+        case 0x08:
+          return (Lsr(code1, code2));
+        case 0x10:
+          return (Roxr(code1, code2));
+        case 0x18:
+          return (Ror(code1, code2));
+        default:
+          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
+      }
+    }
+  }
+
+  err68a("未定義命令を実行しました", __FILE__, __LINE__);
+}
+
+/* $Id: linee.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.3  1999/12/07  12:46:06  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.3  1999/10/20  04:14:48  masamichi
+ * Added showing more information about errors.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

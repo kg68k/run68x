@@ -19,6 +19,7 @@
 
 #include <direct.h>
 #include <string.h>
+#include <windows.h>
 
 #include "human68k.h"
 #include "run68.h"
@@ -26,7 +27,40 @@
 #define DRV_CLN_LEN 2     // "A:"
 #define DRV_CLN_BS_LEN 3  // "A:\\"
 
-// DOS _CURDIR
+// DOS _MKDIR (0xff39)
+Long Mkdir_win32(Long name) {
+  char* name_ptr = prog_ptr + name;
+
+  if (CreateDirectoryA(name_ptr, NULL) == FALSE) {
+    if (errno == EACCES) return DOSE_EXISTDIR;  // ディレクトリは既に存在する
+    return DOSE_ILGFNAME;                       // ファイル名指定誤り
+  }
+  return DOSE_SUCCESS;
+}
+
+// DOS _RMDRV (0xff3a)
+Long Rmdir_win32(Long name) {
+  char* name_ptr = prog_ptr + name;
+
+  errno = 0;
+  if (RemoveDirectoryA(name_ptr) == FALSE) {
+    if (errno == EACCES)
+      return DOSE_NOTEMPTY;  // ディレクトリ中にファイルがある
+    return DOSE_ILGFNAME;    // ファイル名指定誤り
+  }
+  return DOSE_SUCCESS;
+}
+
+// DOS _CHDIR (0xff3b)
+Long Chdir_win32(Long name) {
+  char* name_ptr = prog_ptr + name;
+
+  if (SetCurrentDirectoryA(name_ptr) == FALSE)
+    return DOSE_NODIR;  // ディレクトリが見つからない
+  return DOSE_SUCCESS;
+}
+
+// DOS _CURDIR (0xff47)
 Long Curdir_win32(short drv, char* buf_ptr) {
   char buf[DRV_CLN_LEN + HUMAN68K_PATH_MAX] = {0};
   const char* p = _getdcwd(drv, buf, sizeof(buf));
@@ -40,14 +74,13 @@ Long Curdir_win32(short drv, char* buf_ptr) {
   return DOSE_SUCCESS;
 }
 
-// DOS _FILEDATE
+// DOS _FILEDATE (0xff87)
 Long Filedate_win32(short hdl, Long dt) {
   FILETIME ctime, atime, wtime;
   int64_t ll_wtime;
   HANDLE hFile;
-  BOOL b;
 
-  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
+  if (finfo[hdl].fh == NULL) return DOSE_BADF;  // オープンされていない
 
   if (dt != 0) { /* 設定 */
     hFile = finfo[hdl].fh;
@@ -55,11 +88,14 @@ Long Filedate_win32(short hdl, Long dt) {
     ll_wtime = (dt >> 16) * 86400 * 10000000 + (dt & 0xFFFF) * 10000000;
     wtime.dwLowDateTime = (DWORD)(ll_wtime & 0xFFFFFFFF);
     wtime.dwHighDateTime = (DWORD)(ll_wtime >> 32);
-    b = SetFileTime(hFile, &ctime, &atime, &wtime);
-    if (b) return (-19); /* 書き込み不可 */
+    if (SetFileTime(hFile, &ctime, &atime, &wtime) == FALSE) {
+      // 書き込み不可
+      // 実際のHuman68kでは-19が返ることはない。
+      return DOSE_RDONLY;
+    }
     finfo[hdl].date = (ULong)(ll_wtime / 10000000 / 86400);
     finfo[hdl].time = (ULong)((ll_wtime / 10000000) % 86400);
-    return (0);
+    return DOSE_SUCCESS;
   }
 
   hFile = finfo[hdl].fh;

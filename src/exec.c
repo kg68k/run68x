@@ -34,6 +34,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,10 +46,10 @@
 
 /*
  　機能：1命令実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-int prog_exec() {
+bool prog_exec() {
   char *pc_ptr;
   Long adr;
   short save_s;
@@ -94,81 +95,79 @@ int prog_exec() {
         ra[7] -= 2;
         mem_set(ra[7], sr, S_WORD);
         pc = adr;
-        return (FALSE);
+        return false;
       }
       if (save_s == 0) SR_S_OFF();
       pc += 2;
       err68("A系列割り込みを実行しました");
-      return (TRUE);
     default:
       pc += 2;
       err68("おかしな命令を実行しました");
-      return (TRUE);
   }
 }
 
 /*
  　機能：コンディションが成立しているかどうか調べる
- 戻り値： TRUE = 成立
- 　　　　FALSE = 不成立
+ 戻り値： true = 成立
+ 　　　　false = 不成立
 */
-int get_cond(char cond) {
+bool get_cond(char cond) {
   switch (cond) {
     case 0x00: /* t */
-      return (TRUE);
+      return true;
     case 0x02: /* hi */
-      if (CCR_C_REF() == 0 && CCR_Z_REF() == 0) return (TRUE);
+      if (CCR_C_REF() == 0 && CCR_Z_REF() == 0) return true;
       break;
     case 0x03: /* ls */
-      if (CCR_C_REF() != 0 || CCR_Z_REF() != 0) return (TRUE);
+      if (CCR_C_REF() != 0 || CCR_Z_REF() != 0) return true;
       break;
     case 0x04: /* cc */
-      if (CCR_C_REF() == 0) return (TRUE);
+      if (CCR_C_REF() == 0) return true;
       break;
     case 0x05: /* cs */
-      if (CCR_C_REF() != 0) return (TRUE);
+      if (CCR_C_REF() != 0) return true;
       break;
     case 0x06: /* ne */
-      if (CCR_Z_REF() == 0) return (TRUE);
+      if (CCR_Z_REF() == 0) return true;
       break;
     case 0x07: /* eq */
-      if (CCR_Z_REF() != 0) return (TRUE);
+      if (CCR_Z_REF() != 0) return true;
       break;
     case 0x08: /* vc */
-      if (CCR_V_REF() == 0) return (TRUE);
+      if (CCR_V_REF() == 0) return true;
       break;
     case 0x09: /* vs */
-      if (CCR_V_REF() != 0) return (TRUE);
+      if (CCR_V_REF() != 0) return true;
       break;
     case 0x0A: /* pl */
-      if (CCR_N_REF() == 0) return (TRUE);
+      if (CCR_N_REF() == 0) return true;
       break;
     case 0x0B: /* mi */
-      if (CCR_N_REF() != 0) return (TRUE);
+      if (CCR_N_REF() != 0) return true;
       break;
     case 0x0C: /* ge */
       if ((CCR_N_REF() != 0 && CCR_V_REF() != 0) ||
           (CCR_N_REF() == 0 && CCR_V_REF() == 0))
-        return (TRUE);
+        return true;
       break;
     case 0x0D: /* lt */
       if ((CCR_N_REF() != 0 && CCR_V_REF() == 0) ||
           (CCR_N_REF() == 0 && CCR_V_REF() != 0))
-        return (TRUE);
+        return true;
       break;
     case 0x0E: /* gt */
       if (CCR_Z_REF() == 0 && ((CCR_N_REF() != 0 && CCR_V_REF() != 0) ||
                                (CCR_N_REF() == 0 && CCR_V_REF() == 0)))
-        return (TRUE);
+        return true;
       break;
     case 0x0F: /* le */
       if (CCR_Z_REF() != 0 || (CCR_N_REF() != 0 && CCR_V_REF() == 0) ||
           (CCR_N_REF() == 0 && CCR_V_REF() != 0))
-        return (TRUE);
+        return true;
       break;
   }
 
-  return (FALSE);
+  return false;
 }
 
 static int begin_undefined(const char *s) {

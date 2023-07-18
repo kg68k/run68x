@@ -1,28 +1,21 @@
-/* $Id: load.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
- * First imported source code and docs
- *
- * Revision 1.5  1999/12/24  04:04:37  yfujii
- * BUGFIX:When .x or .r is ommited and specified drive or path,
- * run68 couldn't find the executable file.
- *
- * Revision 1.4  1999/12/07  12:47:10  yfujii
- * *** empty log message ***
- *
- * Revision 1.4  1999/11/29  06:11:28  yfujii
- * *** empty log message ***
- *
- * Revision 1.3  1999/10/21  13:32:01  yfujii
- * DOS calls are replaced by win32 functions.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,10 +29,7 @@
 
 static UChar xhead[XHEAD_SIZE];
 
-static Long xfile_cnv(Long *, Long *, Long, int);
-static int xrelocate(Long, Long, Long);
 static Long xhead_getl(int);
-static int set_fname(char *, Long);
 
 static char *GetAPath(char **path_p, char *buf);
 
@@ -50,12 +40,12 @@ static char *GetAPath(char **path_p, char *buf);
     最初にカレントディレクトリを検索する。
   引数：
     char *fname     -- ファイル名文字列
-    int  msg_flag   -- 0でない時メッセージを標準エラー出力に出力
+    bool print_error -- trueの時メッセージを標準エラー出力に出力
   戻り値：
     NULL = オープンできない
     !NULL = 実行ファイルのファイルポインタ
 */
-FILE *prog_open(char *fname, int mes_flag) {
+FILE *prog_open(char *fname, bool print_error) {
   char dir[MAX_PATH], fullname[MAX_PATH], cwd[MAX_PATH];
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
@@ -121,7 +111,7 @@ EndOfFunc:
   strcpy(fname, fullname);
   return fp;
 ErrorRet:
-  if (mes_flag == TRUE) fprintf(stderr, "ファイルがオープンできません\n");
+  if (print_error) fprintf(stderr, "ファイルがオープンできません\n");
   return NULL;
 }
 
@@ -155,92 +145,25 @@ ErrorReturn:
 }
 
 /*
- 　機能：プログラムをメモリに読み込む(fpはクローズされる)
- 戻り値：正 = 実行開始アドレス
- 　　　　負 = エラーコード
+ 　機能：Xファイルをリロケートする
+ 戻り値： true = 正常終了
+ 　　　　false = 異常終了
 */
-Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
-               Long *prog_sz2, int mes_flag)
-/* prog_sz2はロードモード＋リミットアドレスの役割も果たす */
-{
-  char *read_ptr;
-  Long read_sz;
-  Long pc_begin;
-  int x_flag = FALSE;
-  int loadmode;
-  int i;
+static bool xrelocate(Long reloc_adr, Long reloc_size, Long read_top) {
+  Long prog_adr;
+  Long data;
+  UShort disp;
 
-  loadmode = ((*prog_sz2 >> 24) & 0x03);
-  *prog_sz2 &= 0xFFFFFF;
-
-  if (fseek(fp, 0, SEEK_END) != 0) {
-    fclose(fp);
-    if (mes_flag == TRUE) fprintf(stderr, "ファイルのシークに失敗しました\n");
-    return (-11);
-  }
-  if ((*prog_sz = ftell(fp)) <= 0) {
-    fclose(fp);
-    if (mes_flag == TRUE) fprintf(stderr, "ファイルサイズが０です\n");
-    return (-11);
-  }
-  if (fseek(fp, 0, SEEK_SET) != 0) {
-    fclose(fp);
-    if (mes_flag == TRUE) fprintf(stderr, "ファイルのシークに失敗しました\n");
-    return (-11);
-  }
-  if (read_top + *prog_sz > *prog_sz2) {
-    fclose(fp);
-    if (mes_flag == TRUE) fprintf(stderr, "ファイルサイズが大きすぎます\n");
-    return (-8);
+  prog_adr = read_top;
+  for (; reloc_size > 0; reloc_size -= 2, reloc_adr += 2) {
+    disp = (UShort)mem_get(read_top + reloc_adr, S_WORD);
+    if (disp == 1) return false;
+    prog_adr += disp;
+    data = mem_get(prog_adr, S_LONG) + read_top;
+    mem_set(prog_adr, data, S_LONG);
   }
 
-  read_sz = *prog_sz;
-  read_ptr = prog_ptr + read_top;
-  pc_begin = read_top;
-
-  /* XHEAD_SIZEバイト読み込む */
-  if (*prog_sz >= XHEAD_SIZE) {
-    if (fread(read_ptr, 1, XHEAD_SIZE, fp) != XHEAD_SIZE) {
-      fclose(fp);
-      if (mes_flag == TRUE)
-        fprintf(stderr, "ファイルの読み込みに失敗しました\n");
-      return (-11);
-    }
-    read_sz -= XHEAD_SIZE;
-    if (loadmode == 1)
-      i = 0; /* Rファイル */
-    else if (loadmode == 3)
-      i = 1; /* Xファイル */
-    else
-      i = strlen(fname) - 2;
-    if (mem_get(read_top, S_WORD) == 0x4855 && i > 0) {
-      if (loadmode == 3 || strcmp(&(fname[i]), ".x") == 0 ||
-          strcmp(&(fname[i]), ".X") == 0) {
-        x_flag = TRUE;
-        memcpy(xhead, read_ptr, XHEAD_SIZE);
-        *prog_sz = read_sz;
-      }
-    }
-    if (x_flag == FALSE) read_ptr += XHEAD_SIZE;
-  }
-
-  if (fread(read_ptr, 1, read_sz, fp) != (size_t)read_sz) {
-    fclose(fp);
-    if (mes_flag == TRUE) fprintf(stderr, "ファイルの読み込みに失敗しました\n");
-    return (-11);
-  }
-
-  /* 実行ファイルのクローズ */
-  fclose(fp);
-
-  /* Xファイルの処理 */
-  *prog_sz2 = *prog_sz;
-  if (x_flag == TRUE) {
-    if ((pc_begin = xfile_cnv(prog_sz, prog_sz2, read_top, mes_flag)) == 0)
-      return (-11);
-  }
-
-  return (pc_begin);
+  return true;
 }
 
 /*
@@ -249,7 +172,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
  　　　　!0 = プログラム開始アドレス
 */
 static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
-                      int mes_flag) {
+                      bool print_error) {
   Long pc_begin;
   Long code_size;
   Long data_size;
@@ -257,7 +180,7 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
   Long reloc_size;
 
   if (xhead_getl(0x3C) != 0) {
-    if (mes_flag == TRUE) fprintf(stderr, "BINDされているファイルです\n");
+    if (print_error) fprintf(stderr, "BINDされているファイルです\n");
     return (0);
   }
   pc_begin = xhead_getl(0x08);
@@ -267,9 +190,8 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
   reloc_size = xhead_getl(0x18);
 
   if (reloc_size != 0) {
-    if (xrelocate(code_size + data_size, reloc_size, read_top) == FALSE) {
-      if (mes_flag == TRUE)
-        fprintf(stderr, "未対応のリロケート情報があります\n");
+    if (!xrelocate(code_size + data_size, reloc_size, read_top)) {
+      if (print_error) fprintf(stderr, "未対応のリロケート情報があります\n");
       return (0);
     }
   }
@@ -282,25 +204,91 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
 }
 
 /*
- 　機能：Xファイルをリロケートする
- 戻り値： TRUE = 正常終了
- 　　　　FALSE = 異常終了
+ 　機能：プログラムをメモリに読み込む(fpはクローズされる)
+ 戻り値：正 = 実行開始アドレス
+ 　　　　負 = エラーコード
 */
-static int xrelocate(Long reloc_adr, Long reloc_size, Long read_top) {
-  Long prog_adr;
-  Long data;
-  UShort disp;
+Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
+               Long *prog_sz2, bool print_error)
+/* prog_sz2はロードモード＋リミットアドレスの役割も果たす */
+{
+  char *read_ptr;
+  Long read_sz;
+  Long pc_begin;
+  bool x_file = false;
+  int loadmode;
+  int i;
 
-  prog_adr = read_top;
-  for (; reloc_size > 0; reloc_size -= 2, reloc_adr += 2) {
-    disp = (UShort)mem_get(read_top + reloc_adr, S_WORD);
-    if (disp == 1) return (FALSE);
-    prog_adr += disp;
-    data = mem_get(prog_adr, S_LONG) + read_top;
-    mem_set(prog_adr, data, S_LONG);
+  loadmode = ((*prog_sz2 >> 24) & 0x03);
+  *prog_sz2 &= 0xFFFFFF;
+
+  if (fseek(fp, 0, SEEK_END) != 0) {
+    fclose(fp);
+    if (print_error) fprintf(stderr, "ファイルのシークに失敗しました\n");
+    return (-11);
+  }
+  if ((*prog_sz = ftell(fp)) <= 0) {
+    fclose(fp);
+    if (print_error) fprintf(stderr, "ファイルサイズが０です\n");
+    return (-11);
+  }
+  if (fseek(fp, 0, SEEK_SET) != 0) {
+    fclose(fp);
+    if (print_error) fprintf(stderr, "ファイルのシークに失敗しました\n");
+    return (-11);
+  }
+  if (read_top + *prog_sz > *prog_sz2) {
+    fclose(fp);
+    if (print_error) fprintf(stderr, "ファイルサイズが大きすぎます\n");
+    return (-8);
   }
 
-  return (TRUE);
+  read_sz = *prog_sz;
+  read_ptr = prog_ptr + read_top;
+  pc_begin = read_top;
+
+  /* XHEAD_SIZEバイト読み込む */
+  if (*prog_sz >= XHEAD_SIZE) {
+    if (fread(read_ptr, 1, XHEAD_SIZE, fp) != XHEAD_SIZE) {
+      fclose(fp);
+      if (print_error) fprintf(stderr, "ファイルの読み込みに失敗しました\n");
+      return (-11);
+    }
+    read_sz -= XHEAD_SIZE;
+    if (loadmode == 1)
+      i = 0; /* Rファイル */
+    else if (loadmode == 3)
+      i = 1; /* Xファイル */
+    else
+      i = strlen(fname) - 2;
+    if (mem_get(read_top, S_WORD) == 0x4855 && i > 0) {
+      if (loadmode == 3 || strcmp(&(fname[i]), ".x") == 0 ||
+          strcmp(&(fname[i]), ".X") == 0) {
+        x_file = true;
+        memcpy(xhead, read_ptr, XHEAD_SIZE);
+        *prog_sz = read_sz;
+      }
+    }
+    if (!x_file) read_ptr += XHEAD_SIZE;
+  }
+
+  if (fread(read_ptr, 1, read_sz, fp) != (size_t)read_sz) {
+    fclose(fp);
+    if (print_error) fprintf(stderr, "ファイルの読み込みに失敗しました\n");
+    return (-11);
+  }
+
+  /* 実行ファイルのクローズ */
+  fclose(fp);
+
+  /* Xファイルの処理 */
+  *prog_sz2 = *prog_sz;
+  if (x_file) {
+    if ((pc_begin = xfile_cnv(prog_sz, prog_sz2, read_top, print_error)) == 0)
+      return (-11);
+  }
+
+  return (pc_begin);
 }
 
 /*
@@ -321,12 +309,79 @@ static Long xhead_getl(int adr) {
 }
 
 /*
- 　機能：プロセス管理テーブルを作成する
- 戻り値： TRUE = 正常終了
- 　　　　FALSE = 異常終了
+ 　機能：プロセス管理テーブルにファイル名をセットする
+ 戻り値： true = 正常終了
+ 　　　　false = 異常終了
 */
-int make_psp(char *fname, Long prev_adr, Long end_adr, Long process_id,
-             Long prog_size2) {
+static bool set_fname(char *p, Long psp_adr) {
+  char cud[67];
+  char *mem_ptr;
+  int i;
+
+  for (i = strlen(p) - 1; i >= 0; i--) {
+    if (p[i] == '\\' || p[i] == '/' || p[i] == ':') break;
+  }
+  i++;
+  if (strlen(&(p[i])) > 22) return false;
+  mem_ptr = prog_ptr + psp_adr + 0xC4;
+  strcpy(mem_ptr, &(p[i]));
+
+  mem_ptr = prog_ptr + psp_adr + 0x82;
+  if (i == 0) {
+    /* カレントディレクトリをセット */
+#ifdef _WIN32
+    {
+      GetCurrentDirectoryA(sizeof(cud), cud);
+      cud[sizeof(cud) - 1] = '\0';
+    }
+    if (false) {
+#else
+    if (getcwd(cud, 66) == NULL) {
+#endif
+      strcpy(mem_ptr, ".\\");
+    } else {
+      mem_ptr -= 2;
+      strcpy(mem_ptr, cud);
+      if (cud[strlen(cud) - 1] != '\\') strcat(mem_ptr, "\\");
+      return true;
+    }
+  } else {
+    p[i] = '\0';
+    for (i--; i >= 0; i--) {
+      if (p[i] == ':') break;
+    }
+    i++;
+    if (strlen(&(p[i])) > 64) return false;
+    strcpy(mem_ptr, &(p[i]));
+  }
+
+  mem_ptr = prog_ptr + psp_adr + 0x80;
+  if (i == 0) {
+    /* カレントドライブをセット */
+#ifdef _WIN32
+    {
+      char cpath[MAX_PATH];
+      GetCurrentDirectoryA(sizeof(cpath), cpath);
+      mem_ptr[0] = cpath[0];
+    }
+#else
+    mem_ptr[0] = 'A';
+#endif
+    mem_ptr[1] = ':';
+  } else {
+    memcpy(mem_ptr, p, 2);
+  }
+
+  return true;
+}
+
+/*
+ 　機能：プロセス管理テーブルを作成する
+ 戻り値： true = 正常終了
+ 　　　　false = 異常終了
+*/
+bool make_psp(char *fname, Long prev_adr, Long end_adr, Long process_id,
+              Long prog_size2) {
   char *mem_ptr;
 
   mem_ptr = prog_ptr + ra[0];
@@ -343,77 +398,33 @@ int make_psp(char *fname, Long prev_adr, Long end_adr, Long process_id,
   mem_set(ra[0] + 0x38, ra[1], S_LONG);
   mem_set(ra[0] + 0x44, sr, S_WORD); /* 親のSRの値 */
   mem_set(ra[0] + 0x60, 0, S_LONG);  /* 親あり */
-  if (set_fname(fname, ra[0]) == FALSE) return (FALSE);
+  if (!set_fname(fname, ra[0])) return false;
 
   psp[nest_cnt] = ra[0];
-  return (TRUE);
+  return true;
 }
+
+/* $Id: load.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
 
 /*
- 　機能：プロセス管理テーブルにファイル名をセットする
- 戻り値： TRUE = 正常終了
- 　　　　FALSE = 異常終了
-*/
-static int set_fname(char *p, Long psp_adr) {
-  char cud[67];
-  char *mem_ptr;
-  int i;
-
-  for (i = strlen(p) - 1; i >= 0; i--) {
-    if (p[i] == '\\' || p[i] == '/' || p[i] == ':') break;
-  }
-  i++;
-  if (strlen(&(p[i])) > 22) return (FALSE);
-  mem_ptr = prog_ptr + psp_adr + 0xC4;
-  strcpy(mem_ptr, &(p[i]));
-
-  mem_ptr = prog_ptr + psp_adr + 0x82;
-  if (i == 0) {
-    /* カレントディレクトリをセット */
-#ifdef _WIN32
-    {
-      BOOL b;
-      b = GetCurrentDirectoryA(sizeof(cud), cud);
-      cud[sizeof(cud) - 1] = '\0';
-    }
-    if (FALSE) {
-#else
-    if (getcwd(cud, 66) == NULL) {
-#endif
-      strcpy(mem_ptr, ".\\");
-    } else {
-      mem_ptr -= 2;
-      strcpy(mem_ptr, cud);
-      if (cud[strlen(cud) - 1] != '\\') strcat(mem_ptr, "\\");
-      return (TRUE);
-    }
-  } else {
-    p[i] = '\0';
-    for (i--; i >= 0; i--) {
-      if (p[i] == ':') break;
-    }
-    i++;
-    if (strlen(&(p[i])) > 64) return (FALSE);
-    strcpy(mem_ptr, &(p[i]));
-  }
-
-  mem_ptr = prog_ptr + psp_adr + 0x80;
-  if (i == 0) {
-    /* カレントドライブをセット */
-#ifdef _WIN32
-    {
-      char cpath[MAX_PATH];
-      BOOL b;
-      b = GetCurrentDirectoryA(sizeof(cpath), cpath);
-      mem_ptr[0] = cpath[0];
-    }
-#else
-    mem_ptr[0] = 'A';
-#endif
-    mem_ptr[1] = ':';
-  } else {
-    memcpy(mem_ptr, p, 2);
-  }
-
-  return (TRUE);
-}
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.5  1999/12/24  04:04:37  yfujii
+ * BUGFIX:When .x or .r is ommited and specified drive or path,
+ * run68 couldn't find the executable file.
+ *
+ * Revision 1.4  1999/12/07  12:47:10  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.4  1999/11/29  06:11:28  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.3  1999/10/21  13:32:01  yfujii
+ * DOS calls are replaced by win32 functions.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

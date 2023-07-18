@@ -15,65 +15,9 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/* $Id: doscall.c,v 1.3 2009/08/08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: doscall.c,v $
- * Revision 1.3  2009/08/08 06:49:44  masamic
- * Convert Character Encoding Shifted-JIS to UTF-8.
- *
- * Revision 1.2  2009/08/05 14:44:33  masamic
- * Some Bug fix, and implemented some instruction
- * Following Modification contributed by TRAP.
- *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
- * word size.
- * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
- * Add: Nbcd, Sbcd.
- *
- * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
- * First imported source code and docs
- *
- * Revision 1.14  2000/01/19  03:51:39  yfujii
- * NFILES is debugged.
- *
- * Revision 1.13  2000/01/16  05:38:53  yfujii
- * Function call 'NAMESTS' is debugged.
- *
- * Revision 1.12  2000/01/09  04:24:13  yfujii
- * Func call CURDRV is fixed according to buginfo0002.
- *
- * Revision 1.11  1999/12/23  08:06:27  yfujii
- * Bugs of FILES/NFILES calls are fixed.
- *
- * Revision 1.10  1999/12/07  12:41:55  yfujii
- * *** empty log message ***
- *
- * Revision 1.10  1999/11/29  07:57:04  yfujii
- * Modified time/date retrieving code to be correct.
- *
- * Revision 1.7  1999/10/29  13:44:11  yfujii
- * FGETC function is debugged.
- *
- * Revision 1.6  1999/10/26  12:26:08  yfujii
- * Environment variable function is drasticaly modified.
- *
- * Revision 1.5  1999/10/25  03:23:59  yfujii
- * Some function calls are modified to be correct.
- *
- * Revision 1.4  1999/10/21  04:08:21  yfujii
- * A lot of warnings are removed.
- *
- * Revision 1.3  1999/10/20  06:00:06  yfujii
- * Compile time errors are all removed.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
 #include <ctype.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,6 +30,7 @@
 #include <direct.h>
 #include <dos.h>
 #include <io.h>
+#include <windows.h>
 #else
 #include <dirent.h>
 #include <time.h>
@@ -157,23 +102,12 @@ static Long Exec3(Long, Long, Long);
 static void Exec4(Long);
 static Long gets2(char *, int);
 
+static void not_implemented(const char *name) {
+  fprintf(stderr, "run68: %s()は未実装です。\n", name);
+}
+
 #ifndef _WIN32
 void CloseHandle(FILE *fp) { fclose(fp); }
-
-int CreateDirectoryA(char *name, void *ptr) {
-  printf("CreateDirectoryA(\"%s\")\n", name);
-  return 1;
-}
-
-int RemoveDirectoryA(char *name) {
-  printf("RemoveDirectoryA(\"%s\")\n", name);
-  return 1;
-}
-
-int SetCurrentDirectory(char *name) {
-  printf("SetCurrentDirectory(\"%s\")\n", name);
-  return 1;
-}
 
 int _dos_getfileattr(char *name, void *ret) {
   printf("_dos_getfileattr(\"%s\")\n", name);
@@ -233,7 +167,7 @@ char ungetch(char c) {
 #endif
 
 // DOS _EXIT、DOS _EXIT2
-static BOOL Exit2(const char *name, Long exit_code) {
+static bool Exit2(const char *name, Long exit_code) {
   int i;
 
   if (func_trace_f) {
@@ -250,14 +184,14 @@ static BOOL Exit2(const char *name, Long exit_code) {
   }
   rd[0] = exit_code;
   if (nest_cnt == 0) {
-    return TRUE;
+    return true;
   }
   sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
   Mfree(psp[nest_cnt] + MB_SIZE);
   nest_cnt--;
   pc = nest_pc[nest_cnt];
   ra[7] = nest_sp[nest_cnt];
-  return FALSE;
+  return false;
 }
 
 // DOSコール名を表示する
@@ -282,10 +216,10 @@ static void print_drive_param(const char *prefix, UShort drive,
 
 /*
  　機能：DOSCALLを実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
  */
-int dos_call(UChar code) {
+bool dos_call(UChar code) {
   char *data_ptr = 0;
   Long stack_adr;
   Long data;
@@ -348,19 +282,18 @@ int dos_call(UChar code) {
 #ifdef _WIN32
         INPUT_RECORD ir;
         DWORD read_len;
-        BOOL b;
         rd[0] = 0;
-        b = PeekConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
+        PeekConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
         if (read_len == 0) {
           /* Do nothing. */
         } else if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown ||
                    c == 0x0) {
           /* 不要なイベントは読み捨てる */
-          b = ReadConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
+          ReadConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
         } else if (srt != 0xFE) {
-          b = ReadConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
+          ReadConsoleInput(finfo[0].fh, &ir, 1, (LPDWORD)&read_len);
           c = ir.Event.KeyEvent.uChar.AsciiChar;
-          if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
+          if (ini_info.pc98_key) c = cnv_key98(c);
           rd[0] = c;
         }
 #else
@@ -370,7 +303,7 @@ int dos_call(UChar code) {
           if (c == 0x00) {
             c = _getch();
           } else {
-            if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
+            if (ini_info.pc98_key) c = cnv_key98(c);
           }
           if (srt == 0xFE) ungetch(c);
           rd[0] = c;
@@ -463,11 +396,8 @@ int dos_call(UChar code) {
 #ifdef _WIN32
       {
         char drv[3];
-        BOOL b;
         sprintf(drv, "%c:", srt + 'A');
-        /* Win32 API */
-        b = SetCurrentDirectory(drv);
-        if (b) {
+        if (SetCurrentDirectory(drv)) {
           /* When succeeded. */
           rd[0] = srt;
         }
@@ -483,8 +413,7 @@ int dos_call(UChar code) {
 #ifdef _WIN32
       {
         char drv[512];
-        BOOL b;
-        b = GetCurrentDirectoryA(sizeof(drv), drv);
+        BOOL b = GetCurrentDirectoryA(sizeof(drv), drv);
         if (b && strlen(drv) != 0 && (drv[0] - 'A') == rd[0]) {
           /* OK, nothing to do. */
         } else {
@@ -532,8 +461,7 @@ int dos_call(UChar code) {
 #ifdef _WIN32
       {
         char path[512];
-        BOOL b;
-        b = GetCurrentDirectory(sizeof(path), path);
+        BOOL b = GetCurrentDirectory(sizeof(path), path);
         if (b && strlen(path) != 0) {
           rd[0] = path[0] - 'A';
         } else {
@@ -555,12 +483,12 @@ int dos_call(UChar code) {
       } else {
 #ifdef _WIN32
         DWORD read_len;
-        BOOL b = FALSE;
         INPUT_RECORD ir;
         if (GetFileType(finfo[fhdl].fh) == FILE_TYPE_CHAR) {
           /* 標準入力のハンドルがキャラクタタイプだったら、ReadConsoleを試してみる。*/
-          while (TRUE) {
-            b = ReadConsoleInput(finfo[fhdl].fh, &ir, 1, (LPDWORD)&read_len);
+          while (true) {
+            BOOL b =
+                ReadConsoleInput(finfo[fhdl].fh, &ir, 1, (LPDWORD)&read_len);
             if (b == FALSE) {
               /* コンソールではなかった。*/
               ReadFile(finfo[fhdl].fh, &c, 1, (LPDWORD)&read_len, NULL);
@@ -986,7 +914,7 @@ int dos_call(UChar code) {
           break;
         default:
           err68("DOSCALL EXEC(5)が実行されました");
-          return (TRUE);
+          return true;
       }
       break;
     case 0x4E: /* FILES */
@@ -1088,10 +1016,10 @@ int dos_call(UChar code) {
       break;
 
     case 0x4C: /* EXIT2 */
-      if (Exit2("EXIT2", mem_get(stack_adr, S_WORD))) return TRUE;
+      if (Exit2("EXIT2", mem_get(stack_adr, S_WORD))) return true;
       break;
     case 0x00: /* EXIT */
-      if (Exit2("EXIT", 0)) return TRUE;
+      if (Exit2("EXIT", 0)) return true;
       break;
 
     case 0x31: /* KEEPPR */
@@ -1106,7 +1034,7 @@ int dos_call(UChar code) {
           if (finfo[i].fh != NULL) CloseHandle(finfo[i].fh);
         }
       }
-      if (nest_cnt == 0) return TRUE;
+      if (nest_cnt == 0) return true;
       Setblock(psp[nest_cnt] + MB_SIZE, len + PSP_SIZE - MB_SIZE);
       mem_set(psp[nest_cnt] + 0x04, 0xFF, S_BYTE);
       sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
@@ -1133,7 +1061,7 @@ int dos_call(UChar code) {
       }
       break;
   }
-  return (FALSE);
+  return false;
 }
 
 /*
@@ -1382,13 +1310,13 @@ static Long Mfree(Long adr) {
  */
 static Long Dskfre(short drv, Long buf) {
 #ifdef _WIN32
-  BOOL b;
   ULong SectorsPerCluster, BytesPerSector, NumberOfFreeClusters,
       TotalNumberOfClusters;
-  b = GetDiskFreeSpaceA(
-      NULL, (LPDWORD)&SectorsPerCluster, (LPDWORD)&BytesPerSector,
-      (LPDWORD)&NumberOfFreeClusters, (LPDWORD)&TotalNumberOfClusters);
-  if (!b) return (-15);
+
+  BOOL b = GetDiskFreeSpaceA(NULL, (LPDWORD)&SectorsPerCluster, (LPDWORD)&BytesPerSector,
+                    (LPDWORD)&NumberOfFreeClusters,
+                    (LPDWORD)&TotalNumberOfClusters);
+  if (b == FALSE) return (-15);
   NumberOfFreeClusters &= 0xFFFF;
   mem_set(buf, NumberOfFreeClusters, S_WORD);
   TotalNumberOfClusters &= 0xFFFF;
@@ -2070,48 +1998,58 @@ static Long Chmod(Long adr, short atr) {
   }
 }
 
+// DOS _MKDIR 汎用環境用(未実装)
+#ifndef HOST_MKDIR
+#define HOST_MKDIR Mkdir_generic
+
+static Long Mkdir_generic(Long name) {
+  not_implemented(__func__);
+  return DOSE_ILGFNC;
+}
+#endif
+
 /*
  　機能：DOSCALL MKDIRを実行する
  戻り値：エラーコード
  */
-static Long Mkdir(Long name) {
-  char *name_ptr;
-
-  name_ptr = prog_ptr + name;
-  if (CreateDirectoryA(name_ptr, NULL) == FALSE) {
-    if (errno == EACCES) return (-20); /* ディレクトリは既に存在する */
-    return (-13);                      /* ファイル名指定誤り */
-  }
-  return (0);
+static Long Mkdir(Long name) {  //
+  return HOST_MKDIR(name);
 }
+
+// DOS _RMDIR 汎用環境用(未実装)
+#ifndef HOST_RMDIR
+#define HOST_RMDIR Rmdir_generic
+
+static Long Rmdir_generic(Long name) {
+  not_implemented(__func__);
+  return DOSE_ILGFNC;
+}
+#endif
 
 /*
  　機能：DOSCALL RMDIRを実行する
  戻り値：エラーコード
          */
-static Long Rmdir(Long name) {
-  char *name_ptr;
-
-  name_ptr = prog_ptr + name;
-  errno = 0;
-  if (RemoveDirectoryA(name_ptr) == FALSE) {
-    if (errno == EACCES) return (-21); /* ディレクトリ中にファイルがある */
-    return (-13);                      /* ファイル名指定誤り */
-  }
-  return (0);
+static Long Rmdir(Long name) {  //
+  return HOST_RMDIR(name);
 }
+
+// DOS _CHDIR 汎用環境用(未実装)
+#ifndef HOST_CHDIR
+#define HOST_CHDIR Chdir_generic
+
+static Long Chdir_generic(Long name) {
+  not_implemented(__func__);
+  return DOSE_ILGFNC;
+}
+#endif
 
 /*
  　機能：DOSCALL CHDIRを実行する
  戻り値：エラーコード
  */
-static Long Chdir(Long name) {
-  char *name_ptr;
-
-  name_ptr = prog_ptr + name;
-  if (SetCurrentDirectory(name_ptr) == FALSE)
-    return (-3); /* ディレクトリが見つからない */
-  return (0);
+static Long Chdir(Long name) {  //
+  return HOST_CHDIR(name);
 }
 
 #ifdef USE_ICONV
@@ -2206,9 +2144,9 @@ handle = FindFirstFileEx
   buf_ptr[1] = 0;                    /* ドライブ番号(not used) */
   *((HANDLE *)&buf_ptr[2]) = handle; /* サーチハンドル */
   {
-    BOOL b = handle != INVALID_HANDLE_VALUE;
+    bool b = handle != INVALID_HANDLE_VALUE;
     /* 属性の一致するファイルが見つかるまで繰返し検索する。*/
-    while (b == TRUE) {
+    while (b) {
       unsigned char fatr;
       fatr = f_data.dwFileAttributes & FILE_ATTRIBUTE_READONLY ? 0x01 : 0;
       fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN ? 0x02 : 0;
@@ -2222,7 +2160,7 @@ handle = FindFirstFileEx
         buf_ptr[21] = fatr;
         break; /* 指定された属性のファイルが見つかった。*/
       }
-      b = FindNextFile(handle, &f_data);
+      b = FindNextFile(handle, &f_data) != FALSE;
     }
     if (!b) return (-2);
   }
@@ -2263,9 +2201,7 @@ handle = FindFirstFileEx
       buf_ptr[1] = 0;   /* ドライブ番号(not used) */
                         //			*((HANDLE*)&buf_ptr[2]) = handle; /*
                         // サーチハンドル */
-      {
-          // BOOL b = handle != INVALID_HANDLE_VALUE;
-      } /* DATEとTIMEをセット */
+      /* DATEとTIMEをセット */
       {
         /*
                                         SYSTEMTIME st;
@@ -2332,7 +2268,6 @@ static Long Nfiles(Long buf) {
     /* todo:buf_ptrの指す領域から必要な情報を取り出して、f_dataにコピーする。*/
     /* 2秒→100nsに変換する。*/
     SYSTEMTIME st;
-    BOOL b;
     unsigned short s;
 
     s = *((unsigned short *)&buf_ptr[24]);
@@ -2344,15 +2279,15 @@ static Long Nfiles(Long buf) {
     st.wMinute = (s & 0x07e0) >> 5;
     st.wSecond = (s & 0x001f);
     st.wMilliseconds = 0;
-    b = SystemTimeToFileTime(&st, &f_data.ftLastWriteTime);
+    SystemTimeToFileTime(&st, &f_data.ftLastWriteTime);
 
     f_data.nFileSizeHigh = 0;
     f_data.nFileSizeLow = *((ULong *)&buf_ptr[29]);
     /* ファイルのハンドルをバッファから取得する。*/
     handle = *((HANDLE *)&buf_ptr[2]);
-    b = FindNextFile(handle, &f_data);
+    bool b = FindNextFile(handle, &f_data) != FALSE;
     /* 属性の一致するファイルが見つかるまで繰返し検索する。*/
-    while (b == TRUE) {
+    while (b) {
       unsigned char fatr;
       fatr = f_data.dwFileAttributes & FILE_ATTRIBUTE_READONLY ? 0x01 : 0;
       fatr |= f_data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN ? 0x02 : 0;
@@ -2366,7 +2301,7 @@ static Long Nfiles(Long buf) {
         buf_ptr[21] = fatr;
         break; /* 指定された属性のファイルが見つかった。*/
       }
-      b = FindNextFile(handle, &f_data);
+      b = FindNextFile(handle, &f_data) != FALSE;
     }
     if (!b) {
       return -2;
@@ -2403,13 +2338,13 @@ static Long Nfiles(Long buf) {
   return (0);
 }
 
-// DOS _CURDIR 汎用環境用
+// DOS _FILEDATE 汎用環境用(未実装)
 #ifndef HOST_FILEDATE
 #define HOST_FILEDATE Filedate_generic
 
 static Long Filedate_generic(short hdl, Long dt) {
-  printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__);
-  return -6;
+  not_implemented(__func__);
+  return DOSE_ILGFNC;
 }
 #endif
 
@@ -2417,8 +2352,7 @@ static Long Filedate_generic(short hdl, Long dt) {
  　機能：DOSCALL FILEDATEを実行する
  戻り値：エラーコード
  */
-static Long Filedate(short hdl, Long dt) {
-  //
+static Long Filedate(short hdl, Long dt) {  //
   return HOST_FILEDATE(hdl, dt);
 }
 
@@ -2877,7 +2811,7 @@ static Long Keyctrl(short mode, Long stack_adr) {
         if (c == 0x85) /* F11 */
           c = 0x03;    /* break */
       } else {
-        if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
+        if (ini_info.pc98_key) c = cnv_key98(c);
       }
       return (c);
 #ifdef _WIN32
@@ -2889,7 +2823,7 @@ static Long Keyctrl(short mode, Long stack_adr) {
         if (c == 0x85) /* F11 */
           c = 0x03;    /* break */
       } else {
-        if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
+        if (ini_info.pc98_key) c = cnv_key98(c);
       }
       _ungetch(c);
       return (c);
@@ -3070,7 +3004,7 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
   if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
   strcpy(fname, name_ptr);
-  if ((fp = prog_open(fname, FALSE)) == NULL) return (-2);
+  if ((fp = prog_open(fname, false)) == NULL) return (-2);
 
   if (nest_cnt + 1 >= NEST_MAX) return (-8);
 
@@ -3091,7 +3025,7 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
 
   prog_size2 = ((loadmode << 24) | end_adr);
   pc1 = prog_read(fp, fname, mem - MB_SIZE + PSP_SIZE, &prog_size, &prog_size2,
-                  FALSE);
+                  false);
   if (pc1 < 0) {
     Mfree(mem);
     return (pc1);
@@ -3108,8 +3042,7 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
     ra[3] = env;
   ra[4] = pc1;
   nest_cnt++;
-  if (make_psp(fname, prev_adr, end_adr, psp[nest_cnt - 1], prog_size2) ==
-      FALSE) {
+  if (!make_psp(fname, prev_adr, end_adr, psp[nest_cnt - 1], prog_size2)) {
     nest_cnt--;
     Mfree(mem);
     return (-13);
@@ -3148,7 +3081,7 @@ static Long Exec2(Long nm, Long cmd, Long env) {
   }
 
   /* 環境変数PATHに従ってファイルを検索し、オープンする。*/
-  fp = prog_open(name_ptr, TRUE);
+  fp = prog_open(name_ptr, true);
   if (fp == NULL) {
     return 0;
   } else {
@@ -3178,10 +3111,10 @@ static Long Exec3(Long nm, Long adr1, Long adr2) {
   if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
   strcpy(fname, name_ptr);
-  if ((fp = prog_open(fname, FALSE)) == NULL) return (-2);
+  if ((fp = prog_open(fname, false)) == NULL) return (-2);
 
   prog_size2 = ((loadmode << 24) | adr2);
-  ret = prog_read(fp, fname, adr1, &prog_size, &prog_size2, FALSE);
+  ret = prog_read(fp, fname, adr1, &prog_size, &prog_size2, false);
   if (ret < 0) return (ret);
 
   return (prog_size);
@@ -3247,3 +3180,60 @@ static Long gets2(char *str, int max) {
                 DOS	_BUS_ERR
                 lea	(10,sp),sp
 */
+
+/* $Id: doscall.c,v 1.3 2009/08/08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: doscall.c,v $
+ * Revision 1.3  2009/08/08 06:49:44  masamic
+ * Convert Character Encoding Shifted-JIS to UTF-8.
+ *
+ * Revision 1.2  2009/08/05 14:44:33  masamic
+ * Some Bug fix, and implemented some instruction
+ * Following Modification contributed by TRAP.
+ *
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
+ * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
+ * Add: Nbcd, Sbcd.
+ *
+ * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.14  2000/01/19  03:51:39  yfujii
+ * NFILES is debugged.
+ *
+ * Revision 1.13  2000/01/16  05:38:53  yfujii
+ * Function call 'NAMESTS' is debugged.
+ *
+ * Revision 1.12  2000/01/09  04:24:13  yfujii
+ * Func call CURDRV is fixed according to buginfo0002.
+ *
+ * Revision 1.11  1999/12/23  08:06:27  yfujii
+ * Bugs of FILES/NFILES calls are fixed.
+ *
+ * Revision 1.10  1999/12/07  12:41:55  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.10  1999/11/29  07:57:04  yfujii
+ * Modified time/date retrieving code to be correct.
+ *
+ * Revision 1.7  1999/10/29  13:44:11  yfujii
+ * FGETC function is debugged.
+ *
+ * Revision 1.6  1999/10/26  12:26:08  yfujii
+ * Environment variable function is drasticaly modified.
+ *
+ * Revision 1.5  1999/10/25  03:23:59  yfujii
+ * Some function calls are modified to be correct.
+ *
+ * Revision 1.4  1999/10/21  04:08:21  yfujii
+ * A lot of warnings are removed.
+ *
+ * Revision 1.3  1999/10/20  06:00:06  yfujii
+ * Compile time errors are all removed.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

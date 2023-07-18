@@ -16,6 +16,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -48,10 +49,10 @@ static void Dmamove(Long, Long, Long, Long);
 
 /*
  　機能：IOCSCALLを実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-int iocs_call() {
+bool iocs_call() {
   UChar *data_ptr;
   ULong ul;
   UChar no;
@@ -156,7 +157,6 @@ int iocs_call() {
       break;
     case 0x6E: /* HSYNCST */
       err68("水平同期割り込みを設定しようとしました");
-      return (TRUE);
     case 0x7F: /* ONTIME */
 #ifdef _WIN32
       ul = GetTickCount() / 1000;
@@ -232,7 +232,7 @@ int iocs_call() {
       break;
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*

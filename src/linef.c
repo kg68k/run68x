@@ -15,39 +15,10 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/* $Id: linef.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.2  2009/08/05 14:44:33  masamic
- * Some Bug fix, and implemented some instruction
- * Following Modification contributed by TRAP.
- *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
- * word size.
- * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
- * Add: Nbcd, Sbcd.
- *
- * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
- * First imported source code and docs
- *
- * Revision 1.4  1999/12/07  12:46:15  yfujii
- * *** empty log message ***
- *
- * Revision 1.4  1999/10/22  04:02:00  yfujii
- * 'ltoa()'s are replaced by '_ltoa()'.
- *
- * Revision 1.3  1999/10/20  04:14:48  masamichi
- * Added showing more information about errors.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,7 +35,6 @@ typedef union {
   UChar c[4];
 } FLT;
 
-static int fefunc(UChar);
 static Long Lmul(Long, Long);
 static Long Ldiv(Long, Long);
 static Long Lmod(Long, Long);
@@ -129,32 +99,11 @@ static void To_dbl(DBL *, Long, Long);
 static void Pow(Long, Long, Long, Long);
 
 /*
- 　機能：Fライン命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
-*/
-int linef(char *pc_ptr) {
-  char code;
-
-  code = *(pc_ptr++);
-  pc += 2;
-
-  /* DOSコールの処理 */
-  if (code == (char)0xFF) return (dos_call(*pc_ptr));
-
-  /* FLOATコールの処理 */
-  if (code == (char)0xFE) return (fefunc(*pc_ptr));
-
-  err68a("未定義のＦライン命令を実行しました", __FILE__, __LINE__);
-  return (TRUE);
-}
-
-/*
  　機能：FLOAT CALLを実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int fefunc(UChar code) {
+static bool fefunc(UChar code) {
   Long adr;
   short save_s;
 
@@ -168,7 +117,7 @@ static int fefunc(UChar code) {
     ra[7] -= 2;
     mem_set(ra[7], sr, S_WORD);
     pc = adr;
-    return (FALSE);
+    return false;
   }
   if (save_s == 0) SR_S_OFF();
 
@@ -390,10 +339,9 @@ static int fefunc(UChar code) {
       printf("0x%X\n", code);
       err68a("未登録のFEファンクションコールを実行しました", __FILE__,
              __LINE__);
-      return (TRUE);
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
@@ -1708,3 +1656,53 @@ static void Pow(Long d0, Long d1, Long d2, Long d3) {
 
   From_dbl(&ans, 0);
 }
+
+/*
+ 　機能：Fライン命令を実行する
+ 戻り値： true = 実行終了
+         false = 実行継続
+*/
+bool linef(char *pc_ptr) {
+  char code;
+
+  code = *(pc_ptr++);
+  pc += 2;
+
+  /* DOSコールの処理 */
+  if (code == (char)0xFF) return (dos_call(*pc_ptr));
+
+  /* FLOATコールの処理 */
+  if (code == (char)0xFE) return (fefunc(*pc_ptr));
+
+  err68a("未定義のＦライン命令を実行しました", __FILE__, __LINE__);
+}
+
+/* $Id: linef.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.2  2009/08/05 14:44:33  masamic
+ * Some Bug fix, and implemented some instruction
+ * Following Modification contributed by TRAP.
+ *
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
+ * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
+ * Add: Nbcd, Sbcd.
+ *
+ * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.4  1999/12/07  12:46:15  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.4  1999/10/22  04:02:00  yfujii
+ * 'ltoa()'s are replaced by '_ltoa()'.
+ *
+ * Revision 1.3  1999/10/20  04:14:48  masamichi
+ * Added showing more information about errors.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

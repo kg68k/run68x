@@ -39,6 +39,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -66,16 +67,15 @@ void read_ini(char *path, char *prog) {
   char buf[1024] = {0};
   char sec_name[MAX_PATH];
   FILE *fp;
-  int flag = TRUE;
   int i;
   int c;
   char *p;
 
   /* 情報構造体の初期化 */
-  ini_info.env_lower = FALSE;
-  ini_info.trap_emulate = FALSE;
-  ini_info.pc98_key = FALSE;
-  ini_info.io_through = FALSE;
+  ini_info.env_lower = false;
+  ini_info.trap_emulate = false;
+  ini_info.pc98_key = false;
+  ini_info.io_through = false;
   mem_aloc = 0x100000;
 
   /* INIファイルのフルパス名を得る。*/
@@ -119,31 +119,33 @@ void read_ini(char *path, char *prog) {
   }
   sprintf(sec_name, "[%s]", &(prog[i]));
   _strlwr(sec_name);
+
   /* 内容を調べる */
+  bool section_match = true;
   while (fgets(buf, 1023, fp) != NULL) {
     _strlwr(buf);
     chomp(buf);
 
     /* セクションを見る */
     if (buf[0] == '[') {
-      flag = FALSE;
+      section_match = false;
       if (_stricmp(buf, "[all]") == 0)
-        flag = TRUE;
+        section_match = true;
       else if (_stricmp(buf, sec_name) == 0)
-        flag = TRUE;
+        section_match = true;
       continue;
     }
 
     /* キーワードを見る */
-    if (flag == TRUE) {
+    if (section_match) {
       if (_stricmp(buf, "envlower") == 0)
-        ini_info.env_lower = TRUE;
+        ini_info.env_lower = true;
       else if (_stricmp(buf, "trapemulate") == 0)
-        ini_info.trap_emulate = TRUE;
+        ini_info.trap_emulate = true;
       else if (_stricmp(buf, "pc98") == 0)
-        ini_info.pc98_key = TRUE;
+        ini_info.pc98_key = true;
       else if (_stricmp(buf, "iothrough") == 0)
-        ini_info.io_through = TRUE;
+        ini_info.io_through = true;
       else if (strncmp(buf, "mainmemory=", 11) == 0) {
         if (strlen(buf) < 12 || 13 < strlen(buf)) continue;
         if ('0' <= buf[11] && buf[11] <= '9') {
@@ -170,8 +172,7 @@ void readenv_from_ini(char *path) {
   int len;
   char *mem_ptr; /* メモリ管理ブロック */
   char *read_ptr;
-  int env_len = 0;        /* 環境の長さ */
-  BOOL env_flag = FALSE;  // ファイル先頭は [all] セクション
+  int env_len = 0; /* 環境の長さ */
 
   /* INIファイルの名前(パス含む)を得る */
   strcpy(buf, path);
@@ -184,27 +185,29 @@ void readenv_from_ini(char *path) {
   /* 環境変数はiniファイルに記述する。*/
   mem_set(ra[3], ENV_SIZE, S_LONG);
   mem_set(ra[3] + 4, 0, S_BYTE);
+
   /* 内容を調べる */
+  bool env_flag = false;  // ファイル先頭は [all] セクション
   while (fgets(buf, 1023, fp) != NULL) {
     _strlwr(buf);
     chomp(buf);
 
     /* セクションを見る */
     if (buf[0] == '[') {
-      env_flag = FALSE;
+      env_flag = false;
       if (strcmp(buf, "[environment]") == 0) {
-        env_flag = TRUE;
+        env_flag = true;
       }
       continue;
     }
 
-    if (env_flag == TRUE) {
+    if (env_flag) {
       /* 環境変数はiniファイルに記述する。*/
       /* bufに格納された文字列の書式を確認すべきである。*/
       if (env_len + strlen(buf) < ENV_SIZE - 5) {
         mem_ptr = prog_ptr + ra[3] + 4 + env_len;
         strcpy(mem_ptr, buf);
-        if (ini_info.env_lower == TRUE) {
+        if (ini_info.env_lower) {
           _strlwr(buf);
           read_ptr = buf;
           while (*mem_ptr != '\0' && *mem_ptr != '=')

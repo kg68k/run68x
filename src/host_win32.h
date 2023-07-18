@@ -22,6 +22,15 @@
 
 #ifdef _WIN32
 
+Long Mkdir_win32(Long name);
+#define HOST_MKDIR Mkdir_win32
+
+Long Rmdir_win32(Long name);
+#define HOST_RMDIR Rmdir_win32
+
+Long Chdir_win32(Long name);
+#define HOST_CHDIR Chdir_win32
+
 Long Curdir_win32(short drv, char* buf_ptr);
 #define HOST_CURDIR Curdir_win32
 

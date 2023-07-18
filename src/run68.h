@@ -15,78 +15,6 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/* $Id: run68.h,v 1.5 2009/08/08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: run68.h,v $
- * Revision 1.5  2009/08/08 06:49:44  masamic
- * Convert Character Encoding Shifted-JIS to UTF-8.
- *
- * Revision 1.4  2009/08/05 14:44:33  masamic
- * Some Bug fix, and implemented some instruction
- * Following Modification contributed by TRAP.
- *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
- * word size.
- * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
- * Add: Nbcd, Sbcd.
- *
- * Revision 1.3  2004/12/17 07:51:06  masamic
- * Support TRAP instraction widely. (but not be tested)
- *
- * Revision 1.2  2004/12/16 12:25:12  masamic
- * It has become under GPL.
- * Maintenor name has changed.
- * Modify codes for aboves.
- *
- * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
- * First imported source code and docs
- *
- * Revision 1.14  1999/12/07  12:47:54  yfujii
- * *** empty log message ***
- *
- * Revision 1.14  1999/11/29  06:24:55  yfujii
- * Some functions' prototypes are added.
- *
- * Revision 1.13  1999/11/08  10:29:30  yfujii
- * Calling convention to eaaccess.c is changed.
- *
- * Revision 1.12  1999/11/08  03:09:41  yfujii
- * Debugger command "wathchc" is added.
- *
- * Revision 1.11  1999/11/01  10:36:33  masamichi
- * Reduced move[a].l routine. and Create functions about accessing effective
- * address.
- *
- * Revision 1.10  1999/11/01  06:23:33  yfujii
- * Some debugging functions are introduced.
- *
- * Revision 1.9  1999/10/29  13:44:04  yfujii
- * Debugging facilities are introduced.
- *
- * Revision 1.8  1999/10/27  03:44:01  yfujii
- * Macro RUN68VERSION is defined.
- *
- * Revision 1.7  1999/10/26  12:26:08  yfujii
- * Environment variable function is drasticaly modified.
- *
- * Revision 1.6  1999/10/26  01:31:54  yfujii
- * Execution history and address trap is added.
- *
- * Revision 1.5  1999/10/25  03:26:27  yfujii
- * Declarations for some flags are added.
- *
- * Revision 1.4  1999/10/20  12:52:10  yfujii
- * Add an #if directive.
- *
- * Revision 1.3  1999/10/20  06:31:09  yfujii
- * Made a little modification for Cygnus GCC.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
 #ifndef RUN68_H
 #define RUN68_H
 
@@ -104,6 +32,7 @@
 #endif
 
 #include <setjmp.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -113,14 +42,6 @@ typedef int16_t Short;
 typedef uint16_t UShort;
 typedef int32_t Long;    // 64bit 環境対応
 typedef uint32_t ULong;  // 64bit 環境対応
-
-#ifdef WIN32
-#include <windows.h>
-#else
-#define BOOL int
-#define TRUE -1
-#define FALSE 0
-#endif
 
 #ifndef _WIN32
 #include <limits.h>
@@ -197,11 +118,6 @@ typedef uint32_t ULong;  // 64bit 環境対応
 #define EA_Variable 0x01ff       /* 0000 0001 1111 1111 */
 #define EA_VariableMemory 0x01fc /* 0000 0001 1111 1100 */
 
-/* EaAccess.c */
-BOOL get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data);
-BOOL set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data);
-BOOL get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data);
-
 #define CCR_X_ON() sr |= 0x0010
 #define CCR_X_OFF() sr &= 0xFFEF
 #define CCR_X_REF() (sr & 0x0010)
@@ -222,6 +138,9 @@ BOOL get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data);
 #define SR_S_REF() (sr & 0x2000)
 #define SR_T_REF() (sr & 0x8000)
 
+#ifdef _WIN32
+#include <windows.h>  // HANDLE
+#endif
 typedef struct {
 #ifdef _WIN32
   HANDLE fh;
@@ -236,10 +155,10 @@ typedef struct {
 } FILEINFO;
 
 typedef struct {
-  char env_lower;
-  char trap_emulate;
-  char pc98_key;
-  char io_through;
+  bool env_lower;
+  bool trap_emulate;
+  bool pc98_key;
+  bool io_through;
 } INI_INFO;
 
 /* デバッグ用に実行した命令の情報を保存しておく構造体 */
@@ -254,9 +173,17 @@ typedef struct {
   char mnemonic[64]; /* ニーモニック(できれば) */
 } EXEC_INSTRUCTION_INFO;
 
+/* eaaccess.c */
+bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data);
+bool set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data);
+bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data);
+bool get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size,
+                          Long *data);
+
 /* run68.c */
-extern FILEINFO finfo[FILE_MAX];  // ファイル管理テーブル
-extern INI_INFO ini_info;         // iniファイルの内容
+extern EXEC_INSTRUCTION_INFO OP_info;  // 命令実行情報
+extern FILEINFO finfo[FILE_MAX];       // ファイル管理テーブル
+extern INI_INFO ini_info;              // iniファイルの内容
 extern const char size_char[3];
 extern Long ra[8];      // アドレスレジスタ
 extern Long rd[8 + 1];  // データレジスタ
@@ -270,34 +197,24 @@ extern Long psp[NEST_MAX];      // PSP
 extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保存
 extern Long nest_sp[NEST_MAX];  // 親プロセスのスタックポインタを保存
 extern unsigned int nest_cnt;  // 子プロセスを起動するたびに+1
-extern Long mem_aloc;          // メインメモリの大きさ
-/* フラグ */
-extern BOOL func_trace_f;
-extern BOOL trace_f;
-extern Long trap_pc;
-extern jmp_buf jmp_when_abort;
-extern unsigned short cwatchpoint;
-/* 標準入力のハンドル */
-#ifdef _WIN32
-extern HANDLE stdin_handle;
-#endif
-
-/* 命令実行情報 */
-extern EXEC_INSTRUCTION_INFO OP_info;
-void term(int);
+extern jmp_buf jmp_when_abort;  // アボート処理のためのジャンプバッファ
+extern Long mem_aloc;           // メインメモリの大きさ
+extern bool func_trace_f;  // -f ファンクションコールトレース
+extern Long trap_pc;       // -tr MPU命令トレースを行うアドレス
+extern unsigned short cwatchpoint;  // 命令ウォッチ
 
 /* getini.c */
 void read_ini(char *path, char *prog);
 void readenv_from_ini(char *path);
 
 /* load.c */
-FILE *prog_open(char *, int);
-Long prog_read(FILE *, char *, Long, Long *, Long *, int);
-int make_psp(char *, Long, Long, Long, Long);
+FILE *prog_open(char *, bool);
+Long prog_read(FILE *, char *, Long, Long *, Long *, bool);
+bool make_psp(char *, Long, Long, Long, Long);
 
 /* exec.c */
-int prog_exec(void);
-int get_cond(char);
+bool prog_exec(void);
+bool get_cond(char);
 NORETURN void err68(char *);
 NORETURN void err68a(char *mes, char *file, int line);
 NORETURN void err68b(char *mes, Long pc, Long ppc);
@@ -323,11 +240,11 @@ void mem_set(Long, Long, char);
 NORETURN void run68_abort(Long);
 
 /* doscall.c */
-int dos_call(UChar);
+bool dos_call(UChar);
 Long Getenv_common(const char *name_p, char *buf_p);
 
 /* iocscall.c */
-int iocs_call(void);
+bool iocs_call(void);
 
 /* key.c */
 void get_fnckey(int, char *);
@@ -335,25 +252,23 @@ void put_fnckey(int, char *);
 UChar cnv_key98(UChar);
 
 /* line?.c */
-int line0(char *);
-int line2(char *);
-int line4(char *);
-int line5(char *);
-int line6(char *);
-int line7(char *);
-int line8(char *);
-int line9(char *);
-int lineb(char *);
-int linec(char *);
-int lined(char *);
-int linee(char *);
-int linef(char *);
-
-/* eaaccess.c */
-BOOL get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size,
-                          Long *data);
+bool line0(char *);
+bool line2(char *);
+bool line4(char *);
+bool line5(char *);
+bool line6(char *);
+bool line7(char *);
+bool line8(char *);
+bool line9(char *);
+bool lineb(char *);
+bool linec(char *);
+bool lined(char *);
+bool linee(char *);
+bool linef(char *);
 
 /* debugger.c */
+extern ULong stepcount;
+
 typedef enum {
   RUN68_COMMAND_BREAK,   /* ブレークポイントの設定 */
   RUN68_COMMAND_CLEAR,   /* ブレークポイントのクリア */
@@ -373,14 +288,14 @@ typedef enum {
   RUN68_COMMAND_ERROR   /* コマンドエラー(移動禁止) */
 } RUN68_COMMAND;
 
-RUN68_COMMAND debugger(BOOL running);
+RUN68_COMMAND debugger(bool running);
 
 /* conditions.c */
 void general_conditions(Long dest, int size);
-void add_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag);
+void add_conditions(Long src, Long dest, Long result, int size, bool zero_flag);
 void cmp_conditions(Long src, Long dest, Long result, int size);
-void sub_conditions(Long src, Long dest, Long result, int size, BOOL zero_flag);
-void neg_conditions(Long dest, Long result, int size, BOOL zero_flag);
+void sub_conditions(Long src, Long dest, Long result, int size, bool zero_flag);
+void neg_conditions(Long dest, Long result, int size, bool zero_flag);
 void check(char *mode, Long src, Long dest, Long result, int size,
            short before);
 
@@ -407,3 +322,75 @@ char *disassemble(Long addr, Long *next_addr);
 */
 
 #endif
+
+/* $Id: run68.h,v 1.5 2009/08/08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: run68.h,v $
+ * Revision 1.5  2009/08/08 06:49:44  masamic
+ * Convert Character Encoding Shifted-JIS to UTF-8.
+ *
+ * Revision 1.4  2009/08/05 14:44:33  masamic
+ * Some Bug fix, and implemented some instruction
+ * Following Modification contributed by TRAP.
+ *
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
+ * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
+ * Add: Nbcd, Sbcd.
+ *
+ * Revision 1.3  2004/12/17 07:51:06  masamic
+ * Support TRAP instraction widely. (but not be tested)
+ *
+ * Revision 1.2  2004/12/16 12:25:12  masamic
+ * It has become under GPL.
+ * Maintenor name has changed.
+ * Modify codes for aboves.
+ *
+ * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.14  1999/12/07  12:47:54  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.14  1999/11/29  06:24:55  yfujii
+ * Some functions' prototypes are added.
+ *
+ * Revision 1.13  1999/11/08  10:29:30  yfujii
+ * Calling convention to eaaccess.c is changed.
+ *
+ * Revision 1.12  1999/11/08  03:09:41  yfujii
+ * Debugger command "wathchc" is added.
+ *
+ * Revision 1.11  1999/11/01  10:36:33  masamichi
+ * Reduced move[a].l routine. and Create functions about accessing effective
+ * address.
+ *
+ * Revision 1.10  1999/11/01  06:23:33  yfujii
+ * Some debugging functions are introduced.
+ *
+ * Revision 1.9  1999/10/29  13:44:04  yfujii
+ * Debugging facilities are introduced.
+ *
+ * Revision 1.8  1999/10/27  03:44:01  yfujii
+ * Macro RUN68VERSION is defined.
+ *
+ * Revision 1.7  1999/10/26  12:26:08  yfujii
+ * Environment variable function is drasticaly modified.
+ *
+ * Revision 1.6  1999/10/26  01:31:54  yfujii
+ * Execution history and address trap is added.
+ *
+ * Revision 1.5  1999/10/25  03:26:27  yfujii
+ * Declarations for some flags are added.
+ *
+ * Revision 1.4  1999/10/20  12:52:10  yfujii
+ * Add an #if directive.
+ *
+ * Revision 1.3  1999/10/20  06:31:09  yfujii
+ * Made a little modification for Cygnus GCC.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

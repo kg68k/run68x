@@ -1,30 +1,24 @@
-/* $Id: mem.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
- * First imported source code and docs
- *
- * Revision 1.4  1999/12/07  12:47:22  yfujii
- * *** empty log message ***
- *
- * Revision 1.4  1999/11/29  06:18:06  yfujii
- * Calling CloseHandle instead of fclose when abort().
- *
- * Revision 1.3  1999/11/01  06:23:33  yfujii
- * Some debugging functions are introduced.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "run68.h"
-
-static int mem_red_chk(Long);
-static int mem_wrt_chk(Long);
 
 /*
  　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
@@ -85,6 +79,48 @@ Long imi_get(char size) {
 }
 
 /*
+ 　機能：読み込みアドレスのチェック
+ 戻り値： true = OK
+         false = NGだが、0を読み込んだとみなす
+*/
+static bool mem_red_chk(Long adr) {
+  char message[256];
+
+  adr &= 0x00FFFFFF;
+  if (adr >= 0xC00000) {
+    if (ini_info.io_through) return false;
+    sprintf(message, "I/OポートorROM($%06X)から読み込もうとしました。", adr);
+    err68(message);
+  }
+  if (SR_S_REF() == 0 || adr >= mem_aloc) {
+    sprintf(message, "不正アドレス($%06X)からの読み込みです。", adr);
+    err68(message);
+  }
+  return true;
+}
+
+/*
+ 　機能：書き込みアドレスのチェック
+ 戻り値： true = OK
+         false = NGだが、何も書き込まずにOKとみなす
+*/
+static int mem_wrt_chk(Long adr) {
+  char message[256];
+
+  adr &= 0x00FFFFFF;
+  if (adr >= 0xC00000) {
+    if (ini_info.io_through) return false;
+    sprintf(message, "I/OポートorROM($%06X)に書き込もうとしました。", adr);
+    err68(message);
+  }
+  if (SR_S_REF() == 0 || adr >= mem_aloc) {
+    sprintf(message, "不正アドレスへの書き込みです($%06X)", adr);
+    err68(message);
+  }
+  return true;
+}
+
+/*
  　機能：メモリから指定されたサイズのデータをゲットする
  戻り値：データの値
 */
@@ -93,7 +129,7 @@ Long mem_get(Long adr, char size) {
   Long d;
 
   if (adr < ENV_TOP || adr >= mem_aloc) {
-    if (mem_red_chk(adr) == FALSE) return (0);
+    if (!mem_red_chk(adr)) return (0);
   }
   mem = (UChar *)prog_ptr + adr;
 
@@ -121,7 +157,7 @@ void mem_set(Long adr, Long d, char size) {
   UChar *mem;
 
   if (adr < ENV_TOP || adr >= mem_aloc) {
-    if (mem_wrt_chk(adr) == FALSE) return;
+    if (!mem_wrt_chk(adr)) return;
   }
   mem = (UChar *)prog_ptr + adr;
 
@@ -140,56 +176,6 @@ void mem_set(Long adr, Long d, char size) {
       *mem = (d & 0xFF);
       return;
   }
-}
-
-/*
- 　機能：読み込みアドレスのチェック
- 戻り値： TRUE = OK
-         FALSE = NGだが、0を読み込んだとみなす
-*/
-static int mem_red_chk(Long adr) {
-  char message[256];
-
-  adr &= 0x00FFFFFF;
-  if (adr >= 0xC00000) {
-    if (ini_info.io_through == TRUE) return (FALSE);
-    sprintf(message, "I/OポートorROM($%06X)から読み込もうとしました。", adr);
-    err68(message);
-    run68_abort(adr);
-  }
-  if (SR_S_REF() == 0 || adr >= mem_aloc) {
-    sprintf(message, "不正アドレス($%06X)からの読み込みです。", adr);
-    err68(message);
-    run68_abort(adr);
-  }
-  return (TRUE);
-}
-
-/*
- 　機能：書き込みアドレスのチェック
- 戻り値： TRUE = OK
-         FALSE = NGだが、何も書き込まずにOKとみなす
-*/
-static int mem_wrt_chk(Long adr) {
-  char message[256];
-
-  adr &= 0x00FFFFFF;
-  if (adr >= 0xC00000) {
-    if (ini_info.io_through == TRUE) return (FALSE);
-    /*
-                    if ( adr == 0xE8A01F )	/# RESET CONTROLLER #/
-                            return( FALSE );
-    */
-    sprintf(message, "I/OポートorROM($%06X)に書き込もうとしました。", adr);
-    err68(message);
-    run68_abort(adr);
-  }
-  if (SR_S_REF() == 0 || adr >= mem_aloc) {
-    sprintf(message, "不正アドレスへの書き込みです($%06X)", adr);
-    err68(message);
-    run68_abort(adr);
-  }
-  return (TRUE);
 }
 
 /*
@@ -224,3 +210,24 @@ void run68_abort(Long adr) {
 #endif
   longjmp(jmp_when_abort, 2);
 }
+
+/* $Id: mem.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:08  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.4  1999/12/07  12:47:22  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.4  1999/11/29  06:18:06  yfujii
+ * Calling CloseHandle instead of fclose when abort().
+ *
+ * Revision 1.3  1999/11/01  06:23:33  yfujii
+ * Some debugging functions are introduced.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

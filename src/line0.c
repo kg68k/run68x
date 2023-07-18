@@ -1,130 +1,31 @@
-/* $Id: line0.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
- * First imported source code and docs
- *
- * Revision 1.6  1999/12/21  10:08:59  yfujii
- * Uptodate source code from Beppu.
- *
- * Revision 1.5  1999/12/07  12:43:24  yfujii
- * *** empty log message ***
- *
- * Revision 1.5  1999/11/22  03:57:08  yfujii
- * Condition code calculations are rewriten.
- *
- * Revision 1.3  1999/10/20  02:39:39  masamichi
- * Add showing more information about errors.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "run68.h"
 
-static int Ori(char);
-static int Ori_t_ccr(void);
-static int Ori_t_sr(void);
-static int Andi(char);
-static int Andi_t_ccr(void);
-static int Andi_t_sr(void);
-static int Addi(char);
-static int Subi(char);
-static int Eori(char);
-static int Eori_t_ccr(void);
-static int Cmpi(char);
-static int Btsti(char);
-static int Btst(char, char);
-static int Bchgi(char);
-static int Bchg(char, char);
-static int Bclri(char);
-static int Bclr(char, char);
-static int Bseti(char);
-static int Bset(char, char);
-static int Movep_f(char, char);
-static int Movep_t(char, char);
-
-/*
- 　機能：0ライン命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
-*/
-int line0(char *pc_ptr) {
-  char code1, code2;
-
-  code1 = *(pc_ptr++);
-  code2 = *pc_ptr;
-  pc += 2;
-
-  switch (code1) {
-    case 0x00:
-      if (code2 == 0x3C)
-        return (Ori_t_ccr());
-      else if (code2 == 0x7C)
-        return (Ori_t_sr());
-      else
-        return (Ori(code2));
-    case 0x02:
-      if (code2 == 0x3C)
-        return (Andi_t_ccr());
-      else if (code2 == 0x7C)
-        return (Andi_t_sr());
-      else
-        return (Andi(code2));
-    case 0x04:
-      return (Subi(code2));
-    case 0x06:
-      return (Addi(code2));
-    case 0x08:
-      switch (code2 & 0xC0) {
-        case 0x00:
-          return (Btsti(code2));
-        case 0x40:
-          return (Bchgi(code2));
-        case 0x80:
-          return (Bclri(code2));
-        default: /* 0xC0 */
-          return (Bseti(code2));
-      }
-    case 0x0A:
-      if (code2 == 0x3C) return (Eori_t_ccr());
-      if (code2 == 0x7C) { /* eori to SR */
-        err68a("未定義命令を実行しました", __FILE__, __LINE__);
-        return (TRUE);
-      }
-      return (Eori(code2));
-    case 0x0C:
-      return (Cmpi(code2));
-    default:
-      if ((code2 & 0x38) == 0x08) {
-        if ((code2 & 0x80) != 0)
-          return (Movep_f(code1, code2));
-        else
-          return (Movep_t(code1, code2));
-      }
-      switch (code2 & 0xC0) {
-        case 0x00:
-          return (Btst(code1, code2));
-        case 0x40:
-          return (Bchg(code1, code2));
-        case 0x80:
-          return (Bclr(code1, code2));
-        default: /* 0xC0 */
-          return (Bset(code1, code2));
-      }
-  }
-}
-
 /*
  　機能：ori命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Ori(char code) {
+static bool Ori(char code) {
   Long src_data;
   char mode;
   char reg;
@@ -135,7 +36,6 @@ static int Ori(char code) {
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです", __FILE__, __LINE__);
-    return (TRUE);
   }
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
@@ -149,7 +49,7 @@ static int Ori(char code) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* OR演算 */
@@ -163,21 +63,21 @@ static int Ori(char code) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグのセット */
   general_conditions(data, size);
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：ori to CCR命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Ori_t_ccr() {
+static bool Ori_t_ccr() {
   char data;
 
   data = (char)imi_get(S_BYTE);
@@ -193,20 +93,19 @@ static int Ori_t_ccr() {
   if ((data & 0x02) != 0) CCR_V_ON();
   if ((data & 0x01) != 0) CCR_C_ON();
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：ori to SR命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Ori_t_sr() {
+static bool Ori_t_sr() {
   short data;
 
   if (SR_S_REF() == 0) {
     err68a("特権命令を実行しました", __FILE__, __LINE__);
-    return (TRUE);
   }
 
   data = (short)imi_get(S_WORD);
@@ -218,15 +117,15 @@ static int Ori_t_sr() {
   /* SRをセット */
   sr |= data;
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：andi命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Andi(char code) {
+static bool Andi(char code) {
   Long src_data;
   char mode;
   char reg;
@@ -237,7 +136,6 @@ static int Andi(char code) {
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-    return (TRUE);
   }
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
@@ -252,7 +150,7 @@ static int Andi(char code) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* AND演算 */
@@ -266,21 +164,21 @@ static int Andi(char code) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグのセット */
   general_conditions(data, size);
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：andi to CCR命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Andi_t_ccr() {
+static bool Andi_t_ccr() {
   char data;
 
   data = (char)imi_get(S_BYTE);
@@ -296,20 +194,19 @@ static int Andi_t_ccr() {
   if ((data & 0x02) == 0) CCR_V_OFF();
   if ((data & 0x01) == 0) CCR_C_OFF();
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：andi to SR命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Andi_t_sr() {
+static bool Andi_t_sr() {
   short data;
 
   if (SR_S_REF() == 0) {
     err68a("特権命令を実行しました", __FILE__, __LINE__);
-    return (TRUE);
   }
 
   data = (short)imi_get(S_WORD);
@@ -321,15 +218,15 @@ static int Andi_t_sr() {
   /* SRをセット */
   sr &= data;
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：addi命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Addi(char code) {
+static bool Addi(char code) {
   Long src_data;
   char mode;
   char reg;
@@ -344,7 +241,6 @@ static int Addi(char code) {
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-    return (TRUE);
   }
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
@@ -359,7 +255,7 @@ static int Addi(char code) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &dest_data)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TEST_CCR
@@ -381,25 +277,25 @@ static int Addi(char code) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, rd[8])) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの変化 */
-  add_conditions(src_data, dest_data, rd[8], size, 1);
+  add_conditions(src_data, dest_data, rd[8], size, true);
 
 #ifdef TEST_CCR
   check("addi", src_data, dest_data, rd[8], size, before);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：subi命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Subi(char code) {
+static bool Subi(char code) {
   Long src_data;
   char mode;
   char reg;
@@ -414,7 +310,6 @@ static int Subi(char code) {
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-    return (TRUE);
   }
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
@@ -429,7 +324,7 @@ static int Subi(char code) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &dest_data)) {
-    return (TRUE);
+    return true;
   }
 
 #ifdef TEST_CCR
@@ -451,25 +346,25 @@ static int Subi(char code) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, rd[8])) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグの変化 */
-  sub_conditions(src_data, dest_data, rd[8], size, 1);
+  sub_conditions(src_data, dest_data, rd[8], size, true);
 
 #ifdef TEST_CCR
   check("subi", src_data, dest_data, rd[8], size, before);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：eori命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Eori(char code) {
+static bool Eori(char code) {
   char size;
   char mode;
   char reg;
@@ -491,7 +386,7 @@ static int Eori(char code) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* Eor演算 */
@@ -505,21 +400,21 @@ static int Eori(char code) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
   /* フラグのセット */
   general_conditions(data, size);
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：eori to CCR命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Eori_t_ccr() {
+static bool Eori_t_ccr() {
   char data;
 
   data = (char)imi_get(S_BYTE);
@@ -560,15 +455,15 @@ static int Eori_t_ccr() {
       CCR_C_OFF();
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：cmpi命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Cmpi(char code) {
+static bool Cmpi(char code) {
   char mode;
   char reg;
   char size;
@@ -584,7 +479,6 @@ static int Cmpi(char code) {
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-    return (TRUE);
   }
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
@@ -593,7 +487,7 @@ static int Cmpi(char code) {
   src_data = imi_get(size);
 
   if (get_data_at_ea(EA_VariableData, mode, reg, size, &dest_data)) {
-    return (TRUE);
+    return true;
   }
 
   /* ワークレジスタへコピー */
@@ -619,15 +513,15 @@ static int Cmpi(char code) {
   check("cmpi", src_data, dest_data, rd[8], size, before);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：btst #data,<ea>命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Btsti(char code) {
+static bool Btsti(char code) {
   char mode;
   char reg;
   UChar bitno;
@@ -653,7 +547,7 @@ static int Btsti(char code) {
 
   /* 実効アドレスで示されたデータを取得 */
   if (get_data_at_ea(EA_Data, mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* Zフラグに反映 */
@@ -666,15 +560,15 @@ static int Btsti(char code) {
   printf("trace: btst     src=%d PC=%06lX\n", bitno, save_pc);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：btst Dn,<ea>命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Btst(char code1, char code2) {
+static bool Btst(char code1, char code2) {
   char mode;
   char reg;
   UChar bitno;
@@ -702,7 +596,7 @@ static int Btst(char code1, char code2) {
 
   /* 実効アドレスで示されたデータを取得 */
   if (get_data_at_ea(EA_Data, mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* Zフラグに反映 */
@@ -715,15 +609,15 @@ static int Btst(char code1, char code2) {
   printf("trace: btst     src=%d PC=%06lX\n", bitno, save_pc);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：bchg #data,<ea>命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Bchgi(char code) {
+static bool Bchgi(char code) {
   char mode;
   char reg;
   UChar bitno;
@@ -754,7 +648,7 @@ static int Bchgi(char code) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* bchg演算 */
@@ -774,18 +668,18 @@ static int Bchgi(char code) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：bchg Dn,<ea>命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Bchg(char code1, char code2) {
+static bool Bchg(char code1, char code2) {
   char mode;
   char reg;
   UChar bitno;
@@ -817,7 +711,7 @@ static int Bchg(char code1, char code2) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* bchg演算 */
@@ -837,18 +731,18 @@ static int Bchg(char code1, char code2) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：bclr #data,<ea>命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Bclri(char code) {
+static bool Bclri(char code) {
   char mode;
   char reg;
   UChar bitno;
@@ -879,7 +773,7 @@ static int Bclri(char code) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* bclr演算 */
@@ -898,18 +792,18 @@ static int Bclri(char code) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：bclr Dn,<ea>命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Bclr(char code1, char code2) {
+static bool Bclr(char code1, char code2) {
   char mode;
   char reg;
   UChar bitno;
@@ -941,7 +835,7 @@ static int Bclr(char code1, char code2) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* bclr演算 */
@@ -960,18 +854,18 @@ static int Bclr(char code1, char code2) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：bset #data,<ea>命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Bseti(char code) {
+static bool Bseti(char code) {
   char mode;
   char reg;
   UChar bitno;
@@ -1002,7 +896,7 @@ static int Bseti(char code) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* bset演算 */
@@ -1021,18 +915,18 @@ static int Bseti(char code) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：bset Dn,<ea>命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Bset(char code1, char code2) {
+static bool Bset(char code1, char code2) {
   char mode;
   char reg;
   UChar bitno;
@@ -1064,7 +958,7 @@ static int Bset(char code1, char code2) {
   }
 
   if (get_data_at_ea_noinc(EA_VariableData, work_mode, reg, size, &data)) {
-    return (TRUE);
+    return true;
   }
 
   /* bset演算 */
@@ -1083,18 +977,18 @@ static int Bset(char code1, char code2) {
   }
 
   if (set_data_at_ea(EA_VariableData, work_mode, reg, size, data)) {
-    return (TRUE);
+    return true;
   }
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：movep from Dn命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Movep_f(char code1, char code2) {
+static bool Movep_f(char code1, char code2) {
   int d_reg;
   int a_reg;
   short disp;
@@ -1121,15 +1015,15 @@ static int Movep_f(char code1, char code2) {
   printf("trace: movep_f  src=%d PC=%06lX\n", rd[d_reg], pc - 2);
 #endif
 
-  return (FALSE);
+  return false;
 }
 
 /*
  　機能：movep to Dn命令を実行する
- 戻り値： TRUE = 実行終了
-         FALSE = 実行継続
+ 戻り値： true = 実行終了
+         false = 実行継続
 */
-static int Movep_t(char code1, char code2) {
+static bool Movep_t(char code1, char code2) {
   int d_reg;
   int a_reg;
   short disp;
@@ -1155,5 +1049,99 @@ static int Movep_t(char code1, char code2) {
   printf("trace: movep_t  PC=%06lX\n", pc - 2);
 #endif
 
-  return (FALSE);
+  return false;
 }
+
+/*
+ 　機能：0ライン命令を実行する
+ 戻り値： true = 実行終了
+         false = 実行継続
+*/
+bool line0(char *pc_ptr) {
+  char code1, code2;
+
+  code1 = *(pc_ptr++);
+  code2 = *pc_ptr;
+  pc += 2;
+
+  switch (code1) {
+    case 0x00:
+      if (code2 == 0x3C)
+        return (Ori_t_ccr());
+      else if (code2 == 0x7C)
+        return (Ori_t_sr());
+      else
+        return (Ori(code2));
+    case 0x02:
+      if (code2 == 0x3C)
+        return (Andi_t_ccr());
+      else if (code2 == 0x7C)
+        return (Andi_t_sr());
+      else
+        return (Andi(code2));
+    case 0x04:
+      return (Subi(code2));
+    case 0x06:
+      return (Addi(code2));
+    case 0x08:
+      switch (code2 & 0xC0) {
+        case 0x00:
+          return (Btsti(code2));
+        case 0x40:
+          return (Bchgi(code2));
+        case 0x80:
+          return (Bclri(code2));
+        default: /* 0xC0 */
+          return (Bseti(code2));
+      }
+    case 0x0A:
+      if (code2 == 0x3C) return (Eori_t_ccr());
+      if (code2 == 0x7C) { /* eori to SR */
+        err68a("未定義命令を実行しました", __FILE__, __LINE__);
+      }
+      return (Eori(code2));
+    case 0x0C:
+      return (Cmpi(code2));
+    default:
+      if ((code2 & 0x38) == 0x08) {
+        if ((code2 & 0x80) != 0)
+          return (Movep_f(code1, code2));
+        else
+          return (Movep_t(code1, code2));
+      }
+      switch (code2 & 0xC0) {
+        case 0x00:
+          return (Btst(code1, code2));
+        case 0x40:
+          return (Bchg(code1, code2));
+        case 0x80:
+          return (Bclr(code1, code2));
+        default: /* 0xC0 */
+          return (Bset(code1, code2));
+      }
+  }
+}
+
+/* $Id: line0.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.6  1999/12/21  10:08:59  yfujii
+ * Uptodate source code from Beppu.
+ *
+ * Revision 1.5  1999/12/07  12:43:24  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.5  1999/11/22  03:57:08  yfujii
+ * Condition code calculations are rewriten.
+ *
+ * Revision 1.3  1999/10/20  02:39:39  masamichi
+ * Add showing more information about errors.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */
