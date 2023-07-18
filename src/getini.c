@@ -44,7 +44,7 @@
 
 #include "run68.h"
 
-#if !defined(_WIN32) && !defined(DOSX)
+#ifndef _WIN32
 #include <ctype.h>
 #define _strlwr(p)                         \
   do {                                     \

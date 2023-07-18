@@ -119,10 +119,6 @@ typedef uint16_t UShort;
 typedef int32_t Long;    // 64bit 環境対応
 typedef uint32_t ULong;  // 64bit 環境対応
 
-#if defined(WIN32) /* Win32 APIでDOSコールをエミュレートする。*/
-#undef DOSX
-#endif
-
 #ifdef WIN32
 #include <windows.h>
 #else
@@ -132,12 +128,10 @@ typedef uint32_t ULong;  // 64bit 環境対応
 #endif
 
 #if !defined(WIN32) /* Win32 APIでDOSコールをエミュレートする。*/
-#if !defined(DOSX)
 #include <limits.h>
 #define MAX_PATH PATH_MAX
 #define _fcvt fcvt
 #define _stricmp strcasecmp
-#endif
 #endif
 
 #define XHEAD_SIZE 0x40       /* Xファイルのヘッダサイズ */

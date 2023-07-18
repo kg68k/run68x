@@ -40,4 +40,34 @@ Long Curdir_win32(short drv, char* buf_ptr) {
   return DOSE_SUCCESS;
 }
 
+// DOS _FILEDATE
+Long Filedate_win32(short hdl, Long dt) {
+  FILETIME ctime, atime, wtime;
+  int64_t ll_wtime;
+  HANDLE hFile;
+  BOOL b;
+
+  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
+
+  if (dt != 0) { /* 設定 */
+    hFile = finfo[hdl].fh;
+    GetFileTime(hFile, &ctime, &atime, &wtime);
+    ll_wtime = (dt >> 16) * 86400 * 10000000 + (dt & 0xFFFF) * 10000000;
+    wtime.dwLowDateTime = (DWORD)(ll_wtime & 0xFFFFFFFF);
+    wtime.dwHighDateTime = (DWORD)(ll_wtime >> 32);
+    b = SetFileTime(hFile, &ctime, &atime, &wtime);
+    if (b) return (-19); /* 書き込み不可 */
+    finfo[hdl].date = (ULong)(ll_wtime / 10000000 / 86400);
+    finfo[hdl].time = (ULong)((ll_wtime / 10000000) % 86400);
+    return (0);
+  }
+
+  hFile = finfo[hdl].fh;
+  GetFileTime(hFile, &ctime, &atime, &wtime);
+  ll_wtime =
+      (((int64_t)wtime.dwLowDateTime) << 32) + (int64_t)wtime.dwLowDateTime;
+  return (Long)(((ll_wtime / 86400 / 10000000) << 16) +
+                (ll_wtime / 10000000) % 86400);
+}
+
 #endif

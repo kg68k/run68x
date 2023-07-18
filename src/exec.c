@@ -39,9 +39,6 @@
 #include <string.h>
 
 #include "run68.h"
-#if defined(DOSX)
-#include <dos.h>
-#endif
 
 /* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
 #define prog_ptr_u ((unsigned char *)prog_ptr)
@@ -336,25 +333,6 @@ void text_color(short c) {
 */
 Long get_locate() {
   UShort x = 0, y = 0;
-
-#if defined(WIN32)
-  // @Todo
-#elif defined(DOSX)
-  union REGS inreg, outreg;
-  short save_s;
-
-  fflush(stdout);
-  inreg.h.ah = 0x03;
-  inreg.h.bh = 0;
-  int86(0x10, &inreg, &outreg);
-  x = outreg.h.dl;
-  y = outreg.h.dh;
-  save_s = SR_S_REF();
-  SR_S_ON();
-  mem_set(0x974, x, S_WORD);
-  mem_set(0x976, y, S_WORD);
-  if (save_s == 0) SR_S_OFF();
-#endif
 
   return ((x << 16) | y);
 }

@@ -25,5 +25,8 @@
 Long Curdir_win32(short drv, char* buf_ptr);
 #define HOST_CURDIR Curdir_win32
 
+Long Filedate_win32(short hdl, Long dt);
+#define HOST_FILEDATE Filedate_win32
+
 #endif
 #endif

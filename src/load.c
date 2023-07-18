@@ -60,7 +60,7 @@ FILE *prog_open(char *fname, int mes_flag) {
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
   char *p;
-#if defined(WIN32) || defined(DOSX)
+#ifdef WIN32
   char sep_chr = '\\';
   char sep_str[] = "\\";
 #else
@@ -125,7 +125,7 @@ ErrorRet:
   return NULL;
 }
 
-#if !defined(WIN32) && !defined(DOSX)
+#ifdef WIN32
 #define PATH_DELIMITER ':'
 #else
 #define PATH_DELIMITER ';'
@@ -407,11 +407,8 @@ static int set_fname(char *p, Long psp_adr) {
       b = GetCurrentDirectoryA(sizeof(cpath), cpath);
       mem_ptr[0] = cpath[0];
     }
-#elif defined(DOSX)
-    dos_getdrive(&drv);
-    mem_ptr[0] = drv - 1 + 'A';
 #else
-  mem_ptr[0] = 'A';
+    mem_ptr[0] = 'A';
 #endif
     mem_ptr[1] = ':';
   } else {

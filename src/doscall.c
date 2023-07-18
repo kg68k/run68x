@@ -82,7 +82,7 @@
 #include <conio.h>
 #endif
 
-#if defined(DOSX) || defined(WIN32)
+#ifdef WIN32
 #include <direct.h>
 #include <dos.h>
 #include <io.h>
@@ -157,7 +157,7 @@ static Long Exec3(Long, Long, Long);
 static void Exec4(Long);
 static Long gets2(char *, int);
 
-#if !defined(WIN32) && !defined(DOSX)
+#ifndef WIN32
 void CloseHandle(FILE *fp) { fclose(fp); }
 
 int CreateDirectoryA(char *name, void *ptr) {
@@ -316,8 +316,6 @@ int dos_call(UChar code) {
       }
 #if defined(WIN32)
       FlushFileBuffers(finfo[1].fh);
-#elif defined(DOSX)
-      fflush(stdout);
 #endif
       rd[0] = (_getche() & 0xFF);
       break;
@@ -335,9 +333,7 @@ int dos_call(UChar code) {
         /* Win32API */
         WriteFile(finfo[1].fh, data_ptr, 1, (LPDWORD)&nwritten, NULL);
       }
-#elif defined(DOSX)
-      _dos_write(fileno(finfo[1].fh), data_ptr, 1, &drv);
-#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+#else
       Write_conv(1, data_ptr, 1);
 #endif
       rd[0] = 0;
@@ -392,8 +388,6 @@ int dos_call(UChar code) {
       }
 #if defined(WIN32)
       FlushFileBuffers(finfo[1].fh);
-#elif defined(DOSX)
-      fflush(stdout);
 #endif
       c = _getch();
       if (c == 0x00) {
@@ -417,12 +411,8 @@ int dos_call(UChar code) {
         /* Win32API */
         WriteFile(finfo[1].fh, data_ptr, len, (LPDWORD)&nwritten, NULL);
       }
-#elif defined(DOSX)
-      _dos_write(fileno(finfo[1].fh), data_ptr, (unsigned)len, &drv);
-#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-      Write_conv(1, data_ptr, (unsigned)len);
 #else
-      printf("DOSCALL:PRINT not implemented yet.\n");
+      Write_conv(1, data_ptr, (unsigned)len);
 #endif
       /* printf( "%s", data_ptr ); */
       rd[0] = 0;
@@ -434,7 +424,6 @@ int dos_call(UChar code) {
       }
       rd[0] = Gets(buf);
       break;
-      // #elif defined(DOSX)
     case 0x0B: /* KEYSNS */
       if (func_trace_f) {
         printf("%-10s\n", "KEYSNS");
@@ -483,10 +472,6 @@ int dos_call(UChar code) {
           rd[0] = srt;
         }
       }
-#elif defined(DOSX)
-      srt += 1;
-      dos_setdrive(srt, &drv);
-      rd[0] = drv;
 #else
       srt += 1;
       int drv = 0;
@@ -506,10 +491,6 @@ int dos_call(UChar code) {
           rd[0] = -15; /* ドライブ指定誤り */
         }
       }
-#elif defined(DOSX)
-      dos_getdrive(&drv);
-      srt += 1;
-      if (srt != drv) rd[0] = -15;
 #else
       dos_getdrive(&drv);
       srt += 1;
@@ -629,12 +610,7 @@ int dos_call(UChar code) {
         else
           rd[0] = 1;
       }
-#elif defined(DOSX)
-      if (fputc(*(unsigned char *)data_ptr, finfo[fhdl].fh) == EOF)
-        rd[0] = 0;
-      else
-        rd[0] = 1;
-#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+#else
       if (Write_conv(fhdl, data_ptr, 1) == EOF)
         rd[0] = 0;
       else
@@ -657,13 +633,7 @@ int dos_call(UChar code) {
                   NULL);
       }
       rd[0] = len;
-#elif defined(DOSX)
-      if (fprintf(finfo[fhdl].fh, "%s", data_ptr) == -1) {
-        rd[0] = 0;
-      } else {
-        rd[0] = strlen(data_ptr);
-      }
-#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
+#else
       if (Write_conv(fhdl, data_ptr, strlen(data_ptr)) == -1) {
         rd[0] = 0;
       } else {
@@ -1199,10 +1169,6 @@ static Long Gets(Long buf) {
 static Long Kflush(short mode) {
   UChar c;
 
-#if defined(WIN32)
-#elif defined(DOSX)
-  while (kbhit() != 0) _getch();
-#endif
   switch (mode) {
     case 0x01:
       return (_getche() & 0xFF);
@@ -1432,23 +1398,6 @@ static Long Dskfre(short drv, Long buf) {
   BytesPerSector &= 0xFFFF;
   mem_set(buf + 6, BytesPerSector, S_WORD);
   return NumberOfFreeClusters * SectorsPerCluster * BytesPerSector;
-#elif defined(DOSX)
-  static buf_save;
-  struct diskfree_t dspace;
-  buf_save = buf; /* dos_getdiskfreeがDskfreの引数を壊すため */
-  if (_dos_getdiskfree(drv, &dspace) != 0) return (-15); /* ドライブ指定誤り */
-  buf = buf_save;
-  buf = buf_save;
-  dspace.avail_clusters &= 0xFFFF;
-  mem_set(buf, dspace.avail_clusters, S_WORD);
-  dspace.total_clusters &= 0xFFFF;
-  mem_set(buf + 2, dspace.total_clusters, S_WORD);
-  dspace.sectors_per_cluster &= 0xFFFF;
-  mem_set(buf + 4, dspace.sectors_per_cluster, S_WORD);
-  dspace.bytes_per_sector &= 0xFFFF;
-  mem_set(buf + 6, dspace.bytes_per_sector, S_WORD);
-  return dspace.avail_clusters * dspace.sectors_per_cluster *
-         dspace.bytes_per_sector;
 #else
   return -15;
 #endif
@@ -1521,7 +1470,7 @@ static Long Create(char *p, short atr) {
   Long i;
   int len;
 
-#if !defined(WIN32) && !defined(DOSX)
+#ifndef WIN32
   char *name = p;
   int namelen = strlen(name);
   for (int i = 0; i < namelen; ++i) {
@@ -1532,7 +1481,7 @@ static Long Create(char *p, short atr) {
       p = &name[i + 1];
     }
   }
-//	printf("Create(\"%s\", %d) = %s\n", name, atr, p);
+  // printf("Create(\"%s\", %d) = %s\n", name, atr, p);
 #endif
 
   ret = 0;
@@ -1654,7 +1603,7 @@ static Long Open(char *p, short mode) {
   Long ret;
   Long i;
 
-#if !defined(WIN32) && !defined(DOSX)
+#ifndef WIN32
   char *name = p;
   int namelen = strlen(name);
   for (int i = 0; i < namelen; ++i) {
@@ -1665,7 +1614,7 @@ static Long Open(char *p, short mode) {
       p = &name[i + 1];
     }
   }
-//	printf("Open(\"%s\", %d) = %s\n", name, mode, p);
+  // printf("Open(\"%s\", %d) = %s\n", name, mode, p);
 #endif
 
   switch (mode) {
@@ -1781,15 +1730,6 @@ static Long Close(short hdl) {
     ft2.dwHighDateTime = (ULong)(datetime >> 32);
     SetFileTime(fh, &ft0, &ft1, &ft2);
     CloseHandle(fh);
-    finfo[hdl].date = 0;
-    finfo[hdl].time = 0;
-  }
-#elif defined(DOSX)
-  if (finfo[hdl].date != 0 || finfo[hdl].time != 0) {
-    if (_dos_open(finfo[hdl].name, 1, &dos_fh) == 0) {
-      dos_setftime(dos_fh, finfo[hdl].date, finfo[hdl].time);
-      dos_close(dos_fh);
-    }
     finfo[hdl].date = 0;
     finfo[hdl].time = 0;
   }
@@ -1914,20 +1854,8 @@ static Long Write(short hdl, Long buf, Long len) {
   write_len = len2;
   if (finfo[hdl].fh == GetStdHandle(STD_OUTPUT_HANDLE))
     FlushFileBuffers(finfo[hdl].fh);
-#elif defined(DOSX)
-  unsigned len2;
-  if (len < 65536) {
-    _dos_write(fileno(finfo[hdl].fh), write_buf, (unsigned)len, &len2);
-    write_len = len2;
-  } else {
-    write_len = fwrite(write_buf, 1, len, finfo[hdl].fh);
-  }
-  if (finfo[hdl].fh == stdout) fflush(stdout);
-#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-  write_len = Write_conv(hdl, write_buf, len);
 #else
-  write_len = fwrite(write_buf, 1, len, finfo[hdl].fh);
-  if (finfo[hdl].fh == stdout) fflush(stdout);
+  write_len = Write_conv(hdl, write_buf, len);
 #endif
 
   return (write_len);
@@ -2211,9 +2139,6 @@ static void to_backslash(char *buf) {
 // DOS _CURDIR 汎用環境用
 #ifndef HOST_CURDIR
 #define HOST_CURDIR Curdir_generic
-#ifdef DOSX
-#error "DOSX is not supported"
-#endif
 
 #define ROOT_SLASH_LEN 1  // "/"
 
@@ -2405,7 +2330,6 @@ static Long Nfiles(Long buf) {
   atr = buf_ptr[0]; /* 検索すべきファイルの属性 */
   {
     /* todo:buf_ptrの指す領域から必要な情報を取り出して、f_dataにコピーする。*/
-    /* DOSXの処理を参考にする。*/
     /* 2秒→100nsに変換する。*/
     SYSTEMTIME st;
     BOOL b;
@@ -2421,41 +2345,7 @@ static Long Nfiles(Long buf) {
     st.wSecond = (s & 0x001f);
     st.wMilliseconds = 0;
     b = SystemTimeToFileTime(&st, &f_data.ftLastWriteTime);
-    /* ファイル名 */
-    /* ファイル名をbufから取り出してf_dataにコピーする必要はないと思う。
-この部分のコードが原因で誤動作していたと考えられるので、リリース後
-1ヶ月待って削除する。  Y.Fujii 2000/1/19
-{
-char *p;
-int i;
-p = (char*)&buf_ptr[30];
-for (i = 0; i < 19; i++)
-{
-    if (*p == ' ' || *p == 0)
-    {
-        f_data.cFileName[i] = 0;
-        break;
-    }
-    f_data.cFileName[i] = *p++;
-}
-p = (char*)&buf_ptr[30+19];
-if (*p != ' ')
-{
-    strcat(f_data.cFileName, ".");
-}
-for (i = strlen(f_data.cFileName); i < 22; i++)
-{
-    if (*p == ' ' || *p == 0)
-    {
-        f_data.cFileName[i] = 0;
-        break;
-    }
-    f_data.cFileName[i] = *p++;
-}
-strncpy(f_data.cFileName, (char*)&buf_ptr[30], 22);
-f_data.cFileName[21] = '\0';
-}
-     */
+
     f_data.nFileSizeHigh = 0;
     f_data.nFileSizeLow = *((ULong *)&buf_ptr[29]);
     /* ファイルのハンドルをバッファから取得する。*/
@@ -2513,129 +2403,9 @@ f_data.cFileName[21] = '\0';
   return (0);
 }
 
-#ifdef DOSX
-/*
- 　機能：標準時間を日本時間に変換する
- 戻り値：なし
- */
-static void get_jtime(UShort *d, UShort *t, int offset) {
-  static int month_day[13] = {31, 31, 28, 31, 30, 31, 30,
-                              31, 31, 30, 31, 30, 31};
-  short year;
-  short month;
-  short day;
-  short hour;
-
-  hour = (*t >> 11);
-  if (hour + offset * 9 >= 0 && hour + offset * 9 <= 23) {
-    *t += (0x4800 * offset);
-    return;
-  }
-
-  if (offset > 0)
-    hour -= 15;
-  else
-    hour += 15;
-  *t = (*t & 0x7FF) + (0x800 * hour);
-
-  year = (*d >> 9);
-  month = ((*d >> 5) & 0xF);
-  day = (*d & 0x1F);
-
-  /* 2月の日数の判定 */
-  if ((year % 4) == 0) {
-    if ((year % 100) == 0) {
-      if ((year % 400) == 0)
-        month_day[2] = 29;
-      else
-        month_day[2] = 28;
-    } else {
-      month_day[2] = 29;
-    }
-  } else {
-    month_day[2] = 28;
-  }
-
-  if (day + offset >= 1 && day + offset <= month_day[month]) {
-    *d += offset; /* 日±1 */
-    return;
-  }
-  if (offset > 0)
-    *d = (*d & 0xFFE0) + 1; /* 1日 */
-  else
-    *d = (*d & 0xFFE0) + month_day[month - 1]; /* 前月最終日 */
-
-  if (month + offset >= 1 && month + offset <= 12) {
-    *d += (0x20 * offset); /* 月±1 */
-    return;
-  }
-  if (offset > 0)
-    *d = (*d & 0xFE1F) + 0x200 + 0x20; /* 翌年1月 */
-  else
-    *d = (*d & 0xFE1F) - 0x200 + 0x180; /* 前年12月 */
-}
-#endif
-
-#if defined(_WIN32) || defined(DOSX)
-static Long Filedate_win32dosx(short hdl, Long dt) {
-#if defined(WIN32)
-  FILETIME ctime, atime, wtime;
-  int64_t ll_wtime;
-  HANDLE hFile;
-  BOOL b;
-#elif defined(DOSX)
-  int dosfh;
-  unsigned fd;
-  unsigned ft;
-  UShort fdate;
-  UShort ftime;
-#endif
-  if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
-#ifdef DOSX
-  dosfh = fileno(finfo[hdl].fh);
-#endif
-  if (dt != 0) { /* 設定 */
-#if defined(WIN32)
-    hFile = finfo[hdl].fh;
-    GetFileTime(hFile, &ctime, &atime, &wtime);
-    ll_wtime = (dt >> 16) * 86400 * 10000000 + (dt & 0xFFFF) * 10000000;
-    wtime.dwLowDateTime = (DWORD)(ll_wtime & 0xFFFFFFFF);
-    wtime.dwHighDateTime = (DWORD)(ll_wtime >> 32);
-    b = SetFileTime(hFile, &ctime, &atime, &wtime);
-    if (b) return (-19); /* 書き込み不可 */
-    finfo[hdl].date = (ULong)(ll_wtime / 10000000 / 86400);
-    finfo[hdl].time = (ULong)((ll_wtime / 10000000) % 86400);
-#else
-    fdate = (unsigned short)(dt >> 16);
-    ftime = (unsigned short)(dt & 0xFFFF);
-    get_jtime(&fdate, &ftime, -1);
-    fd = fdate;
-    ft = ftime;
-    if (dos_setftime(dosfh, fd, ft) != 0) return (-19); /* 書き込み不可 */
-    finfo[hdl].date = fd;
-    finfo[hdl].time = ft;
-#endif
-    return (0);
-  }
-
-#if defined(WIN32)
-  hFile = finfo[hdl].fh;
-  GetFileTime(hFile, &ctime, &atime, &wtime);
-  ll_wtime =
-      (((int64_t)wtime.dwLowDateTime) << 32) + (int64_t)wtime.dwLowDateTime;
-  return (Long)(((ll_wtime / 86400 / 10000000) << 16) +
-                (ll_wtime / 10000000) % 86400);
-#else
-  if (dos_getftime(dosfh, &fd, &ft) != 0) return (0);
-
-  fdate = fd;
-  ftime = ft;
-  get_jtime(&fdate, &ftime, 1);
-  return ((fdate << 16) | ftime);
-#endif
-}
-
-#else
+// DOS _CURDIR 汎用環境用
+#ifndef HOST_FILEDATE
+#define HOST_FILEDATE Filedate_generic
 
 static Long Filedate_generic(short hdl, Long dt) {
   printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__);
@@ -2648,11 +2418,8 @@ static Long Filedate_generic(short hdl, Long dt) {
  戻り値：エラーコード
  */
 static Long Filedate(short hdl, Long dt) {
-#if defined(_WIN32) || defined(DOSX)
-  return Filedate_win32dosx(hdl, dt);
-#else
-  return Filedate_generic(hdl, dt);
-#endif
+  //
+  return HOST_FILEDATE(hdl, dt);
 }
 
 /*
@@ -2668,11 +2435,6 @@ static Long Getdate() {
   GetLocalTime(&stime);
   ret = ((Long)(stime.wDayOfWeek) << 16) + (((Long)(stime.wYear) - 1980) << 9) +
         ((Long)(stime.wMonth) << 5) + (Long)(stime.wDay);
-#elif defined(DOSX)
-  struct dos_date_t ddate;
-  dos_getdate(&ddate);
-  ret = (ddate.dayofweek << 16) + ((ddate.year - 1980) << 9) +
-        (ddate.month << 5) + ddate.day;
 #else
   struct tm tm;
   time_t t = time(NULL);
@@ -2703,14 +2465,6 @@ static Long Setdate(short dt) {
   // b = SetSystemTime(&stime);
   b = SetLocalTime(&stime);
   if (!b) return -14; /* パラメータ不正 */
-#elif (DOSX)
-  struct dos_date_t ddate;
-
-  ddate.year = ((dt >> 9) & 0x7F) + 1980;
-  ddate.month = ((dt >> 5) & 0xF);
-  ddate.day = (dt & 0x1F);
-
-  if (dos_setdate(&ddate) != 0) return (-14); /* パラメータ不正 */
 #else
   printf("DOSCALL SETDATE:not defined yet %s %d\n", __FILE__, __LINE__);
 #endif
@@ -2735,14 +2489,6 @@ static Long Gettime(int flag) {
     // ret = stime.wHour << 16 + stime.wMinute << 8 + stime.wSecond;
     ret = ((Long)(stime.wHour) << 16) + ((Long)(stime.wMinute) << 8) +
           (Long)(stime.wSecond);
-#elif defined(DOSX)
-  struct dos_time_t dtime;
-  dos_gettime(&dtime);
-
-  if (flag == 0)
-    ret = (dtime.hour << 11) + (dtime.minute << 5) + (dtime.second >> 1);
-  else
-    ret = (dtime.hour << 16) + (dtime.minute << 8) + dtime.second;
 #else
 
   struct tm tm;
@@ -2776,14 +2522,6 @@ static Long Settim2(Long tim) {
   stime.wMilliseconds = 0;
   b = SetSystemTime(&stime);
   if (!b) return -14; /* パラメータ不正 */
-#elif defined(DOSX)
-  struct dos_time_t dtime;
-
-  dtime.hour = ((tim >> 16) & 0x1F);
-  dtime.minute = ((tim >> 8) & 0x3F);
-  dtime.second = (tim & 0x3F);
-  dtime.hsecond = 0;
-  if (dos_settime(&dtime) != 0) return (-14); /* パラメータ不正 */
 #else
   printf("DOSCALL SETTIM2:not defined yet %s %d\n", __FILE__, __LINE__);
 #endif
@@ -2912,10 +2650,6 @@ static Long Namests(Long name, Long buf) {
     char path[MAX_PATH];
     GetCurrentDirectory(strlen(path), path);
     mem_set(buf + 1, path[0] - 'A', S_BYTE);
-#else /* DOSX */
-    Long getdrv;
-    dos_getdrive(&getdrv);
-    mem_set(buf + 1, getdrv - 1, S_BYTE);
 #endif
   } else {
     drv = toupper(nbuf[0]) - 'A';
@@ -3006,11 +2740,6 @@ static Long Nameck(Long name, Long buf) {
     char path[MAX_PATH];
     GetCurrentDirectoryA(sizeof(path), path);
     buf_ptr[0] = path[0];
-    buf_ptr[1] = ':';
-#elif defined(DOSX)
-    unsigned int drv;
-    dos_getdrive(&drv);
-    buf_ptr[0] = drv - 1 + 'A';
     buf_ptr[1] = ':';
 #else
     Long d;
@@ -3151,9 +2880,7 @@ static Long Keyctrl(short mode, Long stack_adr) {
         if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
       }
       return (c);
-#if defined(WIN32) || defined(DOSX)
-      // #if defined(WIN32)
-      // #elif defined(DOSX)
+#ifdef WIN32
     case 1: /* キーの先読み */
       if (_kbhit() == 0) return (0);
       c = _getch();
@@ -3490,9 +3217,6 @@ static Long gets2(char *str, int max) {
 #if defined(WIN32)
   unsigned dmy;
   WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "\x01B[1A", 4, &dmy, NULL);
-#elif defined(DOSX)
-  unsigned dmy;
-  _dos_write(fileno(stdout), "\x01B[1A", 4, &dmy);
 #endif
   /* printf("%c[1A", 0x1B); */ /* カーソルを１行上に */
   str[cnt] = '\0';

@@ -83,15 +83,12 @@
  *
  */
 
+#include "run68.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if defined(DOSX)
-#include <dos.h>
-#endif
-
-#include "run68.h"
 
 #define prog_ptr_u ((unsigned char *)prog_ptr)
 
@@ -133,7 +130,7 @@ Long mem_aloc;
 /* アボート処理のためのジャンプバッファ */
 jmp_buf jmp_when_abort;
 
-#if !defined(WIN32) && !defined(DOSX)
+#ifndef WIN32
 char *strlwr(char *str) {
   unsigned char *p = (unsigned char *)str;
 
@@ -229,7 +226,7 @@ Restart:
   }
   argbase = i; /* argbase以前の引数はすべてオプションである。*/
   if (argc - argbase == 0) {
-#if defined(WIN32) || defined(DOSX)
+#ifdef WIN32
     strcpy(fname, "run68.exe");
 #else
     strcpy(fname, "run68");
@@ -237,8 +234,6 @@ Restart:
     fprintf(stderr, "X68000 console emulator Ver.%s (for ", RUN68VERSION);
 #if defined(WIN32)
     fprintf(stderr, "Windows Vista/7/8/10");
-#elif defined(DOSX)
-    fprintf(stderr, "32bitDOS");
 #elif defined(__APPLE__)
     fprintf(stderr, "MacOS");
 #elif defined(__EMSCRIPTEN__)
@@ -320,10 +315,6 @@ Restart:
     fprintf(stderr, "run68:Program '%s' was not found.\n", argv[argbase]);
     return (1);
   }
-#if defined(WIN32)
-#elif defined(DOSX)
-  memset(prog_ptr, 0, mem_aloc);
-#endif
 
   /* プログラムをメモリに読み込む */
   prog_size2 = mem_aloc;
