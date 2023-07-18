@@ -19,14 +19,14 @@
  * DOS calls are replaced by win32 functions.
  *
  * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN32 a little.
+ * Added RCS keywords and modified for WIN/32 a little.
  *
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if defined(WIN32)
+#ifdef _WIN32
 #include <direct.h>
 #else
 #include <unistd.h>
@@ -60,7 +60,7 @@ FILE *prog_open(char *fname, int mes_flag) {
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
   char *p;
-#ifdef WIN32
+#ifdef _WIN32
   char sep_chr = '\\';
   char sep_str[] = "\\";
 #else
@@ -82,7 +82,7 @@ FILE *prog_open(char *fname, int mes_flag) {
   }
   if (exp != NULL && !_stricmp(exp, ".x") && !_stricmp(exp, ".r"))
     goto ErrorRet; /* 拡張子が違う */
-#if defined(WIN32)
+#ifdef _WIN32
   GetCurrentDirectory(sizeof(cwd), cwd);
 #else
   if (getcwd(cwd, sizeof(cwd)) == NULL) {
@@ -91,7 +91,7 @@ FILE *prog_open(char *fname, int mes_flag) {
   }
 #endif
   /* PATH環境変数を取得する */
-#if defined(WIN32)
+#ifdef _WIN32
   char env_p[4096];
   Getenv_common("PATH", env_p);
   p = env_p;
@@ -125,7 +125,7 @@ ErrorRet:
   return NULL;
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 #define PATH_DELIMITER ':'
 #else
 #define PATH_DELIMITER ';'
@@ -370,7 +370,7 @@ static int set_fname(char *p, Long psp_adr) {
   mem_ptr = prog_ptr + psp_adr + 0x82;
   if (i == 0) {
     /* カレントディレクトリをセット */
-#if defined(WIN32)
+#ifdef _WIN32
     {
       BOOL b;
       b = GetCurrentDirectoryA(sizeof(cud), cud);
@@ -400,7 +400,7 @@ static int set_fname(char *p, Long psp_adr) {
   mem_ptr = prog_ptr + psp_adr + 0x80;
   if (i == 0) {
     /* カレントドライブをセット */
-#if defined(WIN32)
+#ifdef _WIN32
     {
       char cpath[MAX_PATH];
       BOOL b;

@@ -29,7 +29,7 @@
  * *** empty log message ***
  *
  * Revision 1.2  1999/10/21  12:17:46  yfujii
- * Added RCS keywords and modified for WIN32 a little.
+ * Added RCS keywords and modified for WIN/32 a little.
  *
  */
 

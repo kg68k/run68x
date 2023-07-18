@@ -18,7 +18,7 @@
  * Add showing more information about errors.
  *
  * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN32 a little.
+ * Added RCS keywords and modified for WIN/32 a little.
  *
  */
 

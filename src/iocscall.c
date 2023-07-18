@@ -12,7 +12,7 @@
  * Trace output is now controlled with command option.
  *
  * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN32 a little.
+ * Added RCS keywords and modified for WIN/32 a little.
  *
  */
 
@@ -21,7 +21,7 @@
 
 #include "run68.h"
 
-#if defined(WIN32)
+#ifdef _WIN32
 #include <windows.h>
 #elif defined(__linux__)
 #include <sys/sysinfo.h>
@@ -158,7 +158,7 @@ int iocs_call() {
       err68("水平同期割り込みを設定しようとしました");
       return (TRUE);
     case 0x7F: /* ONTIME */
-#if defined(WIN32)
+#ifdef _WIN32
       ul = GetTickCount() / 1000;
       rd[0] = (ul % (60 * 60 * 24)) * 100;
       rd[1] = ((ul / (60 * 60 * 24)) & 0xFFFF);
@@ -296,7 +296,7 @@ static void Putmes() {
 */
 static Long Dateget() {
   Long ret;
-#if defined(WIN32)
+#ifdef _WIN32
   SYSTEMTIME st;
   GetSystemTime(&st);
   ret = (st.wDayOfWeek << 24);
@@ -326,7 +326,7 @@ static Long Dateget() {
 */
 static Long Timeget() {
   Long ret;
-#if defined(WIN32)
+#ifdef _WIN32
   SYSTEMTIME st;
   GetSystemTime(&st);
   ret = ((st.wHour / 10) << 20);

@@ -79,7 +79,7 @@
  * An preprocessor directive error is removed.
  *
  * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN32 a little.
+ * Added RCS keywords and modified for WIN/32 a little.
  *
  */
 
@@ -105,7 +105,7 @@ Long trap_pc = 0;
 unsigned short cwatchpoint = 0x4afc;
 extern ULong stepcount;
 char ini_file_name[MAX_PATH];
-#if defined(WIN32)
+#ifdef _WIN32
 /* 標準入力のハンドル */
 HANDLE stdin_handle;
 #endif
@@ -130,7 +130,7 @@ Long mem_aloc;
 /* アボート処理のためのジャンプバッファ */
 jmp_buf jmp_when_abort;
 
-#ifndef WIN32
+#ifndef _WIN32
 char *strlwr(char *str) {
   unsigned char *p = (unsigned char *)str;
 
@@ -226,13 +226,13 @@ Restart:
   }
   argbase = i; /* argbase以前の引数はすべてオプションである。*/
   if (argc - argbase == 0) {
-#ifdef WIN32
+#ifdef _WIN32
     strcpy(fname, "run68.exe");
 #else
     strcpy(fname, "run68");
 #endif
     fprintf(stderr, "X68000 console emulator Ver.%s (for ", RUN68VERSION);
-#if defined(WIN32)
+#if defined(_WIN32)
     fprintf(stderr, "Windows Vista/7/8/10");
 #elif defined(__APPLE__)
     fprintf(stderr, "MacOS");
@@ -370,7 +370,7 @@ Restart:
     finfo[i].nest = 0;
     finfo[i].name[0] = '\0';
   }
-#if defined(WIN32)
+#ifdef _WIN32
   finfo[0].fh = GetStdHandle(STD_INPUT_HANDLE);
   finfo[1].fh = GetStdHandle(STD_OUTPUT_HANDLE);
   finfo[2].fh = GetStdHandle(STD_ERROR_HANDLE);

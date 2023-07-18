@@ -15,7 +15,7 @@
  * Some debugging functions are introduced.
  *
  * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN32 a little.
+ * Added RCS keywords and modified for WIN/32 a little.
  *
  */
 
@@ -202,7 +202,7 @@ void run68_abort(Long adr) {
 
   for (i = 5; i < FILE_MAX; i++) {
     if (finfo[i].fh != NULL)
-#if defined(WIN32)
+#ifdef _WIN32
       CloseHandle(finfo[i].fh);
 #else
       fclose(finfo[i].fh);

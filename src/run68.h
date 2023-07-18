@@ -83,7 +83,7 @@
  * Made a little modification for Cygnus GCC.
  *
  * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN32 a little.
+ * Added RCS keywords and modified for WIN/32 a little.
  *
  */
 
@@ -100,12 +100,6 @@
 
 #ifndef NORETURN
 #define NORETURN /* NORETURN */
-#endif
-
-#if defined(_WIN32) /* for Cygnus GCC */
-#if !defined(WIN32)
-#define WIN32
-#endif
 #endif
 
 #include <setjmp.h>
@@ -127,7 +121,7 @@ typedef uint32_t ULong;  // 64bit 環境対応
 #define FALSE 0
 #endif
 
-#if !defined(WIN32) /* Win32 APIでDOSコールをエミュレートする。*/
+#ifndef _WIN32
 #include <limits.h>
 #define MAX_PATH PATH_MAX
 #define _fcvt fcvt
@@ -228,7 +222,7 @@ BOOL get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data);
 #define SR_T_REF() (sr & 0x8000)
 
 typedef struct {
-#if defined(WIN32)
+#ifdef _WIN32
   HANDLE fh;
 #else
   FILE *fh;
@@ -283,7 +277,7 @@ extern Long trap_pc;
 extern jmp_buf jmp_when_abort;
 extern unsigned short cwatchpoint;
 /* 標準入力のハンドル */
-#if defined(WIN32)
+#ifdef _WIN32
 extern HANDLE stdin_handle;
 #endif
 

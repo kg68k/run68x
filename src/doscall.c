@@ -68,7 +68,7 @@
  * Compile time errors are all removed.
  *
  * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN32 a little.
+ * Added RCS keywords and modified for WIN/32 a little.
  *
  */
 
@@ -82,7 +82,7 @@
 #include <conio.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <direct.h>
 #include <dos.h>
 #include <io.h>
@@ -157,7 +157,7 @@ static Long Exec3(Long, Long, Long);
 static void Exec4(Long);
 static Long gets2(char *, int);
 
-#ifndef WIN32
+#ifndef _WIN32
 void CloseHandle(FILE *fp) { fclose(fp); }
 
 int CreateDirectoryA(char *name, void *ptr) {
@@ -296,7 +296,7 @@ int dos_call(UChar code) {
   short fhdl;
   Long c = 0;
   int i;
-#if defined(WIN32)
+#ifdef _WIN32
   DWORD st;
 #endif
   if (func_trace_f) {
@@ -314,7 +314,7 @@ int dos_call(UChar code) {
       if (func_trace_f) {
         printf("%-10s\n", "GETCHAR");
       }
-#if defined(WIN32)
+#ifdef _WIN32
       FlushFileBuffers(finfo[1].fh);
 #endif
       rd[0] = (_getche() & 0xFF);
@@ -324,7 +324,7 @@ int dos_call(UChar code) {
       if (func_trace_f) {
         printf("%-10s char='%c'\n", "PUTCHAR", *(unsigned char *)data_ptr);
       }
-#if defined(WIN32)
+#ifdef _WIN32
       if (GetConsoleMode(finfo[1].fh, &st) != 0) {
         // 非リダイレクト
         WriteW32(1, finfo[1].fh, data_ptr, 1);
@@ -345,7 +345,7 @@ int dos_call(UChar code) {
       srt = (short)mem_get(stack_adr, S_WORD);
       srt &= 0xFF;
       if (srt >= 0xFE) {
-#if defined(WIN32)
+#ifdef _WIN32
         INPUT_RECORD ir;
         DWORD read_len;
         BOOL b;
@@ -386,7 +386,7 @@ int dos_call(UChar code) {
       if (func_trace_f) {
         printf("%-10s\n", code == 0x07 ? "INKEY" : "GETC");
       }
-#if defined(WIN32)
+#ifdef _WIN32
       FlushFileBuffers(finfo[1].fh);
 #endif
       c = _getch();
@@ -403,7 +403,7 @@ int dos_call(UChar code) {
       if (func_trace_f) {
         printf("%-10s str=%s\n", "PRINT", data_ptr);
       }
-#if defined(WIN32)
+#ifdef _WIN32
       if (GetConsoleMode(finfo[1].fh, &st) != 0) {
         WriteW32(1, finfo[1].fh, data_ptr, len);
       } else {
@@ -444,7 +444,7 @@ int dos_call(UChar code) {
       if (func_trace_f) {
         printf("%-10s\n", "FFLUSH");
       }
-#if defined(WIN32)
+#ifdef _WIN32
       /* オープン中の全てのファイルをフラッシュする。*/
       for (i = 5; i < FILE_MAX; i++) {
         if (finfo[i].fh == NULL) continue;
@@ -460,7 +460,7 @@ int dos_call(UChar code) {
       if (func_trace_f) {
         printf("%-10s drv=%c:\n", "CHGDRV", srt + 'A');
       }
-#if defined(WIN32)
+#ifdef _WIN32
       {
         char drv[3];
         BOOL b;
@@ -480,7 +480,7 @@ int dos_call(UChar code) {
 
 #endif
       // Verify
-#if defined(WIN32)
+#ifdef _WIN32
       {
         char drv[512];
         BOOL b;
@@ -529,7 +529,7 @@ int dos_call(UChar code) {
       if (func_trace_f) {
         printf("%-10s\n", "CURDRV");
       }
-#if defined(WIN32)
+#ifdef _WIN32
       {
         char path[512];
         BOOL b;
@@ -553,7 +553,7 @@ int dos_call(UChar code) {
       if (finfo[fhdl].mode == 1) {
         rd[0] = -1;
       } else {
-#if defined(WIN32)
+#ifdef _WIN32
         DWORD read_len;
         BOOL b = FALSE;
         INPUT_RECORD ir;
@@ -597,7 +597,7 @@ int dos_call(UChar code) {
         printf("%-10s file_no=%d char=0x%02X\n", "FPUTC", fhdl,
                *(unsigned char *)data_ptr);
       }
-#if defined(WIN32)
+#ifdef _WIN32
       if (GetConsoleMode(finfo[fhdl].fh, &st) != 0 &&
           (fhdl == 1 || fhdl == 2)) {
         // 非リダイレクトで標準出力か標準エラー出力
@@ -624,7 +624,7 @@ int dos_call(UChar code) {
       if (func_trace_f) {
         printf("%-10s file_no=%d str=\"%s\"\n", "FPUTS", fhdl, data_ptr);
       }
-#if defined(WIN32)
+#ifdef _WIN32
       if (GetConsoleMode(finfo[1].fh, &st) != 0 && (fhdl == 1 || fhdl == 2)) {
         // 非リダイレクトで標準出力か標準エラー出力
         len = WriteW32(fhdl, finfo[fhdl].fh, data_ptr, strlen(data_ptr));
@@ -1381,7 +1381,7 @@ static Long Mfree(Long adr) {
               エラーコード(<0)
  */
 static Long Dskfre(short drv, Long buf) {
-#if defined(WIN32)
+#ifdef _WIN32
   BOOL b;
   ULong SectorsPerCluster, BytesPerSector, NumberOfFreeClusters,
       TotalNumberOfClusters;
@@ -1461,7 +1461,7 @@ static Long Setblock(Long adr, Long size) {
               エラーコード(<0)
  */
 static Long Create(char *p, short atr) {
-#if defined(WIN32)
+#ifdef _WIN32
   HANDLE fp;
 #else
   FILE *fp;
@@ -1506,7 +1506,7 @@ static Long Create(char *p, short atr) {
     /* 拡張子が存在する */
     if (strlen(&(p[i])) > 4) return (-13);
   }
-#if defined(WIN32)
+#ifdef _WIN32
   if ((fp = CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL, CREATE_ALWAYS,
                        FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
 #else
@@ -1525,7 +1525,7 @@ static Long Create(char *p, short atr) {
  戻り値：ファイルハンドル(負ならエラーコード)
  */
 static Long Newfile(char *p, short atr) {
-#if defined(WIN32)
+#ifdef _WIN32
   HANDLE fp;
 #else
   FILE *fp;
@@ -1556,7 +1556,7 @@ static Long Newfile(char *p, short atr) {
     /* 拡張子が存在する */
     if (strlen(&(p[i])) > 4) return (-13);
   }
-#if defined(WIN32)
+#ifdef _WIN32
   /*
    * 「X68000環境ハンドブック」によると、ファイルが存在する場合でも
    * 新たにファイルを生成するとあるので、ファイルの存在チェックは不要
@@ -1592,7 +1592,7 @@ if ((fp = CreateFile(p, GENERIC_READ, 0, NULL,
  戻り値：ファイルハンドル(負ならエラーコード)
  */
 static Long Open(char *p, short mode) {
-#if defined(WIN32)
+#ifdef _WIN32
   HANDLE fh;
   DWORD md;
 #else
@@ -1619,14 +1619,14 @@ static Long Open(char *p, short mode) {
 
   switch (mode) {
     case 0: /* 読み込みオープン */
-#if defined(WIN32)
+#ifdef _WIN32
       md = GENERIC_READ;
 #else
       strcpy(md, "rb");
 #endif
       break;
     case 1: /* 書き込みオープン */
-#if defined(WIN32)
+#ifdef _WIN32
       if ((fh = CreateFile(p, GENERIC_READ, 0, NULL, OPEN_EXISTING,
                            FILE_ATTRIBUTE_NORMAL, NULL)) ==
           INVALID_HANDLE_VALUE)
@@ -1641,7 +1641,7 @@ static Long Open(char *p, short mode) {
 #endif
       break;
     case 2: /* 読み書きオープン */
-#if defined(WIN32)
+#ifdef _WIN32
       md = GENERIC_READ | GENERIC_WRITE;
 #else
       strcpy(md, "r+b");
@@ -1656,7 +1656,7 @@ static Long Open(char *p, short mode) {
   for (i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
 
   if ((len = strlen(p)) > 88) return (-13); /* ファイル名の指定誤り */
-#if defined(WIN32)
+#ifdef _WIN32
   if ((fh = CreateFile(p, md, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
                        NULL)) == INVALID_HANDLE_VALUE)
 #else
@@ -1678,7 +1678,7 @@ static Long Open(char *p, short mode) {
   }
 
   if (ret == 0) {
-#if defined(WIN32)
+#ifdef _WIN32
     CloseHandle(fh);
 #else
     fclose(fp);
@@ -1686,7 +1686,7 @@ static Long Open(char *p, short mode) {
     return (-4); /* オープンしているファイルが多すぎる */
   }
 
-#if defined(WIN32)
+#ifdef _WIN32
   finfo[ret].fh = fh;
 #else
   finfo[ret].fh = fp;
@@ -1706,7 +1706,7 @@ static Long Close(short hdl) {
 
   if (hdl <= 4) return (0);
 
-#if defined(WIN32)
+#ifdef _WIN32
   if (CloseHandle(finfo[hdl].fh) == FALSE)
 #else
   if (fclose(finfo[hdl].fh) == EOF)
@@ -1715,7 +1715,7 @@ static Long Close(short hdl) {
 
   finfo[hdl].fh = NULL;
   /* タイムスタンプ変更 */
-#if defined(WIN32)
+#ifdef _WIN32
   if (finfo[hdl].date != 0 || finfo[hdl].time != 0) {
     FILETIME ft0, ft1, ft2;
     HANDLE fh;
@@ -1752,7 +1752,7 @@ static Long Fgets(Long adr, short hdl) {
   if (finfo[hdl].mode == 1) return (-1);
 
   max = (unsigned char)mem_get(adr, S_BYTE);
-#if defined(WIN32)
+#ifdef _WIN32
   {
     BOOL b;
     DWORD read_len;
@@ -1802,7 +1802,7 @@ static Long Read(short hdl, Long buf, Long len) {
   if (len == 0) return (0);
 
   read_buf = prog_ptr + buf;
-#if defined(WIN32)
+#ifdef _WIN32
   ReadFile(finfo[hdl].fh, read_buf, len, (LPDWORD)&read_len, NULL);
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
   read_len = Read_conv(hdl, read_buf, len);
@@ -1848,7 +1848,7 @@ static Long Write(short hdl, Long buf, Long len) {
   if (len == 0) return (0);
 
   write_buf = prog_ptr + buf;
-#if defined(WIN32)
+#ifdef _WIN32
   unsigned len2;
   WriteFile(finfo[hdl].fh, (LPCVOID)write_buf, len, &len2, NULL);
   write_len = len2;
@@ -1975,7 +1975,7 @@ static Long Seek(short hdl, Long offset, short mode) {
   int sk;
   Long ret;
 
-#if defined(WIN32)
+#ifdef _WIN32
   if (finfo[hdl].fh == INVALID_HANDLE_VALUE)
     return (-6); /* オープンされていない */
   switch (mode) {
@@ -2047,7 +2047,7 @@ static Long Chmod(Long adr, short atr) {
   name_ptr = prog_ptr + adr;
   if (atr == -1) {
     /* 読み出し */
-#if defined(WIN32)
+#ifdef _WIN32
     if ((ret = GetFileAttributesA(name_ptr)) == 0xFFFFFFFF) return -2;
 #else
     if (_dos_getfileattr(name_ptr, &ret) != 0) return (-2); /* ファイルがない */
@@ -2056,7 +2056,7 @@ static Long Chmod(Long adr, short atr) {
   } else {
     atr &= 0x3F;
     errno = 0;
-#if defined(WIN32)
+#ifdef _WIN32
     if (SetFileAttributesA(name_ptr, atr) == FALSE) {
 #else
     if (_dos_setfileattr(name_ptr, atr) != 0) {
@@ -2180,7 +2180,7 @@ static Long Curdir(short drv, char *buf_ptr) {
      エラーコード
  */
 static Long Files(Long buf, Long name, short atr) {
-#if defined(WIN32)
+#ifdef _WIN32
 
   WIN32_FIND_DATA f_data;
   HANDLE handle;
@@ -2319,7 +2319,7 @@ handle = FindFirstFileEx
  戻り値：エラーコード
  */
 static Long Nfiles(Long buf) {
-#if defined(WIN32)
+#ifdef _WIN32
   WIN32_FIND_DATA f_data;
   HANDLE handle;
   unsigned int i;
@@ -2429,7 +2429,7 @@ static Long Filedate(short hdl, Long dt) {
 static Long Getdate() {
   Long ret;
 
-#if defined(WIN32)
+#ifdef _WIN32
   SYSTEMTIME stime;
   // GetSystemTime(&stime);
   GetLocalTime(&stime);
@@ -2454,7 +2454,7 @@ static Long Getdate() {
  戻り値：エラーコード
  */
 static Long Setdate(short dt) {
-#if defined(WIN32)
+#ifdef _WIN32
   SYSTEMTIME stime;
   BOOL b;
   stime.wYear = (dt >> 9) & 0x7F + 1980;
@@ -2477,7 +2477,7 @@ static Long Setdate(short dt) {
  */
 static Long Gettime(int flag) {
   Long ret;
-#if defined(WIN32)
+#ifdef _WIN32
   SYSTEMTIME stime;
   // GetSystemTime(&stime);
   GetLocalTime(&stime);
@@ -2512,7 +2512,7 @@ static Long Gettime(int flag) {
  戻り値：エラーコード
  */
 static Long Settim2(Long tim) {
-#if defined(WIN32)
+#ifdef _WIN32
   SYSTEMTIME stime;
   BOOL b;
   stime.wYear = (tim >> 16) & 0x1F;
@@ -2646,7 +2646,7 @@ static Long Namests(Long name, Long buf) {
   /* ドライブ名をセット */
   if (i == 0) {
     /* カレントドライブをセット */
-#if defined(WIN32)
+#ifdef _WIN32
     char path[MAX_PATH];
     GetCurrentDirectory(strlen(path), path);
     mem_set(buf + 1, path[0] - 'A', S_BYTE);
@@ -2736,7 +2736,7 @@ static Long Nameck(Long name, Long buf) {
   /* ドライブ名をセット */
   if (i == 0) {
     /* カレントドライブをセット */
-#if defined(WIN32)
+#ifdef _WIN32
     char path[MAX_PATH];
     GetCurrentDirectoryA(sizeof(path), path);
     buf_ptr[0] = path[0];
@@ -2770,7 +2770,7 @@ static Long Conctrl(short mode, Long adr) {
       usrt = (unsigned short)mem_get(adr, S_WORD);
       if (usrt >= 0x0100) putchar(usrt >> 8);
       putchar(usrt);
-#if defined(WIN32)
+#ifdef _WIN32
       FlushFileBuffers(finfo[1].fh);
 #else
       fflush(stdout);
@@ -2880,7 +2880,7 @@ static Long Keyctrl(short mode, Long stack_adr) {
         if (ini_info.pc98_key == TRUE) c = cnv_key98(c);
       }
       return (c);
-#ifdef WIN32
+#ifdef _WIN32
     case 1: /* キーの先読み */
       if (_kbhit() == 0) return (0);
       c = _getch();
@@ -3214,7 +3214,7 @@ static Long gets2(char *str, int max) {
     c = getchar();
   }
   if (c == EOF) str[cnt++] = EOF;
-#if defined(WIN32)
+#ifdef _WIN32
   unsigned dmy;
   WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "\x01B[1A", 4, &dmy, NULL);
 #endif
