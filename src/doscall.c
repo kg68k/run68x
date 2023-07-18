@@ -1772,13 +1772,13 @@ static Long Close(short hdl) {
   if (finfo[hdl].date != 0 || finfo[hdl].time != 0) {
     FILETIME ft0, ft1, ft2;
     HANDLE fh;
-    __int64 datetime;
+    int64_t datetime;
 
     fh = CreateFileA(finfo[hdl].name, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
                      FILE_ATTRIBUTE_NORMAL, NULL);
     GetFileTime(fh, &ft0, &ft1, &ft2);
     // 秒→100nsecに変換する。
-    datetime = ((__int64)finfo[hdl].date * 86400L + finfo[hdl].time) * 10000000;
+    datetime = ((int64_t)finfo[hdl].date * 86400L + finfo[hdl].time) * 10000000;
     ft2.dwLowDateTime = (ULong)(datetime & 0xffffffff);
     ft2.dwHighDateTime = (ULong)(datetime >> 32);
     SetFileTime(fh, &ft0, &ft1, &ft2);
@@ -2582,7 +2582,7 @@ static void get_jtime(UShort *d, UShort *t, int offset) {
 static Long Filedate_win32dosx(short hdl, Long dt) {
 #if defined(WIN32)
   FILETIME ctime, atime, wtime;
-  __int64 ll_wtime;
+  int64_t ll_wtime;
   HANDLE hFile;
   BOOL b;
 #elif defined(DOSX)
@@ -2624,7 +2624,7 @@ static Long Filedate_win32dosx(short hdl, Long dt) {
   hFile = finfo[hdl].fh;
   GetFileTime(hFile, &ctime, &atime, &wtime);
   ll_wtime =
-      (((__int64)wtime.dwLowDateTime) << 32) + (__int64)wtime.dwLowDateTime;
+      (((int64_t)wtime.dwLowDateTime) << 32) + (int64_t)wtime.dwLowDateTime;
   return (Long)(((ll_wtime / 86400 / 10000000) << 16) +
                 (ll_wtime / 10000000) % 86400);
 #else

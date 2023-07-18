@@ -101,12 +101,6 @@
 #define NORETURN /* NORETURN */
 #endif
 
-#if defined(__GNUC__)
-#if !defined(__int64)
-#define __int64 Long Long
-#endif
-#endif
-
 #if defined(_WIN32) /* for Cygnus GCC */
 #if !defined(WIN32)
 #define WIN32
@@ -122,11 +116,6 @@ typedef int16_t Short;
 typedef uint16_t UShort;
 typedef int32_t Long;    // 64bit 環境対応
 typedef uint32_t ULong;  // 64bit 環境対応
-
-/*
-#undef	TRACE
-#undef	FNC_TRACE
-*/
 
 #if defined(WIN32) /* Win32 APIでDOSコールをエミュレートする。*/
 #undef DOSX
@@ -149,6 +138,7 @@ typedef uint32_t ULong;  // 64bit 環境対応
 #define TRUE -1
 #define FALSE 0
 #endif
+
 #define XHEAD_SIZE 0x40       /* Xファイルのヘッダサイズ */
 #define HUMAN_HEAD 0x6800     /* Humanのメモリ管理ブロック位置 */
 #define FCB_WORK 0x20F00      /* DOSCALL GETFCB用ワーク領域 */
