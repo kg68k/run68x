@@ -83,7 +83,6 @@ static void display_registers();
 static void set_breakpoint(int argc, char **argv);
 static void clear_breakpoint();
 static ULong get_stepcount(int argc, char **argv);
-extern char *disassemble(Long addr, Long *next_addr);
 static unsigned short watchcode(int argc, char **argv);
 
 /*

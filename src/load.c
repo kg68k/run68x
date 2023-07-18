@@ -24,6 +24,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #if defined(WIN32)
 #include <direct.h>
@@ -39,9 +40,6 @@ static Long xfile_cnv(Long *, Long *, Long, int);
 static int xrelocate(Long, Long, Long);
 static Long xhead_getl(int);
 static int set_fname(char *, Long);
-
-/* doscall.c */
-Long Getenv_common(const char *name_p, char *buf_p);
 
 static char *GetAPath(char **path_p, char *buf);
 

@@ -157,8 +157,6 @@ static Long Exec3(Long, Long, Long);
 static void Exec4(Long);
 static Long gets2(char *, int);
 
-Long Getenv_common(const char *name_p, char *buf_p);
-
 #if !defined(WIN32) && !defined(DOSX)
 void CloseHandle(FILE *fp) { fclose(fp); }
 

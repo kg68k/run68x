@@ -98,7 +98,6 @@
 static int exec_trap(BOOL *restart);
 static int exec_notrap(BOOL *restart);
 static void trap_table_make(void);
-extern char *disassemble(Long addr, Long *next_addr);
 
 /* フラグ(グローバル変数) */
 BOOL func_trace_f = FALSE;

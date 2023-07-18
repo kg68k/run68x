@@ -87,9 +87,10 @@
  *
  */
 
+#ifndef RUN68_H
+#define RUN68_H
+
 #define RUN68VERSION "0.09a+MacOS"
-#if !defined(_RUN68_H_)
-#define _RUN68_H_
 
 #if defined(__GNUC__)
 #define NORETURN __attribute__((noreturn))
@@ -107,8 +108,9 @@
 #endif
 #endif
 
-#include <stdint.h>  // for intXX_t
-#include <stdlib.h>
+#include <setjmp.h>
+#include <stdint.h>
+#include <stdio.h>
 
 typedef int8_t Char;
 typedef uint8_t UChar;
@@ -121,22 +123,21 @@ typedef uint32_t ULong;  // 64bit 環境対応
 #undef DOSX
 #endif
 
-#if defined(WIN32)
+#ifdef WIN32
 #include <windows.h>
+#else
+#define BOOL int
+#define TRUE -1
+#define FALSE 0
 #endif
 
-#include <setjmp.h>
-#include <stdio.h>
 #if !defined(WIN32) /* Win32 APIでDOSコールをエミュレートする。*/
 #if !defined(DOSX)
 #include <limits.h>
 #define MAX_PATH PATH_MAX
 #define _fcvt fcvt
 #define _stricmp strcasecmp
-#define BOOL int
 #endif
-#define TRUE -1
-#define FALSE 0
 #endif
 
 #define XHEAD_SIZE 0x40       /* Xファイルのヘッダサイズ */
@@ -197,7 +198,7 @@ typedef uint32_t ULong;  // 64bit 環境対応
 #define EA_PCX 10 /* インデックス付きプログラムカウンタ相対 */
 #define EA_IM 11  /* イミディエイトデータ */
 
-/* 選択可能実効アドレス組み合わせ          fedc ba98 7654 3210 */
+/* 選択可能実効アドレス組み合わせ   fedc ba98 7654 3210 */
 #define EA_All 0x0fff            /* 0000 1111 1111 1111 */
 #define EA_Control 0x07e4        /* 0000 0111 1110 0100 */
 #define EA_Data 0x0ffd           /* 0000 1111 1111 1101 */
@@ -265,6 +266,22 @@ typedef struct {
 } EXEC_INSTRUCTION_INFO;
 
 /* run68.c */
+extern FILEINFO finfo[FILE_MAX];  // ファイル管理テーブル
+extern INI_INFO ini_info;         // iniファイルの内容
+extern const char size_char[3];
+extern Long ra[8];      // アドレスレジスタ
+extern Long rd[8 + 1];  // データレジスタ
+extern Long usp;        // USP
+extern Long pc;         // プログラムカウンタ
+extern short sr;        // ステータスレジスタ
+extern char *prog_ptr;  // プログラムをロードしたメモリへのポインタ
+extern int trap_count;          // 割り込み処理中なら0
+extern Long superjsr_ret;       // DOSCALL SUPER_JSRの戻りアドレス
+extern Long psp[NEST_MAX];      // PSP
+extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保存
+extern Long nest_sp[NEST_MAX];  // 親プロセスのスタックポインタを保存
+extern unsigned int nest_cnt;  // 子プロセスを起動するたびに+1
+extern Long mem_aloc;          // メインメモリの大きさ
 /* フラグ */
 extern BOOL func_trace_f;
 extern BOOL trace_f;
@@ -318,6 +335,7 @@ NORETURN void run68_abort(Long);
 
 /* doscall.c */
 int dos_call(UChar);
+Long Getenv_common(const char *name_p, char *buf_p);
 
 /* iocscall.c */
 int iocs_call(void);
@@ -377,22 +395,8 @@ void neg_conditions(Long dest, Long result, int size, BOOL zero_flag);
 void check(char *mode, Long src, Long dest, Long result, int size,
            short before);
 
-extern FILEINFO finfo[FILE_MAX];  // ファイル管理テーブル
-extern INI_INFO ini_info;         // iniファイルの内容
-extern const char size_char[3];
-extern Long ra[8];      // アドレスレジスタ
-extern Long rd[8 + 1];  // データレジスタ
-extern Long usp;        // USP
-extern Long pc;         // プログラムカウンタ
-extern short sr;        // ステータスレジスタ
-extern char *prog_ptr;  // プログラムをロードしたメモリへのポインタ
-extern int trap_count;          // 割り込み処理中なら0
-extern Long superjsr_ret;       // DOSCALL SUPER_JSRの戻りアドレス
-extern Long psp[NEST_MAX];      // PSP
-extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保存
-extern Long nest_sp[NEST_MAX];  // 親プロセスのスタックポインタを保存
-extern unsigned int nest_cnt;  // 子プロセスを起動するたびに+1
-extern Long mem_aloc;          // メインメモリの大きさ
+// dissassemble.c
+char *disassemble(Long addr, Long *next_addr);
 
 /*
 ０ライン命令：movep, addi, subi, cmpi, andi, eori, ori, btst, bset, bclr, bchg
@@ -413,4 +417,4 @@ extern Long mem_aloc;          // メインメモリの大きさ
 Ｅライン命令：asl, asr, lsl, lsr, rol, ror, roxl, roxr
 */
 
-#endif /* !defined(_RUN68_H_) */
+#endif

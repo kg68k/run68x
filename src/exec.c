@@ -45,7 +45,6 @@
 
 /* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
 #define prog_ptr_u ((unsigned char *)prog_ptr)
-extern char *disassemble(Long addr, Long *next_addr);
 
 /*
  　機能：1命令実行する

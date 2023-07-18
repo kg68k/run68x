@@ -40,16 +40,6 @@
  *
  */
 
-// /* conditions.c */
-
-// void general_conditions(Long result, int size);
-// void add_conditions(Long src , Long dest, Long result, int size, BOOL
-// zero_flag); void cmp_conditions(Long src , Long dest, Long result, int size);
-// void sub_conditions(Long src , Long dest, Long result, int size, BOOL
-// zero_flag); void neg_conditions(Long dest, Long result, int size, BOOL
-// zero_flag); void check(char *mode, Long src, Long dest, Long result, int
-// size, short before);
-
 #include "run68.h"
 
 static void ccr2bitmap(short ccr, char *bitmap) {
