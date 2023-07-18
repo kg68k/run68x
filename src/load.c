@@ -23,8 +23,6 @@
  *
  */
 
-#undef MAIN
-
 #include <stdio.h>
 #include <string.h>
 #if defined(WIN32)

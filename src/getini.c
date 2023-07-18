@@ -39,8 +39,6 @@
  *
  */
 
-#undef MAIN
-
 #include <stdio.h>
 #include <string.h>
 
@@ -172,7 +170,7 @@ void readenv_from_ini(char *path) {
   int len;
   char *mem_ptr; /* メモリ管理ブロック */
   char *read_ptr;
-  int env_len = 0; /* 環境の長さ */
+  int env_len = 0;        /* 環境の長さ */
   BOOL env_flag = FALSE;  // ファイル先頭は [all] セクション
 
   /* INIファイルの名前(パス含む)を得る */

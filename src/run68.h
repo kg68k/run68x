@@ -387,41 +387,22 @@ void neg_conditions(Long dest, Long result, int size, BOOL zero_flag);
 void check(char *mode, Long src, Long dest, Long result, int size,
            short before);
 
-#ifdef MAIN
-FILEINFO finfo[FILE_MAX]; /* ファイル管理テーブル */
-INI_INFO ini_info;        /* iniファイルの内容 */
-char size_char[3] = {'b', 'w', 'l'};
-Long ra[8];     /* アドレスレジスタ */
-Long rd[8 + 1]; /* データレジスタ */
-Long usp;       /* USP */
-Long pc;        /* プログラムカウンタ */
-short sr;       /* ステータスレジスタ */
-char *prog_ptr; /* プログラムをロードしたメモリへのポインタ */
-int trap_count;         /* 割り込み処理中なら０ */
-Long superjsr_ret;      /* DOSCALL SUPER_JSRの戻りアドレス */
-Long psp[NEST_MAX];     /* PSP */
-Long nest_pc[NEST_MAX]; /* 親プロセスへの戻りアドレスを保存 */
-Long nest_sp[NEST_MAX]; /* 親プロセスのスタックポインタを保存 */
-unsigned int nest_cnt;  /* 子プロセスを起動するたびに＋１ */
-Long mem_aloc;          /* メインメモリの大きさ */
-#else
-extern FILEINFO finfo[FILE_MAX];
-extern INI_INFO ini_info;
-extern char size_char[3];
-extern Long ra[8];
-extern Long rd[8 + 1];
-extern Long usp;
-extern Long pc;
-extern short sr;
-extern char *prog_ptr;
-extern int trap_count;
-extern Long superjsr_ret;
-extern Long psp[NEST_MAX];
-extern Long nest_pc[NEST_MAX];
-extern Long nest_sp[NEST_MAX];
-extern unsigned int nest_cnt;
-extern Long mem_aloc;
-#endif
+extern FILEINFO finfo[FILE_MAX];  // ファイル管理テーブル
+extern INI_INFO ini_info;         // iniファイルの内容
+extern const char size_char[3];
+extern Long ra[8];      // アドレスレジスタ
+extern Long rd[8 + 1];  // データレジスタ
+extern Long usp;        // USP
+extern Long pc;         // プログラムカウンタ
+extern short sr;        // ステータスレジスタ
+extern char *prog_ptr;  // プログラムをロードしたメモリへのポインタ
+extern int trap_count;          // 割り込み処理中なら0
+extern Long superjsr_ret;       // DOSCALL SUPER_JSRの戻りアドレス
+extern Long psp[NEST_MAX];      // PSP
+extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保存
+extern Long nest_sp[NEST_MAX];  // 親プロセスのスタックポインタを保存
+extern unsigned int nest_cnt;  // 子プロセスを起動するたびに+1
+extern Long mem_aloc;          // メインメモリの大きさ
 
 /*
 ０ライン命令：movep, addi, subi, cmpi, andi, eori, ori, btst, bset, bclr, bchg

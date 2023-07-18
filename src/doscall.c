@@ -72,8 +72,6 @@
  *
  */
 
-#undef MAIN
-
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -237,7 +235,7 @@ char ungetch(char c) {
 #endif
 
 // DOS _EXIT、DOS _EXIT2
-static BOOL Exit2(const char* name, Long exit_code) {
+static BOOL Exit2(const char *name, Long exit_code) {
   int i;
 
   if (func_trace_f) {

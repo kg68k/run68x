@@ -28,8 +28,6 @@
  *
  */
 
-#undef MAIN
-
 #include <stdio.h>
 
 #include "run68.h"

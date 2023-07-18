@@ -45,8 +45,6 @@
  *
  */
 
-#undef MAIN
-
 #include <ctype.h>
 #include <errno.h>
 #include <math.h>

@@ -83,8 +83,6 @@
  *
  */
 
-#define MAIN
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -115,6 +113,23 @@ char ini_file_name[MAX_PATH];
 /* 標準入力のハンドル */
 HANDLE stdin_handle;
 #endif
+
+FILEINFO finfo[FILE_MAX];
+INI_INFO ini_info;
+const char size_char[3] = {'b', 'w', 'l'};
+Long ra[8];
+Long rd[8 + 1];
+Long usp;
+Long pc;
+short sr;
+char *prog_ptr;
+int trap_count;
+Long superjsr_ret;
+Long psp[NEST_MAX];
+Long nest_pc[NEST_MAX];
+Long nest_sp[NEST_MAX];
+unsigned int nest_cnt;
+Long mem_aloc;
 
 /* アボート処理のためのジャンプバッファ */
 jmp_buf jmp_when_abort;
