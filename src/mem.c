@@ -182,20 +182,12 @@ void mem_set(Long adr, Long d, char size) {
  機能：異常終了する
 */
 void run68_abort(Long adr) {
-  int i;
-
   fprintf(stderr, "アドレス：%08X\n", adr);
 
-  for (i = 5; i < FILE_MAX; i++) {
-    if (finfo[i].fh != NULL)
-#ifdef _WIN32
-      CloseHandle(finfo[i].fh);
-#else
-      fclose(finfo[i].fh);
-#endif
-  }
+  close_all_files();
 
 #ifdef TRACE
+  int i;
   printf("d0-7=%08lx", rd[0]);
   for (i = 1; i < 8; i++) {
     printf(",%08lx", rd[i]);

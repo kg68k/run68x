@@ -549,7 +549,11 @@ Restart:
 
   /* ファイル管理テーブルの初期化 */
   for (i = 0; i < FILE_MAX; i++) {
-    finfo[i].fh = NULL;
+#ifdef _WIN32
+    finfo[i].handle = NULL;
+#else
+    finfo[i].fp = NULL;
+#endif
     finfo[i].date = 0;
     finfo[i].time = 0;
     finfo[i].mode = 0;
@@ -557,13 +561,13 @@ Restart:
     finfo[i].name[0] = '\0';
   }
 #ifdef _WIN32
-  finfo[0].fh = GetStdHandle(STD_INPUT_HANDLE);
-  finfo[1].fh = GetStdHandle(STD_OUTPUT_HANDLE);
-  finfo[2].fh = GetStdHandle(STD_ERROR_HANDLE);
+  finfo[0].handle = GetStdHandle(STD_INPUT_HANDLE);
+  finfo[1].handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  finfo[2].handle = GetStdHandle(STD_ERROR_HANDLE);
 #else
-  finfo[0].fh = stdin;
-  finfo[1].fh = stdout;
-  finfo[2].fh = stderr;
+  finfo[0].fp = stdin;
+  finfo[1].fp = stdout;
+  finfo[2].fp = stderr;
 #endif
   finfo[0].mode = 0;
   finfo[1].mode = 1;

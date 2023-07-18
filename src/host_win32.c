@@ -27,6 +27,20 @@
 #define DRV_CLN_LEN 2     // "A:"
 #define DRV_CLN_BS_LEN 3  // "A:\\"
 
+// オープン中のファイルハンドルか
+bool IsOpendFile_win32(FILEINFO* finfop) {
+  return (finfop->handle == NULL) ? true : false;
+}
+
+// ファイルを閉じる
+bool CloseFile_win32(FILEINFO* finfop) {
+  HANDLE handle = finfop->handle;
+  if (handle == NULL) return false;
+
+  finfop->handle = NULL;
+  return (CloseHandle(handle) == FALSE) ? false : true;
+}
+
 // DOS _MKDIR (0xff39)
 Long Mkdir_win32(Long name) {
   char* name_ptr = prog_ptr + name;
@@ -78,12 +92,13 @@ Long Curdir_win32(short drv, char* buf_ptr) {
 Long Filedate_win32(short hdl, Long dt) {
   FILETIME ctime, atime, wtime;
   int64_t ll_wtime;
-  HANDLE hFile;
 
-  if (finfo[hdl].fh == NULL) return DOSE_BADF;  // オープンされていない
+  if (!IsOpendFile_win32(&finfo[hdl]))
+    return DOSE_BADF;  // オープンされていない
+
+  HANDLE hFile = finfo[hdl].handle;
 
   if (dt != 0) { /* 設定 */
-    hFile = finfo[hdl].fh;
     GetFileTime(hFile, &ctime, &atime, &wtime);
     ll_wtime = (dt >> 16) * 86400 * 10000000 + (dt & 0xFFFF) * 10000000;
     wtime.dwLowDateTime = (DWORD)(ll_wtime & 0xFFFFFFFF);
@@ -98,7 +113,6 @@ Long Filedate_win32(short hdl, Long dt) {
     return DOSE_SUCCESS;
   }
 
-  hFile = finfo[hdl].fh;
   GetFileTime(hFile, &ctime, &atime, &wtime);
   ll_wtime =
       (((int64_t)wtime.dwLowDateTime) << 32) + (int64_t)wtime.dwLowDateTime;

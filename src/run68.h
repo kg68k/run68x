@@ -143,9 +143,9 @@ typedef uint32_t ULong;  // 64bit 環境対応
 #endif
 typedef struct {
 #ifdef _WIN32
-  HANDLE fh;
+  HANDLE handle;
 #else
-  FILE *fh;
+  FILE *fp;
 #endif
   unsigned date;
   unsigned time;
@@ -240,6 +240,7 @@ void mem_set(Long, Long, char);
 NORETURN void run68_abort(Long);
 
 /* doscall.c */
+void close_all_files(void);
 bool dos_call(UChar);
 Long Getenv_common(const char *name_p, char *buf_p);
 

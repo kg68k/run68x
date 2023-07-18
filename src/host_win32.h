@@ -22,6 +22,12 @@
 
 #ifdef _WIN32
 
+bool IsOpendFile_win32(FILEINFO* finfop);
+#define HOST_ISOPENDFILE IsOpendFile_win32
+
+bool CloseFile_win32(FILEINFO* finfop);
+#define HOST_CLOSEFILE CloseFile_win32
+
 Long Mkdir_win32(Long name);
 #define HOST_MKDIR Mkdir_win32
 
