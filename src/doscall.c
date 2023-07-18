@@ -74,6 +74,7 @@
 
 #undef MAIN
 
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,6 +91,7 @@
 #else
 #include <dirent.h>
 #include <time.h>
+#include <unistd.h>
 #endif
 
 #include <sys/stat.h>
@@ -155,13 +157,13 @@ static Long Exec01(Long, Long, Long, int);
 static Long Exec2(Long, Long, Long);
 static Long Exec3(Long, Long, Long);
 static void Exec4(Long);
-static void get_jtime(UShort *, UShort *, int);
 static Long gets2(char *, int);
 
 Long Getenv_common(const char *name_p, char *buf_p);
 
 #if !defined(WIN32) && !defined(DOSX)
 void CloseHandle(FILE *fp) { fclose(fp); }
+
 int CreateDirectoryA(char *name, void *ptr) {
   printf("CreateDirectoryA(\"%s\")\n", name);
   return 1;
@@ -233,6 +235,34 @@ char ungetch(char c) {
   return 0;
 }
 #endif
+
+// DOS _EXIT、DOS _EXIT2
+static BOOL Exit2(const char* name, Long exit_code) {
+  int i;
+
+  if (func_trace_f) {
+    printf("%-10s\n", name);
+  }
+  Mfree(0);
+  for (i = 5; i < FILE_MAX; i++) {
+    if (finfo[i].nest == nest_cnt) {
+      if (finfo[i].fh != NULL) {
+        CloseHandle(finfo[i].fh);
+        finfo[i].fh = NULL;
+      }
+    }
+  }
+  rd[0] = exit_code;
+  if (nest_cnt == 0) {
+    return TRUE;
+  }
+  sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
+  Mfree(psp[nest_cnt] + MB_SIZE);
+  nest_cnt--;
+  pc = nest_pc[nest_cnt];
+  ra[7] = nest_sp[nest_cnt];
+  return FALSE;
+}
 
 // DOSコール名を表示する
 //   function call trace用
@@ -964,6 +994,7 @@ int dos_call(UChar code) {
     case 0x4B: /* EXEC */
       srt = (short)mem_get(stack_adr, S_WORD);
       data = mem_get(stack_adr + 2, S_LONG);
+      buf = len = 0;
       if (srt < 4) {
         buf = mem_get(stack_adr + 6, S_LONG);
         len = mem_get(stack_adr + 10, S_LONG);
@@ -1089,38 +1120,14 @@ int dos_call(UChar code) {
       }
       pc = data;
       break;
+
     case 0x4C: /* EXIT2 */
-      srt = (short)mem_get(stack_adr, S_WORD);
-    case 0x00: /* EXIT */
-      if (func_trace_f) {
-        printf("%-10s\n", code == 0x4C ? "EXIT2" : "EXIT");
-      }
-      Mfree(0);
-      for (i = 5; i < FILE_MAX; i++) {
-        if (finfo[i].nest == nest_cnt) {
-          if (finfo[i].fh != NULL) {
-            CloseHandle(finfo[i].fh);
-            finfo[i].fh = NULL;
-          }
-        }
-      }
-      if (nest_cnt <= 0) {
-        if (code == 0x00)
-          rd[0] = 0;
-        else
-          rd[0] = (UShort)srt;
-        return TRUE;
-      }
-      sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
-      Mfree(psp[nest_cnt] + MB_SIZE);
-      nest_cnt--;
-      pc = nest_pc[nest_cnt];
-      ra[7] = nest_sp[nest_cnt];
-      if (code == 0x00)
-        rd[0] = 0;
-      else
-        rd[0] = (UShort)srt;
+      if (Exit2("EXIT2", mem_get(stack_adr, S_WORD))) return TRUE;
       break;
+    case 0x00: /* EXIT */
+      if (Exit2("EXIT", 0)) return TRUE;
+      break;
+
     case 0x31: /* KEEPPR */
       len = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
@@ -1133,7 +1140,7 @@ int dos_call(UChar code) {
           if (finfo[i].fh != NULL) CloseHandle(finfo[i].fh);
         }
       }
-      if (nest_cnt <= 0) return (TRUE);
+      if (nest_cnt == 0) return TRUE;
       Setblock(psp[nest_cnt] + MB_SIZE, len + PSP_SIZE - MB_SIZE);
       mem_set(psp[nest_cnt] + 0x04, 0xFF, S_BYTE);
       sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
@@ -1141,6 +1148,7 @@ int dos_call(UChar code) {
       pc = nest_pc[nest_cnt];
       ra[7] = nest_sp[nest_cnt];
       rd[0] = (UShort)srt;
+      break;
 
     case 0xf7:  // BUS_ERR
     {
@@ -1411,7 +1419,6 @@ static Long Mfree(Long adr) {
               エラーコード(<0)
  */
 static Long Dskfre(short drv, Long buf) {
-  Long disksize;
 #if defined(WIN32)
   BOOL b;
   ULong SectorsPerCluster, BytesPerSector, NumberOfFreeClusters,
@@ -1428,7 +1435,7 @@ static Long Dskfre(short drv, Long buf) {
   mem_set(buf + 4, SectorsPerCluster, S_WORD);
   BytesPerSector &= 0xFFFF;
   mem_set(buf + 6, BytesPerSector, S_WORD);
-  disksize = NumberOfFreeClusters * SectorsPerCluster * BytesPerSector;
+  return NumberOfFreeClusters * SectorsPerCluster * BytesPerSector;
 #elif defined(DOSX)
   static buf_save;
   struct diskfree_t dspace;
@@ -1444,10 +1451,11 @@ static Long Dskfre(short drv, Long buf) {
   mem_set(buf + 4, dspace.sectors_per_cluster, S_WORD);
   dspace.bytes_per_sector &= 0xFFFF;
   mem_set(buf + 6, dspace.bytes_per_sector, S_WORD);
-  disksize = dspace.avail_clusters * dspace.sectors_per_cluster *
-             dspace.bytes_per_sector;
+  return dspace.avail_clusters * dspace.sectors_per_cluster *
+         dspace.bytes_per_sector;
+#else
+  return -15;
 #endif
-  return disksize;
 }
 
 /*
@@ -1850,7 +1858,6 @@ static Long Fgets(Long adr, short hdl) {
 static Long Read(short hdl, Long buf, Long len) {
   char *read_buf;
   Long read_len;
-  BOOL ret;
 
   if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
 
@@ -1860,7 +1867,7 @@ static Long Read(short hdl, Long buf, Long len) {
 
   read_buf = prog_ptr + buf;
 #if defined(WIN32)
-  ret = ReadFile(finfo[hdl].fh, read_buf, len, (LPDWORD)&read_len, NULL);
+  ReadFile(finfo[hdl].fh, read_buf, len, (LPDWORD)&read_len, NULL);
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
   read_len = Read_conv(hdl, read_buf, len);
 #else
@@ -1899,7 +1906,6 @@ static Long Read_conv(short hdl, void *buf, size_t size) {
 static Long Write(short hdl, Long buf, Long len) {
   char *write_buf;
   Long write_len = 0;
-  unsigned len2;
 
   if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
 
@@ -1907,11 +1913,13 @@ static Long Write(short hdl, Long buf, Long len) {
 
   write_buf = prog_ptr + buf;
 #if defined(WIN32)
+  unsigned len2;
   WriteFile(finfo[hdl].fh, (LPCVOID)write_buf, len, &len2, NULL);
   write_len = len2;
   if (finfo[hdl].fh == GetStdHandle(STD_OUTPUT_HANDLE))
     FlushFileBuffers(finfo[hdl].fh);
 #elif defined(DOSX)
+  unsigned len2;
   if (len < 65536) {
     _dos_write(fileno(finfo[hdl].fh), write_buf, (unsigned)len, &len2);
     write_len = len2;
@@ -1948,7 +1956,7 @@ static Long Write_conv(short hdl, void *buf, size_t size) {
     while (size > 0) {
       char sjis_buf[2048];
       char utf8_buf[4096];
-      int sjis_buf_size;
+      size_t sjis_buf_size;
       char *sjis_buf_p;
       size_t sjis_bytes;
       char *utf8_buf_p = utf8_buf;
@@ -2333,9 +2341,9 @@ handle = FindFirstFileEx
       buf_ptr[0] = atr; /* ファイルの属性 */
       buf_ptr[1] = 0;   /* ドライブ番号(not used) */
                         //			*((HANDLE*)&buf_ptr[2]) = handle; /*
-                        //サーチハンドル */
+                        // サーチハンドル */
       {
-          //				BOOL b = handle != INVALID_HANDLE_VALUE;
+          // BOOL b = handle != INVALID_HANDLE_VALUE;
       } /* DATEとTIMEをセット */
       {
         /*
@@ -2509,14 +2517,71 @@ f_data.cFileName[21] = '\0';
   return (0);
 }
 
+#ifdef DOSX
 /*
- 　機能：DOSCALL FILEDATEを実行する
- 戻り値：エラーコード
+ 　機能：標準時間を日本時間に変換する
+ 戻り値：なし
  */
-static Long Filedate(short hdl, Long dt) {
-#if !defined(WIN32) && !defined(DOSX)
-  printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__);
-#else
+static void get_jtime(UShort *d, UShort *t, int offset) {
+  static int month_day[13] = {31, 31, 28, 31, 30, 31, 30,
+                              31, 31, 30, 31, 30, 31};
+  short year;
+  short month;
+  short day;
+  short hour;
+
+  hour = (*t >> 11);
+  if (hour + offset * 9 >= 0 && hour + offset * 9 <= 23) {
+    *t += (0x4800 * offset);
+    return;
+  }
+
+  if (offset > 0)
+    hour -= 15;
+  else
+    hour += 15;
+  *t = (*t & 0x7FF) + (0x800 * hour);
+
+  year = (*d >> 9);
+  month = ((*d >> 5) & 0xF);
+  day = (*d & 0x1F);
+
+  /* 2月の日数の判定 */
+  if ((year % 4) == 0) {
+    if ((year % 100) == 0) {
+      if ((year % 400) == 0)
+        month_day[2] = 29;
+      else
+        month_day[2] = 28;
+    } else {
+      month_day[2] = 29;
+    }
+  } else {
+    month_day[2] = 28;
+  }
+
+  if (day + offset >= 1 && day + offset <= month_day[month]) {
+    *d += offset; /* 日±1 */
+    return;
+  }
+  if (offset > 0)
+    *d = (*d & 0xFFE0) + 1; /* 1日 */
+  else
+    *d = (*d & 0xFFE0) + month_day[month - 1]; /* 前月最終日 */
+
+  if (month + offset >= 1 && month + offset <= 12) {
+    *d += (0x20 * offset); /* 月±1 */
+    return;
+  }
+  if (offset > 0)
+    *d = (*d & 0xFE1F) + 0x200 + 0x20; /* 翌年1月 */
+  else
+    *d = (*d & 0xFE1F) - 0x200 + 0x180; /* 前年12月 */
+}
+#endif
+
+#if defined(_WIN32) || defined(DOSX)
+static Long Filedate_win32dosx(short hdl, Long dt) {
 #if defined(WIN32)
   FILETIME ctime, atime, wtime;
   __int64 ll_wtime;
@@ -2530,7 +2595,7 @@ static Long Filedate(short hdl, Long dt) {
   UShort ftime;
 #endif
   if (finfo[hdl].fh == NULL) return (-6); /* オープンされていない */
-#if defined(DOSX)
+#ifdef DOSX
   dosfh = fileno(finfo[hdl].fh);
 #endif
   if (dt != 0) { /* 設定 */
@@ -2544,7 +2609,7 @@ static Long Filedate(short hdl, Long dt) {
     if (b) return (-19); /* 書き込み不可 */
     finfo[hdl].date = (ULong)(ll_wtime / 10000000 / 86400);
     finfo[hdl].time = (ULong)((ll_wtime / 10000000) % 86400);
-#elif defined(DOSX)
+#else
     fdate = (unsigned short)(dt >> 16);
     ftime = (unsigned short)(dt & 0xFFFF);
     get_jtime(&fdate, &ftime, -1);
@@ -2572,6 +2637,25 @@ static Long Filedate(short hdl, Long dt) {
   get_jtime(&fdate, &ftime, 1);
   return ((fdate << 16) | ftime);
 #endif
+}
+
+#else
+
+static Long Filedate_generic(short hdl, Long dt) {
+  printf("DOSCALL FILEDATE:not defined yet %s %d\n", __FILE__, __LINE__);
+  return -6;
+}
+#endif
+
+/*
+ 　機能：DOSCALL FILEDATEを実行する
+ 戻り値：エラーコード
+ */
+static Long Filedate(short hdl, Long dt) {
+#if defined(_WIN32) || defined(DOSX)
+  return Filedate_win32dosx(hdl, dt);
+#else
+  return Filedate_generic(hdl, dt);
 #endif
 }
 
@@ -2722,7 +2806,7 @@ static Long Getenv(Long name, Long env, Long buf) {
 }
 
 Long Getenv_common(const char *name_p, char *buf_p) {
-  unsigned char *mem_ptr;
+  char *mem_ptr;
   /*
   WIN32の環境変数領域からrun68のエミュレーション領域に複製してある
   値を検索する仕様にする。
@@ -2768,9 +2852,6 @@ static Long Namests(Long name, Long buf) {
   char cud[67];
   char *name_ptr;
   char *buf_ptr;
-#if !defined(WIN32)
-  unsigned getdrv;
-#endif
   UChar drv;
   int wild = 0;
   int len;
@@ -2836,6 +2917,7 @@ static Long Namests(Long name, Long buf) {
     GetCurrentDirectory(strlen(path), path);
     mem_set(buf + 1, path[0] - 'A', S_BYTE);
 #else /* DOSX */
+    Long getdrv;
     dos_getdrive(&getdrv);
     mem_set(buf + 1, getdrv - 1, S_BYTE);
 #endif
@@ -2877,7 +2959,6 @@ static Long Nameck(Long name, Long buf) {
   char nbuf[89];
   char *name_ptr;
   char *buf_ptr;
-  unsigned int drv;
   int ret = 0;
   int len;
   int i;
@@ -2927,18 +3008,18 @@ static Long Nameck(Long name, Long buf) {
     /* カレントドライブをセット */
 #if defined(WIN32)
     char path[MAX_PATH];
-    BOOL b;
-    b = GetCurrentDirectoryA(sizeof(path), path);
-    drv = path[0] - 'A' + 1;
-    buf_ptr[0] = drv - 1 + 'A';
+    GetCurrentDirectoryA(sizeof(path), path);
+    buf_ptr[0] = path[0];
     buf_ptr[1] = ':';
 #elif defined(DOSX)
+    unsigned int drv;
     dos_getdrive(&drv);
     buf_ptr[0] = drv - 1 + 'A';
     buf_ptr[1] = ':';
 #else
-    dos_getdrive(&drv);
-    buf_ptr[0] = drv - 1 + 'A';
+    Long d;
+    dos_getdrive(&d);
+    buf_ptr[0] = d - 1 + 'A';
     buf_ptr[1] = ':';
 #endif
   } else {
@@ -3395,74 +3476,12 @@ static void Exec4(Long adr) {
 }
 
 /*
- 　機能：標準時間を日本時間に変換する
- 戻り値：なし
- */
-static void get_jtime(UShort *d, UShort *t, int offset) {
-  static int month_day[13] = {31, 31, 28, 31, 30, 31, 30,
-                              31, 31, 30, 31, 30, 31};
-  short year;
-  short month;
-  short day;
-  short hour;
-
-  hour = (*t >> 11);
-  if (hour + offset * 9 >= 0 && hour + offset * 9 <= 23) {
-    *t += (0x4800 * offset);
-    return;
-  }
-
-  if (offset > 0)
-    hour -= 15;
-  else
-    hour += 15;
-  *t = (*t & 0x7FF) + (0x800 * hour);
-
-  year = (*d >> 9);
-  month = ((*d >> 5) & 0xF);
-  day = (*d & 0x1F);
-
-  /* 2月の日数の判定 */
-  if ((year % 4) == 0) {
-    if ((year % 100) == 0) {
-      if ((year % 400) == 0)
-        month_day[2] = 29;
-      else
-        month_day[2] = 28;
-    } else {
-      month_day[2] = 29;
-    }
-  } else {
-    month_day[2] = 28;
-  }
-
-  if (day + offset >= 1 && day + offset <= month_day[month]) {
-    *d += offset; /* 日±1 */
-    return;
-  }
-  if (offset > 0)
-    *d = (*d & 0xFFE0) + 1; /* 1日 */
-  else
-    *d = (*d & 0xFFE0) + month_day[month - 1]; /* 前月最終日 */
-
-  if (month + offset >= 1 && month + offset <= 12) {
-    *d += (0x20 * offset); /* 月±1 */
-    return;
-  }
-  if (offset > 0)
-    *d = (*d & 0xFE1F) + 0x200 + 0x20; /* 翌年1月 */
-  else
-    *d = (*d & 0xFE1F) - 0x200 + 0x180; /* 前年12月 */
-}
-
-/*
  　機能：getsの代わりをする
  戻り値：なし
  */
 static Long gets2(char *str, int max) {
   int c;
   int cnt;
-  unsigned dmy;
 
   cnt = 0;
   c = getchar();
@@ -3473,8 +3492,10 @@ static Long gets2(char *str, int max) {
   }
   if (c == EOF) str[cnt++] = EOF;
 #if defined(WIN32)
+  unsigned dmy;
   WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "\x01B[1A", 4, &dmy, NULL);
 #elif defined(DOSX)
+  unsigned dmy;
   _dos_write(fileno(stdout), "\x01B[1A", 4, &dmy);
 #endif
   /* printf("%c[1A", 0x1B); */ /* カーソルを１行上に */

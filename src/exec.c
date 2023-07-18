@@ -47,7 +47,6 @@
 
 /* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
 #define prog_ptr_u ((unsigned char *)prog_ptr)
-void run68_abort(Long);
 extern char *disassemble(Long addr, Long *next_addr);
 
 /*
@@ -237,7 +236,7 @@ void err68b(char *mes, Long pc, Long ppc) {
  　機能：アドレスレジスタをインクリメントする
  戻り値：なし
 */
-void inc_ra(char reg, char size) {
+void inc_ra(int reg, char size) {
   if (reg == 7 && size == S_BYTE) {
     ra[7] += 2;
   } else {
@@ -259,7 +258,7 @@ void inc_ra(char reg, char size) {
  　機能：アドレスレジスタをデクリメントする
  戻り値：なし
 */
-void dec_ra(char reg, char size) {
+void dec_ra(int reg, char size) {
   if (reg == 7 && size == S_BYTE) {
     ra[7] -= 2;
   } else {

@@ -29,17 +29,15 @@
 #include "run68.h"
 
 /*
- �@�@�\�F6���C�����?����s����
- �?�l�F TRUE = ���s�I��
-         FALSE = ���s�p��
+ 　機能：6ライン命令を実行する
+ 戻り値： TRUE = 実行終了
+         FALSE = 実行継続
 */
 int line6(char *pc_ptr) {
-  char code;
   char cond;
   char disp;
   short disp_w;
 
-  code = *pc_ptr;
   cond = (*pc_ptr & 0x0F);
   disp = *(pc_ptr + 1);
   pc += 2;

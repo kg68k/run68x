@@ -78,9 +78,9 @@ int iocs_call() {
         // SJIS to UTF-8
         char utf8_buf[8192];
         iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
-        size_t inbytes = strlen(data_ptr);
+        size_t inbytes = strlen((char *)data_ptr);
         size_t outbytes = sizeof(utf8_buf) - 1;
-        char *ptr_in = data_ptr;
+        char *ptr_in = (char *)data_ptr;
         char *ptr_out = utf8_buf;
         memset(utf8_buf, 0x00, sizeof(utf8_buf));
         iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
@@ -467,11 +467,11 @@ static Long Timeasc(Long data, Long adr) {
   data_ptr = prog_ptr + adr;
 
   hh = ((data >> 16) & 0xFF);
-  if (hh < 0 || hh > 23) return (-1);
+  if (hh > 23) return (-1);
   mm = ((data >> 8) & 0xFF);
-  if (mm < 0 || mm > 59) return (-1);
+  if (mm > 59) return (-1);
   ss = (data & 0xFF);
-  if (ss < 0 || ss > 59) return (-1);
+  if (ss > 59) return (-1);
 
   sprintf(data_ptr, "%02d:%02d:%02d", hh, mm, ss);
   ra[1] += 8;

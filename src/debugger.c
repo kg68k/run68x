@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: debugger.c,v 1.2 2009-08-08 06:49:44 masamic Exp $*/
 
 /*
@@ -25,6 +42,7 @@
  *
  */
 
+#include <ctype.h>
 #include <string.h>
 
 #include "run68.h"
@@ -213,7 +231,7 @@ EndOfLoop:
  */
 static RUN68_COMMAND analyze(const char *line, int *argc, char **argv) {
   static char cline[MAX_LINE * 2];
-  unsigned int ac = 0, i;
+  unsigned int i;
   char *q = cline;
 
   *argc = 0;
@@ -229,7 +247,7 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char **argv) {
       do {
         *q++ = c;
         c = toupper(*p++);
-      } while ('A' <= c && c <= 'Z' || '0' <= c && c <= '9' || c == '_');
+      } while (('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '_');
       *q++ = '\0';
       i += strlen(argv[*argc - 1]);
     } else if ('0' <= c && c <= '9') {
@@ -241,8 +259,8 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char **argv) {
       } while ('0' <= c && c <= '9');
       *q++ = '\0';
       i += strlen(argv[*argc - 1]);
-    } else if (c == '$' && 'A' <= toupper(*p) && toupper(*p) <= 'F' ||
-               '0' <= *p && *p <= '9') {
+    } else if ((c == '$' && 'A' <= toupper(*p) && toupper(*p) <= 'F') ||
+               ('0' <= *p && *p <= '9')) {
       /* 16進数は$記号を付ける。*/
       argv[(*argc)++] = q;
       *q++ = c;
@@ -250,7 +268,7 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char **argv) {
       do {
         *q++ = c;
         c = toupper(*p++);
-      } while ('A' <= c && c <= 'F' || '0' <= c && c <= '9');
+      } while (('A' <= c && c <= 'F') || ('0' <= c && c <= '9'));
       *q++ = '\0';
       i += strlen(argv[*argc - 1]);
     }
@@ -397,7 +415,12 @@ static void set_breakpoint(int argc, char **argv) {
     fprintf(stderr, "run68-break:Address expression error.\n");
     return;
   }
-  sscanf(&argv[1][1], "%lx", &trap_pc);
+
+  {
+    long unsigned int a;
+    sscanf(&argv[1][1], "%lx", &a);
+    trap_pc = (Long)a;
+  }
 }
 
 static void clear_breakpoint() { trap_pc = 0; }
@@ -477,7 +500,9 @@ static ULong get_stepcount(int argc, char **argv) {
   if (argc == 1) {
     return 0;
   } else if (determine_string(argv[1]) == 1) {
-    sscanf(argv[1], "%lu", &count);
+    long unsigned int a;
+    sscanf(argv[1], "%lu", &a);
+    count = (ULong)a;
   }
   return count;
 }

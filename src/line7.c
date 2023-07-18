@@ -32,7 +32,6 @@
 */
 int line7(char *pc_ptr) {
   char code;
-  char reg;
   char data;
 
   code = *(pc_ptr++);
@@ -41,7 +40,7 @@ int line7(char *pc_ptr) {
     err68a("おかしな命令を実行しました", __FILE__, __LINE__);
     return (TRUE);
   }
-  reg = ((code >> 1) & 0x07);
+  int reg = (code >> 1) & 0x07;
   data = *pc_ptr;
   if (data < 0) {
     rd[reg] = (0xFFFFFF00 | data);

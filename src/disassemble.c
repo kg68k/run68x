@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: disassemble.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
 
 /*
@@ -139,9 +156,6 @@ char *disassemble(Long addr, Long *next_addr) {
   return ptr;
 }
 
-static BOOL effective_address(Long addr, short mode, short reg, char size,
-                              unsigned short mask, char *str, Long *next_addr);
-
 static void fill_space(char *str, unsigned int n) {
   unsigned int i;
   if (strlen(str) >= n) return;
@@ -149,6 +163,127 @@ static void fill_space(char *str, unsigned int n) {
     str[i] = ' ';
   }
   str[n] = '\0';
+}
+
+/*
+   機能：
+   パラメータ：
+     Long   addr       <in>  オペランドのアドレス(使うとは限らない)
+     ushort mode       <in>  実効アドレスのモードフィールド(0-7)
+     ushort reg        <in>  実効アドレスのレジスタフィールド(0-7)
+     char   size       <in>  即値の場合のデータサイズ('b'/'w'/'l')
+     char   *str       <out> 実効アドレスを文字列にして書き込む
+     Long   *next_addr <out> 次のオペランドまたは命令のアドレス
+   戻り値：
+     BOOL   FALSEならエラー。エラー時もnext_addrは有効。
+*/
+static BOOL effective_address(Long addr, short mode, short reg, char size,
+                              char *str, Long *next_addr) {
+  short disp, ext;
+  unsigned short absw;
+  ULong absl;
+  ULong imm;
+
+  switch (mode) {
+    case 0: /* パターン0:データレジスタ直接 */
+      sprintf(str, "d%1d", reg);
+      *next_addr = addr;
+      break;
+    case 1: /* パターン1:アドレスレジスタ直接 */
+      sprintf(str, "a%1d", reg);
+      *next_addr = addr;
+      break;
+    case 2: /* パターン2:アドレスレジスタ間接 */
+      sprintf(str, "(a%1d)", reg);
+      *next_addr = addr;
+      break;
+    case 3: /* パターン3:ポストインクリメント付きアドレスレジスタ間接 */
+      sprintf(str, "(a%1d)+", reg);
+      *next_addr = addr;
+      break;
+    case 4: /* パターン4:プリデクリメント付きアドレスレジスタ間接 */
+      sprintf(str, "-(a%1d)", reg);
+      *next_addr = addr;
+      break;
+    case 5: /* パターン5:ディスプレースメント付きアドレスレジスタ間接 */
+      /* ディスプレースメントは符号付きのワード値である */
+      disp = (short)((unsigned short)prog_ptr_u[addr] << 8) +
+             (unsigned short)prog_ptr_u[addr + 1];
+      sprintf(str, "%d(a%1d)", disp, reg);
+      *next_addr = addr + 2;
+      break;
+    case 6: /* パターン6:インデックス付きアドレスレジスタ間接 */
+      ext = (short)((unsigned short)prog_ptr_u[addr] << 8) +
+            (unsigned short)prog_ptr_u[addr + 1];
+      sprintf(str, "%d(a%1d,%c%1d.%c)", (signed char)(ext & 0xff), reg,
+              ext & 0x8000 ? 'a' : 'd', (ext & 0x7000) >> 12,
+              ext & 0x0800 ? 'l' : 'w');
+      *next_addr = addr + 2;
+      break;
+    case 7: /* regフィールドで更に場合分け */
+      switch (reg) {
+        case 0x0: /* パターン7:絶対ショートアドレス */
+          absw = ((unsigned short)prog_ptr_u[addr] << 8) +
+                 (unsigned short)prog_ptr_u[addr + 1];
+          sprintf(str, "$%06x", absw);
+          *next_addr = addr + 2;
+          break;
+        case 0x1: /* パターン8:絶対ロングアドレス */
+          absl = ((ULong)prog_ptr_u[addr] << 24) +
+                 ((ULong)prog_ptr_u[addr + 1] << 16) +
+                 ((ULong)prog_ptr_u[addr + 2] << 8) +
+                 (ULong)prog_ptr_u[addr + 3];
+          sprintf(str, "$%06x", absl);
+          *next_addr = addr + 4;
+          break;
+        case 0x2: /* パターン9:ディスプレースメント付きPC相対 */
+          /* ディスプレースメントは符号付きのワード値である */
+          disp = (short)((unsigned short)prog_ptr_u[addr] << 8) +
+                 (unsigned short)prog_ptr_u[addr + 1];
+          sprintf(str, "%d(pc)", disp);
+          *next_addr = addr + 2;
+          break;
+        case 0x3: /* パターン10:インデックス付きPC相対 */
+          ext = (short)((unsigned short)prog_ptr_u[addr] << 8) +
+                (unsigned short)prog_ptr_u[addr + 1];
+          sprintf(str, "%d(pc,%c%1d.%c)", (signed char)(ext & 0xff),
+                  ext & 0x8000 ? 'a' : 'd', (ext & 0x7000) >> 12,
+                  ext & 0x0800 ? 'l' : 'w');
+          *next_addr = addr + 2;
+          break;
+        case 0x4: /* パターン11:即値(またはステータスレジスタ) */
+          /* ステータスレジスタの場合はここには現れない */
+          switch (size) {
+            case 'b':
+              imm = (ULong)prog_ptr_u[addr + 1];
+              *next_addr = addr + 2;
+              break;
+            case 'w':
+              imm =
+                  ((ULong)prog_ptr_u[addr] << 8) + (ULong)prog_ptr_u[addr + 1];
+              *next_addr = addr + 2;
+              break;
+            case 'l':
+              imm = ((ULong)prog_ptr_u[addr] << 24) +
+                    ((ULong)prog_ptr_u[addr + 1] << 16) +
+                    ((ULong)prog_ptr_u[addr + 2] << 8) +
+                    (ULong)prog_ptr_u[addr + 3];
+              *next_addr = addr + 4;
+              break;
+            default:
+              /* ここには来ないはず。*/
+              goto ErrorReturn;
+          }
+          sprintf(str, "#$%x", imm);
+          break;
+        default: /* 存在しないアドレッシングモード */
+          *next_addr = addr;
+          goto ErrorReturn;
+      }
+  }
+  return TRUE;
+ErrorReturn:
+  return FALSE;
 }
 
 static char *disa0(Long addr, unsigned short code, Long *next_addr,
@@ -341,133 +476,11 @@ AddEA:
   p = &mnemonic[strlen(mnemonic)];
   /* 即値は有り得ないのでデータサイズには' 'を与える。*/
   effective_address(*next_addr, (short)((code & 0x38) >> 3),
-                    (short)(code & 0x7), size, 0xfff, p, next_addr);
+                    (short)(code & 0x7), size, p, next_addr);
 EndOfFunc:
   return mnemonic;
 ErrorReturn:
   return NULL;
-}
-
-/*
-   機能：
-   パラメータ：
-     Long   addr       <in>  オペランドのアドレス(使うとは限らない)
-     ushort mode       <in>  実効アドレスのモードフィールド(0-7)
-     ushort reg        <in>  実効アドレスのレジスタフィールド(0-7)
-     char   size       <in>  即値の場合のデータサイズ('b'/'w'/'l')
-     ushort mask       <in>  無効なモードをビット位置の1により指定
-     char   *str       <out> 実効アドレスを文字列にして書き込む
-     Long   *next_addr <out> 次のオペランドまたは命令のアドレス
-   戻り値：
-     BOOL   FALSEならエラー。エラー時もnext_addrは有効。
-*/
-static BOOL effective_address(Long addr, short mode, short reg, char size,
-                              unsigned short mask, char *str, Long *next_addr) {
-  short disp, ext;
-  unsigned short absw;
-  ULong absl;
-  ULong imm;
-
-  switch (mode) {
-    case 0: /* パターン0:データレジスタ直接 */
-      sprintf(str, "d%1d", reg);
-      *next_addr = addr;
-      break;
-    case 1: /* パターン1:アドレスレジスタ直接 */
-      sprintf(str, "a%1d", reg);
-      *next_addr = addr;
-      break;
-    case 2: /* パターン2:アドレスレジスタ間接 */
-      sprintf(str, "(a%1d)", reg);
-      *next_addr = addr;
-      break;
-    case 3: /* パターン3:ポストインクリメント付きアドレスレジスタ間接 */
-      sprintf(str, "(a%1d)+", reg);
-      *next_addr = addr;
-      break;
-    case 4: /* パターン4:プリデクリメント付きアドレスレジスタ間接 */
-      sprintf(str, "-(a%1d)", reg);
-      *next_addr = addr;
-      break;
-    case 5: /* パターン5:ディスプレースメント付きアドレスレジスタ間接 */
-      /* ディスプレースメントは符号付きのワード値である */
-      disp = (short)((unsigned short)prog_ptr_u[addr] << 8) +
-             (unsigned short)prog_ptr_u[addr + 1];
-      sprintf(str, "%d(a%1d)", disp, reg);
-      *next_addr = addr + 2;
-      break;
-    case 6: /* パターン6:インデックス付きアドレスレジスタ間接 */
-      ext = (short)((unsigned short)prog_ptr_u[addr] << 8) +
-            (unsigned short)prog_ptr_u[addr + 1];
-      sprintf(str, "%d(a%1d,%c%1d.%c)", (signed char)(ext & 0xff), reg,
-              ext & 0x8000 ? 'a' : 'd', (ext & 0x7000) >> 12,
-              ext & 0x0800 ? 'l' : 'w');
-      *next_addr = addr + 2;
-      break;
-    case 7: /* regフィールドで更に場合分け */
-      switch (reg) {
-        case 0x0: /* パターン7:絶対ショートアドレス */
-          absw = ((unsigned short)prog_ptr_u[addr] << 8) +
-                 (unsigned short)prog_ptr_u[addr + 1];
-          sprintf(str, "$%06x", absw);
-          *next_addr = addr + 2;
-          break;
-        case 0x1: /* パターン8:絶対ロングアドレス */
-          absl = ((ULong)prog_ptr_u[addr] << 24) +
-                 ((ULong)prog_ptr_u[addr + 1] << 16) +
-                 ((ULong)prog_ptr_u[addr + 2] << 8) +
-                 (ULong)prog_ptr_u[addr + 3];
-          sprintf(str, "$%06x", absl);
-          *next_addr = addr + 4;
-          break;
-        case 0x2: /* パターン9:ディスプレースメント付きPC相対 */
-          /* ディスプレースメントは符号付きのワード値である */
-          disp = (short)((unsigned short)prog_ptr_u[addr] << 8) +
-                 (unsigned short)prog_ptr_u[addr + 1];
-          sprintf(str, "%d(pc)", disp);
-          *next_addr = addr + 2;
-          break;
-        case 0x3: /* パターン10:インデックス付きPC相対 */
-          ext = (short)((unsigned short)prog_ptr_u[addr] << 8) +
-                (unsigned short)prog_ptr_u[addr + 1];
-          sprintf(str, "%d(pc,%c%1d.%c)", (signed char)(ext & 0xff),
-                  ext & 0x8000 ? 'a' : 'd', (ext & 0x7000) >> 12,
-                  ext & 0x0800 ? 'l' : 'w');
-          *next_addr = addr + 2;
-          break;
-        case 0x4: /* パターン11:即値(またはステータスレジスタ) */
-          /* ステータスレジスタの場合はここには現れない */
-          switch (size) {
-            case 'b':
-              imm = (ULong)prog_ptr_u[addr + 1];
-              *next_addr = addr + 2;
-              break;
-            case 'w':
-              imm =
-                  ((ULong)prog_ptr_u[addr] << 8) + (ULong)prog_ptr_u[addr + 1];
-              *next_addr = addr + 2;
-              break;
-            case 'l':
-              imm = ((ULong)prog_ptr_u[addr] << 24) +
-                    ((ULong)prog_ptr_u[addr + 1] << 16) +
-                    ((ULong)prog_ptr_u[addr + 2] << 8) +
-                    (ULong)prog_ptr_u[addr + 3];
-              *next_addr = addr + 4;
-              break;
-            default:
-              /* ここには来ないはず。*/
-              goto ErrorReturn;
-          }
-          sprintf(str, "#$%x", imm);
-          break;
-        default: /* 存在しないアドレッシングモード */
-          *next_addr = addr;
-          goto ErrorReturn;
-      }
-  }
-  return TRUE;
-ErrorReturn:
-  return FALSE;
 }
 
 static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr,
@@ -506,11 +519,10 @@ static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr,
   }
   fill_space(mnemonic, 8);
   b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                        (short)(code & 0x7), size, 0xfff, sstr, &addr);
+                        (short)(code & 0x7), size, sstr, &addr);
   if (b == FALSE) goto ErrorReturn;
   b = effective_address(addr, (short)((code & 0x1c0) >> 6),
-                        (short)((code & 0xe00) >> 9), size, 0xfff, dstr,
-                        next_addr);
+                        (short)((code & 0xe00) >> 9), size, dstr, next_addr);
   if (b == FALSE) goto ErrorReturn;
   strcat(mnemonic, sstr);
   strcat(mnemonic, ",");
@@ -601,7 +613,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       size = 'w';
       p = mnemonic + strlen(mnemonic);
       b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, 0xfff, p, next_addr);
+                            (short)(code & 0x7), size, p, next_addr);
       strcat(mnemonic, ",ccr");
       if (b == FALSE) goto ErrorReturn;
       goto EndOfFunc;
@@ -610,7 +622,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       size = 'w';
       p = mnemonic + strlen(mnemonic);
       b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, 0xfff, p, next_addr);
+                            (short)(code & 0x7), size, p, next_addr);
       strcat(mnemonic, ",sr");
       if (b == FALSE) goto ErrorReturn;
       goto EndOfFunc;
@@ -704,7 +716,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
     L0:
       p = mnemonic + strlen(mnemonic);
       b = effective_address(addr + 4, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, 0xfff, p, next_addr);
+                            (short)(code & 0x7), size, p, next_addr);
       strcat(mnemonic, ",");
       if (b == FALSE) goto ErrorReturn;
       goto L1;
@@ -827,7 +839,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
         strcat(mnemonic, ",");
         p = mnemonic + strlen(mnemonic);
         b = effective_address(addr + 4, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), size, 0xfff, p, next_addr);
+                              (short)(code & 0x7), size, p, next_addr);
         if (b == FALSE) goto ErrorReturn;
       }
       goto EndOfFunc;
@@ -839,7 +851,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       size = 'w';
       p = mnemonic + strlen(mnemonic);
       b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, 0xfff, p, next_addr);
+                            (short)(code & 0x7), size, p, next_addr);
       p = mnemonic + strlen(mnemonic);
       if (b == FALSE) goto ErrorReturn;
       sprintf(p, ",d%1d", (code & 0xe00) >> 9);
@@ -849,7 +861,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       size = 'l';
       p = mnemonic + strlen(mnemonic);
       b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, 0xfff, p, next_addr);
+                            (short)(code & 0x7), size, p, next_addr);
       p = mnemonic + strlen(mnemonic);
       if (b == FALSE) goto ErrorReturn;
       sprintf(p, ",a%1d", (code & 0xe00) >> 9);
@@ -862,7 +874,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
 AddEA:
   p = mnemonic + strlen(mnemonic);
   b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                        (short)(code & 0x7), size, 0xfff, p, next_addr);
+                        (short)(code & 0x7), size, p, next_addr);
   if (b == FALSE) goto ErrorReturn;
 EndOfFunc:
   return mnemonic;
@@ -974,7 +986,7 @@ static char *disa5(Long addr, unsigned short code, Long *next_addr,
 AddEA:
   p = mnemonic + strlen(mnemonic);
   b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                        (short)(code & 0x7), size, 0xfff, p, next_addr);
+                        (short)(code & 0x7), size, p, next_addr);
   if (b == FALSE) goto ErrorReturn;
 EndOfFunc:
   return mnemonic;
@@ -1100,7 +1112,7 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
     fill_space(mnemonic, 8);
     p = mnemonic + strlen(mnemonic);
     b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                          (short)(code & 0x7), size, 0xfff, p, &addr);
+                          (short)(code & 0x7), size, p, &addr);
     if (b == FALSE) goto ErrorReturn;
     goto EndOfFunc;
   } else {
@@ -1121,7 +1133,7 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
         strcat(mnemonic, "or.l");
       L1:
         b = effective_address(addr, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), size, 0xfff, ea, &addr);
+                              (short)(code & 0x7), size, ea, &addr);
         if (b == FALSE) goto ErrorReturn;
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
@@ -1140,7 +1152,7 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
         strcat(mnemonic, "or.l");
       L2:
         b = effective_address(addr, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), ' ', 0xfff, ea, &addr);
+                              (short)(code & 0x7), ' ', ea, &addr);
         if (b == FALSE) goto ErrorReturn;
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
@@ -1206,15 +1218,19 @@ static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
         size = 'b';
         goto L2;
       case 3:
-        strcat(mnemonic, "a");
+        strcat(mnemonic, "a.w");
         reg = 'a';
+        size = 'w';
+        goto L2;
       case 1:
         strcat(mnemonic, ".w");
         size = 'w';
         goto L2;
       case 7:
-        strcat(mnemonic, "a");
+        strcat(mnemonic, "a.l");
         reg = 'a';
+        size = 'l';
+        goto L2;
       case 2:
         strcat(mnemonic, ".l");
         size = 'l';
@@ -1222,7 +1238,7 @@ static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
         b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), size, 0xfff, p, next_addr);
+                              (short)(code & 0x7), size, p, next_addr);
         if (b == FALSE) goto ErrorReturn;
         p = mnemonic + strlen(mnemonic);
         sprintf(p, ",%c%1d", reg, (code & 0xe00) >> 9);
@@ -1241,7 +1257,7 @@ static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
         sprintf(p, "d%1d,", (code & 0xe00) >> 9);
         p = mnemonic + strlen(mnemonic);
         b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), ' ', 0xfff, p, next_addr);
+                              (short)(code & 0x7), ' ', p, next_addr);
         if (b == FALSE) goto ErrorReturn;
         break;
       default:
@@ -1289,12 +1305,16 @@ static char *disab(Long addr, unsigned short code, Long *next_addr,
       break;
     case 3:
       reg = 'a';
+      size = 'w';
+      break;
     case 1:
     case 5:
       size = 'w';
       break;
     case 7:
       reg = 'a';
+      size = 'l';
+      break;
     case 2:
     case 6:
       size = 'l';
@@ -1315,7 +1335,7 @@ static char *disab(Long addr, unsigned short code, Long *next_addr,
   }
   p = mnemonic + strlen(mnemonic);
   b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                        (short)(code & 0x7), size, 0xfff, p, next_addr);
+                        (short)(code & 0x7), size, p, next_addr);
   if (b == FALSE) goto ErrorReturn;
   if ((code & 0xf100) == 0xb100 && reg != 'a') {
     /* EOR */
@@ -1387,7 +1407,7 @@ static char *disac(Long addr, unsigned short code, Long *next_addr,
         L2:
           p = mnemonic + strlen(mnemonic);
           b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                                (short)(code & 0x7), size, 0xfff, p, next_addr);
+                                (short)(code & 0x7), size, p, next_addr);
           if (b == FALSE) goto ErrorReturn;
           p = mnemonic + strlen(mnemonic);
           sprintf(p, ",d%1d", (code & 0xe00) >> 9);
@@ -1404,7 +1424,7 @@ static char *disac(Long addr, unsigned short code, Long *next_addr,
           sprintf(mnemonic, "and.%c   d%1d,", size, (code & 0xe00) >> 9);
           p = mnemonic + strlen(mnemonic);
           b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                                (short)(code & 0x7), size, 0xfff, p, next_addr);
+                                (short)(code & 0x7), size, p, next_addr);
           if (b == FALSE) goto ErrorReturn;
           goto EndOfFunc;
       }
@@ -1457,7 +1477,7 @@ static char *disae(Long addr, unsigned short code, Long *next_addr,
     }
     p = mnemonic + strlen(mnemonic);
     b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                          (short)(code & 0x7), ' ', 0xfff, p, next_addr);
+                          (short)(code & 0x7), ' ', p, next_addr);
     if (b == FALSE) goto ErrorReturn;
   } else {
     switch ((code & 0xc0) >> 6) {

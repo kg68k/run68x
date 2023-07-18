@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: conditions.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
 
 /*
@@ -66,41 +83,31 @@ void check(char *mode, Long src, Long dest, Long result, int size,
 }
 
 Long getMSB(Long num, int size) {
-  Long ret;
-
   switch (size) {
     case S_BYTE:
-      ret = ((num >> 7) & 1);
-      break;
+      return (num >> 7) & 1;
     case S_WORD:
-      ret = ((num >> 15) & 1);
-      break;
+      return (num >> 15) & 1;
     case S_LONG:
-      ret = ((num >> 31) & 1);
-      break;
+      return (num >> 31) & 1;
+
     default:
       err68a("不正なデータサイズです。", __FILE__, __LINE__);
   }
-
-  return (ret);
 }
 
 Long getBitsByDataSize(Long num, int size) {
-  Long ret;
   switch (size) {
     case S_BYTE:
-      ret = num & 0xff;
-      break;
+      return num & 0xff;
     case S_WORD:
-      ret = num & 0xffff;
-      break;
+      return num & 0xffff;
     case S_LONG:
-      ret = num;
-      break;
+      return num;
+
     default:
       err68a("不正なデータサイズです。", __FILE__, __LINE__);
   }
-  return (ret);
 }
 
 /*
@@ -348,7 +355,7 @@ void neg_conditions(Long dest, Long result, int size, BOOL zero_flag) {
   }
 
   /* Zero Flag */
-  if (getBitsByDataSize(result, size) == 0) {
+  if ((zero_flag == 1) && getBitsByDataSize(result, size) == 0) {
     CCR_Z_ON();
   } else {
     CCR_Z_OFF();

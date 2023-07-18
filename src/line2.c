@@ -47,7 +47,6 @@
          FALSE = 実行継続
 */
 int line2(char *pc_ptr) {
-  Long save_pc;
   char src_mode;
   char dst_mode;
   char src_reg;
@@ -59,7 +58,6 @@ int line2(char *pc_ptr) {
   code1 = *(pc_ptr++);
   code2 = *pc_ptr;
   pc += 2;
-  save_pc = pc;
   dst_reg = ((code1 & 0x0E) >> 1);
   dst_mode = (((code1 & 0x01) << 2) | ((code2 >> 6) & 0x03));
   src_mode = ((code2 & 0x38) >> 3);

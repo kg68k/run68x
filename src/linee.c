@@ -127,15 +127,13 @@ int linee(char *pc_ptr) {
          FALSE = 実行継続
 */
 static int Asl(char code1, char code2) {
-  char cnt;
   char size;
-  char reg;
   ULong top;
   ULong mask;
   ULong src;
   ULong flag;
 
-  cnt = ((code1 & 0x0E) >> 1);
+  int cnt = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -148,9 +146,9 @@ static int Asl(char code1, char code2) {
       mask = 0x80000000;
       break;
   }
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   if ((code2 & 0x20) != 0) {
-    cnt = (char)((ULong)(rd[cnt]) % 64);
+    cnt = rd[cnt] % 64;
   } else {
     if (cnt == 0) cnt = 8;
   }
@@ -213,7 +211,7 @@ static int Asl(char code1, char code2) {
 */
 static int Asl2(char code2) {
   char reg;
-  ULong src;
+  Long src;
   int mode;
   int work_mode;
   ULong msb;
@@ -238,8 +236,7 @@ static int Asl2(char code2) {
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
-  src <<= 1;
-  src &= 0xFFFF;
+  src = ((ULong)src << 1) & 0xffff;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -280,15 +277,13 @@ static int Asl2(char code2) {
          FALSE = 実行継続
 */
 static int Asr(char code1, char code2) {
-  char cnt;
   char size;
-  char reg;
   char btm;
   ULong mask;
   ULong src;
   ULong flag;
 
-  cnt = ((code1 & 0x0E) >> 1);
+  int cnt = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -301,9 +296,9 @@ static int Asr(char code1, char code2) {
       mask = 0x80000000;
       break;
   }
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   if ((code2 & 0x20) != 0) {
-    cnt = (char)((ULong)(rd[cnt]) % 64);
+    cnt = rd[cnt] % 64;
   } else {
     if (cnt == 0) cnt = 8;
   }
@@ -371,7 +366,7 @@ static int Asr(char code1, char code2) {
 */
 static int Asr2(char code2) {
   char reg;
-  ULong src;
+  Long src;
   int mode;
   int work_mode;
   int msb;
@@ -400,8 +395,7 @@ static int Asr2(char code2) {
   /* シフト前の最下位ビットを保存する */
   lsb = src & 0x1;
 
-  src >>= 1;
-  src |= msb;
+  src = ((ULong)src >> 1) | msb;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -437,13 +431,11 @@ static int Asr2(char code2) {
          FALSE = 実行継続
 */
 static int Lsl(char code1, char code2) {
-  char cnt;
   char size;
-  char reg;
   ULong mask;
   ULong src;
 
-  cnt = ((code1 & 0x0E) >> 1);
+  int cnt = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -456,9 +448,9 @@ static int Lsl(char code1, char code2) {
       mask = 0x80000000;
       break;
   }
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   if ((code2 & 0x20) != 0) {
-    cnt = (char)((ULong)(rd[cnt]) % 64);
+    cnt = rd[cnt] % 64;
   } else {
     if (cnt == 0) cnt = 8;
   }
@@ -517,7 +509,7 @@ static int Lsl(char code1, char code2) {
 */
 static int Lsl2(char code2) {
   char reg;
-  ULong src;
+  Long src;
   int mode;
   int work_mode;
   int msb;
@@ -542,8 +534,7 @@ static int Lsl2(char code2) {
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
-  src <<= 1;
-  src &= 0xFFFF;
+  src = ((ULong)src << 1) & 0xffff;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -576,13 +567,11 @@ static int Lsl2(char code2) {
          FALSE = 実行継続
 */
 static int Lsr(char code1, char code2) {
-  char cnt;
   char size;
-  char reg;
   ULong mask;
   ULong src;
 
-  cnt = ((code1 & 0x0E) >> 1);
+  int cnt = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -595,9 +584,9 @@ static int Lsr(char code1, char code2) {
       mask = 0x80000000;
       break;
   }
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   if ((code2 & 0x20) != 0) {
-    cnt = (char)((ULong)(rd[cnt]) % 64);
+    cnt = rd[cnt] % 64;
   } else {
     if (cnt == 0) cnt = 8;
   }
@@ -662,7 +651,7 @@ static int Lsr(char code1, char code2) {
 */
 static int Lsr2(char code2) {
   char reg;
-  ULong src;
+  Long src;
   int mode;
   int work_mode;
   int lsb;
@@ -687,8 +676,7 @@ static int Lsr2(char code2) {
   /* シフト前の最下位ビットを保存する */
   lsb = src & 0x1;
 
-  src >>= 1;
-  src &= 0xFFFF;
+  src = ((ULong)src >> 1) & 0xffff;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -721,14 +709,12 @@ static int Lsr2(char code2) {
          FALSE = 実行継続
 */
 static int Rol(char code1, char code2) {
-  char cnt;
   char size;
-  char reg;
   ULong top;
   ULong mask;
   ULong src;
 
-  cnt = ((code1 & 0x0E) >> 1);
+  int cnt = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -741,9 +727,9 @@ static int Rol(char code1, char code2) {
       mask = 0x80000000;
       break;
   }
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   if ((code2 & 0x20) != 0) {
-    cnt = (char)((ULong)(rd[cnt]) % 64);
+    cnt = rd[cnt] % 64;
   } else {
     if (cnt == 0) cnt = 8;
   }
@@ -802,7 +788,7 @@ static int Rol(char code1, char code2) {
 */
 static int Rol2(char code2) {
   char reg;
-  ULong src;
+  Long src;
   int mode;
   int work_mode;
   int msb;
@@ -827,8 +813,7 @@ static int Rol2(char code2) {
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
-  src <<= 1;
-  src &= 0xFFFE;
+  src = ((ULong)src << 1) & 0xfffe;
   if (msb) {
     src |= 1;
   }
@@ -863,14 +848,12 @@ static int Rol2(char code2) {
          FALSE = 実行継続
 */
 static int Roxl(char code1, char code2) {
-  char cnt;
   char size;
-  char reg;
   ULong top;
   ULong mask;
   ULong src;
 
-  cnt = ((code1 & 0x0E) >> 1);
+  int cnt = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -883,9 +866,9 @@ static int Roxl(char code1, char code2) {
       mask = 0x80000000;
       break;
   }
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   if ((code2 & 0x20) != 0) {
-    cnt = (char)((ULong)(rd[cnt]) % 64);
+    cnt = rd[cnt] % 64;
   } else {
     if (cnt == 0) cnt = 8;
   }
@@ -949,7 +932,7 @@ static int Roxl(char code1, char code2) {
 */
 static int Roxl2(char code2) {
   char reg;
-  ULong src;
+  Long src;
   int mode;
   int work_mode;
   int msb;
@@ -974,8 +957,7 @@ static int Roxl2(char code2) {
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
-  src <<= 1;
-  src &= 0xFFFE;
+  src = ((ULong)src << 1) & 0xfffe;
   if (CCR_X_REF()) {
     src |= 1;
   }
@@ -1016,14 +998,12 @@ static int Roxl2(char code2) {
          FALSE = 実行継続
 */
 static int Ror(char code1, char code2) {
-  char cnt;
   char size;
-  char reg;
   char btm;
   ULong mask;
   ULong src;
 
-  cnt = ((code1 & 0x0E) >> 1);
+  int cnt = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -1036,9 +1016,9 @@ static int Ror(char code1, char code2) {
       mask = 0x80000000;
       break;
   }
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   if ((code2 & 0x20) != 0) {
-    cnt = (char)((ULong)(rd[cnt]) % 64);
+    cnt = rd[cnt] % 64;
   } else {
     if (cnt == 0) cnt = 8;
   }
@@ -1103,7 +1083,7 @@ static int Ror(char code1, char code2) {
 */
 static int Ror2(char code2) {
   char reg;
-  ULong src;
+  Long src;
   int mode;
   int work_mode;
   int lsb;
@@ -1128,8 +1108,7 @@ static int Ror2(char code2) {
   /* シフト前の最下位ビットを保存する */
   lsb = src & 0x1;
 
-  src >>= 1;
-  src &= 0x7FFF;
+  src = ((ULong)src >> 1) & 0x7fff;
   if (lsb) {
     src |= 0x8000;
   }
@@ -1164,15 +1143,13 @@ static int Ror2(char code2) {
          FALSE = 実行継続
 */
 static int Roxr(char code1, char code2) {
-  char cnt;
   char size;
-  char reg;
   char btm;
   ULong mask;
   ULong src;
   int i;
 
-  cnt = ((code1 & 0x0E) >> 1);
+  int cnt = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -1185,9 +1162,9 @@ static int Roxr(char code1, char code2) {
       mask = 0x80000000;
       break;
   }
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   if ((code2 & 0x20) != 0) {
-    cnt = (char)((ULong)(rd[cnt]) % 64);
+    cnt = rd[cnt] % 64;
   } else {
     if (cnt == 0) cnt = 8;
   }
@@ -1257,7 +1234,7 @@ static int Roxr(char code1, char code2) {
 */
 static int Roxr2(char code2) {
   char reg;
-  ULong src;
+  Long src;
   int mode;
   int work_mode;
   int lsb;
@@ -1282,8 +1259,7 @@ static int Roxr2(char code2) {
   /* シフト前の最下位ビットを保存する */
   lsb = src & 0x1;
 
-  src >>= 1;
-  src &= 0x7FFF;
+  src = ((ULong)src >> 1) & 0x7fff;
   if (CCR_X_REF()) {
     src |= 0x8000;
   }

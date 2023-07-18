@@ -63,11 +63,10 @@ int line5(char *pc_ptr) {
          FALSE = 実行継続
 */
 static int Dbcc(char code1, char code2) {
-  char reg;
   short disp;
   UShort src_data;
 
-  reg = (code2 & 0x07);
+  int reg = (code2 & 0x07);
   disp = (short)imi_get(S_WORD);
   src_data = (rd[reg] & 0xFFFF);
 
@@ -92,11 +91,9 @@ static int Dbcc(char code1, char code2) {
 static int Scc(char code1, char code2) {
   char mode;
   char reg;
-  Long save_pc;
   int ret;
   Long src_data;
 
-  save_pc = pc;
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
   ret = get_cond((char)(code1 & 0x0F));
@@ -126,7 +123,6 @@ static int Addq(char code1, char code2) {
   char mode;
   char reg;
   char src_data;
-  short disp = 0;
   int work_mode;
 
   Long dest_data;
@@ -197,7 +193,6 @@ static int Subq(char code1, char code2) {
   char mode;
   char reg;
   char src_data;
-  short disp = 0;
   int work_mode;
   Long dest_data;
 

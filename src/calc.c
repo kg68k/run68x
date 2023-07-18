@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: calc.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
 
 /*
@@ -22,30 +39,22 @@
 
 #include "run68.h"
 
-// Long add_Long(Long src, Long dest, int size);
-// Long sub_Long(Long src, Long dest, int size);
-
 /*
  　機能：destにsrcをsizeサイズで加算する
  戻り値：答え
 */
 Long add_long(Long src, Long dest, int size) {
-  Long result;
-
   switch (size) {
     case S_BYTE:
-      result = (dest & 0xffffff00) | (((dest & 0xff) + (src & 0xff)) & 0xff);
-      break;
+      return (dest & 0xffffff00) | ((dest + src) & 0xff);
     case S_WORD:
-      result =
-          (dest & 0xffff0000) | (((dest & 0xffff) + (src & 0xffff)) & 0xffff);
-      break;
+      return (dest & 0xffff0000) | ((dest + src) & 0xffff);
     case S_LONG:
-      result = dest + src;
-      break;
-  }
+      return dest + src;
 
-  return (result);
+    default:
+      err68a("不正なデータサイズです。", __FILE__, __LINE__);
+  }
 }
 
 /*
@@ -53,20 +62,15 @@ Long add_long(Long src, Long dest, int size) {
  戻り値：答え
 */
 Long sub_long(Long src, Long dest, int size) {
-  Long result;
-
   switch (size) {
     case S_BYTE:
-      result = (dest & 0xffffff00) | (((dest & 0xff) - (src & 0xff)) & 0xff);
-      break;
+      return (dest & 0xffffff00) | ((dest - src) & 0xff);
     case S_WORD:
-      result =
-          (dest & 0xffff0000) | (((dest & 0xffff) - (src & 0xffff)) & 0xffff);
-      break;
+      return (dest & 0xffff0000) | ((dest - src) & 0xffff);
     case S_LONG:
-      result = dest - src;
-      break;
-  }
+      return dest - src;
 
-  return (result);
+    default:
+      err68a("不正なデータサイズです。", __FILE__, __LINE__);
+  }
 }

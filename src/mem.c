@@ -27,7 +27,6 @@
 
 static int mem_red_chk(Long);
 static int mem_wrt_chk(Long);
-void run68_abort(Long);
 
 /*
  　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
@@ -37,12 +36,11 @@ void run68_abort(Long);
 Long idx_get() {
   char *mem;
   char idx2;
-  char idx_reg;
   Long idx;
 
   mem = prog_ptr + pc;
   idx2 = *(mem++);
-  idx_reg = ((idx2 >> 4) & 0x07);
+  int idx_reg = ((idx2 >> 4) & 0x07);
   if ((idx2 & 0x80) == 0)
     idx = rd[idx_reg];
   else

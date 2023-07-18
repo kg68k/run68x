@@ -62,13 +62,13 @@ int lined(char *pc_ptr) {
 static int Adda(char code1, char code2) {
   char mode;
   char src_reg;
-  char dst_reg;
   char size;
   Long src_data;
-  Long save_pc;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = ((code1 & 0x0E) >> 1);
   if ((code1 & 0x01) == 0x01)
     size = S_LONG;
   else
@@ -105,14 +105,12 @@ static int Adda(char code1, char code2) {
 
 static int Addx(char code1, char code2) {
   char size;
-  char src_reg;
-  char dst_reg;
   short save_z;
   short save_x;
   Long dest_data;
 
-  src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int src_reg = (code2 & 0x07);
+  int dst_reg = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
 
   if ((code2 & 0x08) != 0) {
@@ -158,13 +156,13 @@ static int Add1(char code1, char code2) {
   char mode;
   char src_reg;
   char dst_reg;
-  short disp = 0;
-  Long save_pc;
   int work_mode;
   Long src_data;
   Long dest_data;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = ((code1 & 0x0E) >> 1);
   dst_reg = (code2 & 0x07);
@@ -230,15 +228,15 @@ static int Add2(char code1, char code2) {
   char size;
   char mode;
   char src_reg;
-  char dst_reg;
   Long src_data;
-  Long save_pc;
   Long dest_data;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
 
   if (mode == EA_AD && size == S_BYTE) {

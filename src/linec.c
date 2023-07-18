@@ -186,13 +186,13 @@ static int And1(char code1, char code2) {
   char mode;
   char src_reg;
   char dst_reg;
-  short disp = 0;
   Long data;
-  Long save_pc;
   int work_mode;
   Long src_data;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   size = ((code2 >> 6) & 0x03);
   mode = ((code2 & 0x38) >> 3);
   src_reg = ((code1 & 0x0E) >> 1);
@@ -262,12 +262,8 @@ static int And2(char code1, char code2) {
   char src_reg;
   char dst_reg;
   Long src_data;
-  Long save_pc;
-  int work_pc;
   Long data;
 
-  save_pc = pc;
-  work_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
   dst_reg = ((code1 & 0x0E) >> 1);
@@ -302,14 +298,12 @@ static int And2(char code1, char code2) {
          FALSE = 実行継続
 */
 static int Exg(char code1, char code2) {
-  char src_reg;
-  char dst_reg;
   char mode;
   Long tmp;
 
   mode = ((code2 & 0xF8) >> 3);
-  src_reg = ((code1 & 0x0E) >> 1);
-  dst_reg = (code2 & 0x07);
+  int src_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = (code2 & 0x07);
 
   switch (mode) {
     case 0x08:
@@ -346,18 +340,18 @@ static int Exg(char code1, char code2) {
 */
 static int Mulu(char code1, char code2) {
   char src_reg;
-  char dst_reg;
   char mode;
   UShort src_data;
   UShort dst_data;
   ULong ans;
-  Long save_pc;
   Long src_data_l;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = ((code1 & 0x0E) >> 1);
 
   dst_data = (rd[dst_reg] & 0xFFFF);
 
@@ -386,18 +380,18 @@ static int Mulu(char code1, char code2) {
 */
 static int Muls(char code1, char code2) {
   char src_reg;
-  char dst_reg;
   char mode;
   short src_data;
   short dst_data;
   Long ans;
-  Long save_pc;
   Long src_data_l;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = ((code1 & 0x0E) >> 1);
 
   dst_data = (rd[dst_reg] & 0xFFFF);
 

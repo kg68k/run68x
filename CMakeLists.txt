@@ -53,7 +53,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE ENV_FROM_INI)
 if(MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE /source-charset:utf-8)
 else()
-  target_compile_options(${PROJECT_NAME} PRIVATE -O3 -Wno-int-conversion -Wno-return-type -Wno-switch -Wno-implicit-function-declaration -Wno-format -Wno-invalid-source-encoding -Wno-pointer-integer-compare -Wno-int-to-pointer-cast -Wno-pointer-sign -Wno-incompatible-pointer-types)
+  target_compile_options(${PROJECT_NAME} PRIVATE -O3 -Wall -Wextra -Werror -Wno-unused-parameter)
 
   # linef.c uses math functions.
   target_link_libraries(${PROJECT_NAME} PRIVATE m)

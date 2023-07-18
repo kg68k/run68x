@@ -7,8 +7,7 @@
  * Following Modification contributed by TRAP.
  *
  * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
- * word size.
- * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
+ * word size.Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
  * Add: Nbcd, Sbcd.
  *
  * Revision 1.4  2004/12/17 10:29:20  masamic
@@ -159,14 +158,13 @@ int line4(char *pc_ptr) {
         err68a("TRAPV命令を実行しました", __FILE__, __LINE__);
         return (TRUE);
       }
-      if (code2 == 0x77)
-        ; /* rtr */
       if ((code2 & 0xF8) == 0x50) return (Link(code2));
       if ((code2 & 0xF8) == 0x58) return (Unlk(code2));
       if ((code2 & 0xF8) == 0x60) return (Move_t_usp(code2));
       if ((code2 & 0xF8) == 0x68) return (Move_f_usp(code2));
       if ((code2 & 0xC0) == 0xC0) return (Jmp(code1, code2));
       if ((code2 & 0xC0) == 0x80) return (Jsr(code2));
+      if (code2 == 0x77) break;  // rtr
       break;
   }
 
@@ -182,7 +180,7 @@ int line4(char *pc_ptr) {
 static int Lea(char code1, char code2) {
   char mode;
   char src_reg;
-  char dst_reg;
+  int dst_reg;
   Long save_pc;
 
   save_pc = pc;
@@ -208,10 +206,9 @@ static int Lea(char code1, char code2) {
          FALSE = 実行継続
 */
 static int Link(char code) {
-  char reg;
   short len;
 
-  reg = (code & 0x07);
+  int reg = (code & 0x07);
   len = (short)imi_get(S_WORD);
 
   ra[7] -= 4;
@@ -232,9 +229,7 @@ static int Link(char code) {
          FALSE = 実行継続
 */
 static int Unlk(char code) {
-  char reg;
-
-  reg = (code & 0x07);
+  int reg = (code & 0x07);
 
   ra[7] = ra[reg];
   ra[reg] = mem_get(ra[7], S_LONG);
@@ -302,9 +297,10 @@ static int Tst(char code) {
   char mode;
   char reg;
   Long data;
-  Long save_pc;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
@@ -360,12 +356,11 @@ static int Pea(char code) {
 static int Movem_f(char code) {
   Long mem_adr;
   char mode;
-  char reg;
+  int reg;
   char size;
   char size2;
   short rlist;
   short mask = 1;
-  short disp = 0;
   Long save_pc;
   int i;
   int work_mode;
@@ -447,7 +442,7 @@ static int Movem_f(char code) {
 static int Movem_t(char code) {
   Long mem_adr;
   char mode;
-  char reg;
+  int reg;
   char size;
   char size2;
   short rlist;
@@ -535,9 +530,10 @@ static int Movem_t(char code) {
 static int Move_f_sr(char code) {
   char mode;
   char reg;
-  Long save_pc;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
 
@@ -562,10 +558,11 @@ static int Move_f_sr(char code) {
 static int Move_t_sr(char code) {
   char mode;
   char reg;
-  Long save_pc;
   Long data;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
 
@@ -595,7 +592,7 @@ static int Move_t_sr(char code) {
          FALSE = 実行継続
 */
 static int Move_f_usp(char code) {
-  char reg;
+  int reg;
 
   if (SR_S_REF() == 0) {
     err68a("特権命令を実行しました", __FILE__, __LINE__);
@@ -624,14 +621,12 @@ static int Move_f_usp(char code) {
          FALSE = 実行継続
 */
 static int Move_t_usp(char code) {
-  char reg;
-
   if (SR_S_REF() == 0) {
     err68a("特権命令を実行しました", __FILE__, __LINE__);
     return (TRUE);
   }
 
-  reg = (code & 0x07);
+  // int reg = (code & 0x07);
 
 #ifdef TRACE
   printf("trace: move_t_usp PC=%06lX\n", pc);
@@ -649,10 +644,11 @@ static int Move_t_usp(char code) {
 static int Move_t_ccr(char code) {
   char mode;
   char reg;
-  Long save_pc;
   Long data;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
 
@@ -677,11 +673,10 @@ static int Move_t_ccr(char code) {
          FALSE = 実行継続
 */
 static int Swap(char code) {
-  char reg;
   Long data;
   Long data2;
 
-  reg = (code & 0x07);
+  int reg = (code & 0x07);
   data = ((rd[reg] >> 16) & 0xFFFF);
   data2 = ((rd[reg] & 0xFFFF) << 16);
   data |= data2;
@@ -706,11 +701,12 @@ static int Clr(char code) {
   char size;
   char mode;
   char reg;
-  Long save_pc;
   Long data;
   int work_mode;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
@@ -760,9 +756,8 @@ static int Clr(char code) {
 */
 static int Ext(char code) {
   char size;
-  char reg;
 
-  reg = (code & 0x07);
+  int reg = (code & 0x07);
   if ((code & 0x40) != 0)
     size = S_LONG;
   else
@@ -800,11 +795,12 @@ static int Neg(char code) {
   char mode;
   char reg;
   Long data;
-  Long save_pc;
   Long dest_data;
   int work_mode;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
@@ -854,13 +850,14 @@ static int Negx(char code) {
   char mode;
   char reg;
   Long data;
-  Long save_pc;
   short save_z;
   short save_x;
   Long dest_data;
   int work_mode;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
@@ -913,10 +910,11 @@ static int Not(char code) {
   char mode;
   char reg;
   Long data;
-  Long save_pc;
   int work_mode;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);

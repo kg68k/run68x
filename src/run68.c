@@ -85,14 +85,15 @@
 
 #define MAIN
 
-#include "run68.h"
-
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #if defined(DOSX)
 #include <dos.h>
 #endif
+
+#include "run68.h"
 
 #define prog_ptr_u ((unsigned char *)prog_ptr)
 
@@ -177,8 +178,7 @@ Restart:
             }
             /* 16進文字列が正しいことを確認 */
             for (j = 0; (unsigned int)j < strlen(p); j++) {
-              char c = toupper(p[j]);
-              if (c < '0' || '9' < c && c < 'A' || 'F' < c) {
+              if (!isxdigit((unsigned char)p[j])) {
                 fprintf(stderr, "16進アドレス指定は無効です。(\"%s\")\n", p);
                 invalid_flag = TRUE;
               }
@@ -245,7 +245,7 @@ Restart:
     fprintf(stderr, "             -t         mpu trace\n");
     fprintf(stderr, "             -debug     run with debugger\n");
     //		fprintf(stderr, "             -S  size
-    //実行時スタックサイズ指定(単位KB、未実装)\n");
+    // 実行時スタックサイズ指定(単位KB、未実装)\n");
     return (1);
   }
 
@@ -256,7 +256,6 @@ Restart:
 
   /* メモリを確保する */
   if ((prog_ptr = malloc(mem_aloc)) == NULL) {
-    fclose(fp);
     fprintf(stderr, "メモリが確保できません\n");
     return (1);
   }
@@ -420,11 +419,8 @@ static int exec_trap(BOOL *restart) {
   UChar *trap_mem1;
   UChar *trap_mem2;
   Long trap_adr;
-  Long prev_pc = 0; /* 1サイクル前に実行した命令のPC */
-  RUN68_COMMAND cmd;
-  BOOL cont_flag = TRUE;
-  int ret;
-  BOOL running = TRUE;
+  static BOOL cont_flag = TRUE;
+  static BOOL running = TRUE;
 
   trap_count = 1;
   trap_mem1 = (UChar *)prog_ptr + 0x118;
@@ -493,8 +489,10 @@ static int exec_trap(BOOL *restart) {
     if (debug_on) {
       debug_on = FALSE;
       debug_flag = TRUE;
-      cmd = debugger(running);
+      RUN68_COMMAND cmd = debugger(running);
       switch (cmd) {
+        default:
+          break;
         case RUN68_COMMAND_RUN:
           *restart = TRUE;
           running = TRUE;
@@ -523,7 +521,7 @@ static int exec_trap(BOOL *restart) {
     /* PCの値とニーモニックを保存する */
     OP_info.pc = pc;
     OP_info.code = *((unsigned short *)(prog_ptr + pc));
-    if ((ret = setjmp(jmp_when_abort)) != 0) {
+    if (setjmp(jmp_when_abort) != 0) {
       debug_on = TRUE;
       continue;
     }
@@ -549,10 +547,8 @@ EndOfFunc:
      終了コード
 */
 static int exec_notrap(BOOL *restart) {
-  RUN68_COMMAND cmd;
-  BOOL cont_flag = TRUE;
-  int ret;
-  BOOL running = TRUE;
+  static BOOL cont_flag = TRUE;
+  static BOOL running = TRUE;
 
   *restart = FALSE;
   OPBuf_clear();
@@ -593,8 +589,10 @@ static int exec_notrap(BOOL *restart) {
     if (debug_on) {
       debug_on = FALSE;
       debug_flag = TRUE;
-      cmd = debugger(running);
+      RUN68_COMMAND cmd = debugger(running);
       switch (cmd) {
+        default:
+          break;
         case RUN68_COMMAND_RUN:
           *restart = TRUE;
           running = TRUE;
@@ -623,7 +621,7 @@ static int exec_notrap(BOOL *restart) {
     /* PCの値とニーモニックを保存する */
     OP_info.pc = pc;
     OP_info.code = *((unsigned short *)(prog_ptr + pc));
-    if ((ret = setjmp(jmp_when_abort)) != 0) {
+    if (setjmp(jmp_when_abort) != 0) {
       debug_on = TRUE;
       continue;
     }

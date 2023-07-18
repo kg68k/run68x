@@ -180,17 +180,17 @@ BOOL get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data) {
         *data = mem_get(ra[reg], (char)size);
         if (reg == 7 && size == S_BYTE) {
           /* システムスタックのポインタは常に偶数 */
-          inc_ra((char)reg, (char)S_WORD);
+          inc_ra(reg, (char)S_WORD);
         } else {
-          inc_ra((char)reg, (char)size);
+          inc_ra(reg, (char)size);
         }
         break;
       case EA_AIPD:
         if (reg == 7 && size == S_BYTE) {
           /* システムスタックのポインタは常に偶数 */
-          dec_ra((char)reg, (char)S_WORD);
+          dec_ra(reg, (char)S_WORD);
         } else {
-          dec_ra((char)reg, (char)size);
+          dec_ra(reg, (char)size);
         }
         *data = mem_get(ra[reg], (char)size);
         break;
@@ -304,17 +304,17 @@ BOOL set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data) {
         mem_set(ra[reg], data, (char)size);
         if (reg == 7 && size == S_BYTE) {
           /* システムスタックのポインタは常に偶数 */
-          inc_ra((char)reg, (char)S_WORD);
+          inc_ra(reg, (char)S_WORD);
         } else {
-          inc_ra((char)reg, (char)size);
+          inc_ra(reg, (char)size);
         }
         break;
       case EA_AIPD:
         if (reg == 7 && size == S_BYTE) {
           /* システムスタックのポインタは常に偶数 */
-          dec_ra((char)reg, (char)S_WORD);
+          dec_ra(reg, (char)S_WORD);
         } else {
-          dec_ra((char)reg, (char)size);
+          dec_ra(reg, (char)size);
         }
 
         mem_set(ra[reg], data, (char)size);

@@ -74,16 +74,15 @@ static int Cmp(char code1, char code2) {
   char src_reg;
   char dst_reg;
   Long src_data;
-  Long save_pc;
-  short save_x;
   Long dest_data;
   Long result;
-
 #ifdef TEST_CCR
   short before;
 #endif
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   size = ((code2 >> 6) & 0x03);
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
@@ -107,16 +106,8 @@ static int Cmp(char code1, char code2) {
   before = sr & 0x1f;
 #endif
 
-  /* サイズに応じてCCRをセットする */
-  save_x = CCR_X_REF();
-  //	result = sub_rd( dst_reg, src_data, size );
   result = sub_long(src_data, dest_data, size);
-  //	if ( save_x == 0 )
-  //		CCR_X_OFF();
-  //	else
-  //		CCR_X_ON();
 
-  /* 先のフラグ変化を無視する */
   /* フラグの変化 */
   cmp_conditions(src_data, dest_data, result, size);
 
@@ -152,25 +143,24 @@ static int Cmpa(char code1, char code2) {
   char size;
   char mode;
   char src_reg;
-  char dst_reg;
   Long src_data;
-  Long save_pc;
   Long old;
   Long ans;
   Long dest_data;
-
 #ifdef TEST_CCR
   short before;
 #endif
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   if ((code1 & 0x01) == 0)
     size = S_WORD;
   else
     size = S_LONG;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = ((code1 & 0x0E) >> 1);
 
   /* ソースのアドレッシングモードに応じた処理 */
   if (size == S_BYTE) {
@@ -200,34 +190,6 @@ static int Cmpa(char code1, char code2) {
 #endif
   old = ra[dst_reg];
   ans = old - src_data;
-
-#if 0
-	carry = ((old >> 1) & 0x7FFFFFFF) - ((src_data >> 1) & 0x7FFFFFFF);
-	if ( (old & 0x1) == 0 && (src_data & 0x1) > 0 )
-		carry --;
-	if (carry < 0) {
-		CCR_C_ON();
-		CCR_V_OFF();
-	} else {
-		CCR_C_OFF();
-		if ( (old & 0x80000000) == 0 && (ans & 0x80000000) != 0 )
-			CCR_V_ON();
-		else
-			CCR_V_OFF();
-	}
-	if ( ans < 0 ) {
-		CCR_N_ON();
-		CCR_Z_OFF();
-	} else {
-		CCR_N_OFF();
-		if ( ans == 0 )
-			CCR_Z_ON();
-		else
-			CCR_Z_OFF();
-	}
-
-	/* 先のフラグ変化を無視する */
-#endif
 
   /* フラグの変化 */
   cmp_conditions(src_data, old, ans, size);
@@ -300,11 +262,12 @@ static int Eor(char code1, char code2) {
   char src_reg;
   char dst_reg;
   Long data;
-  Long save_pc;
   Long src_data;
   int work_mode;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   size = ((code2 >> 6) & 0x03);
   mode = ((code2 & 0x38) >> 3);
   src_reg = ((code1 & 0x0E) >> 1);

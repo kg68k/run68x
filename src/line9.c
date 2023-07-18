@@ -71,14 +71,14 @@ int line9(char *pc_ptr) {
 static int Suba(char code1, char code2) {
   char mode;
   char src_reg;
-  char dst_reg;
   char size;
   Long src_data;
-  Long save_pc;
   Long dest_data;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = ((code1 & 0x0E) >> 1);
   if ((code1 & 0x01) == 0x01)
     size = S_LONG;
   else
@@ -127,8 +127,6 @@ static int Suba(char code1, char code2) {
 */
 static int Subx(char code1, char code2) {
   char size;
-  char src_reg;
-  char dst_reg;
   short save_z;
   short save_x;
   Long dest_data;
@@ -137,8 +135,8 @@ static int Subx(char code1, char code2) {
   short before;
 #endif
 
-  src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int src_reg = (code2 & 0x07);
+  int dst_reg = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
 
   if ((code2 & 0x08) != 0) {
@@ -154,18 +152,7 @@ static int Subx(char code1, char code2) {
 
   save_z = CCR_Z_REF() != 0 ? 1 : 0;
   save_x = CCR_X_REF() != 0 ? 1 : 0;
-  //	if ( CCR_X_REF() == 0 ) {
-  //		//rd [ dst_reg ] = sub_rd( dst_reg, rd [ src_reg ], size );
-  //		rd [ dst_reg ] = sub_long(rd [ src_reg ], dest_data, size );
-  //	} else {
-  // rd [ dst_reg ] = sub_rd( dst_reg, rd [ src_reg ] + 1, size );
   rd[dst_reg] = sub_long(rd[src_reg] + save_x, dest_data, size);
-  //	}
-
-  //	if ( rd [ dst_reg ] == 0 ) {
-  //		if ( save_z == 0 )
-  //			CCR_Z_OFF();
-  //	}
 
   /* フラグの変化 */
   sub_conditions(rd[src_reg], dest_data, rd[dst_reg], size, save_z);
@@ -202,17 +189,16 @@ static int Sub1(char code1, char code2) {
   char mode;
   char src_reg;
   char dst_reg;
-  short disp = 0;
-  Long save_pc;
   int work_mode;
   Long src_data;
   Long dest_data;
-
 #ifdef TEST_CCR
   short before;
 #endif
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = ((code1 & 0x0E) >> 1);
   dst_reg = (code2 & 0x07);
@@ -290,19 +276,18 @@ static int Sub2(char code1, char code2) {
   char size;
   char mode;
   char src_reg;
-  char dst_reg;
   Long src_data;
-  Long save_pc;
   Long dest_data;
-
 #ifdef TEST_CCR
   short before;
 #endif
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
 
   if (mode == EA_AD && size == S_BYTE) {

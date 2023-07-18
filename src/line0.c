@@ -131,11 +131,9 @@ static int Ori(char code) {
   char mode;
   char reg;
   char size;
-  Long save_pc;
   int work_mode;
   Long data;
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです", __FILE__, __LINE__);
@@ -235,11 +233,9 @@ static int Andi(char code) {
   char mode;
   char reg;
   char size;
-  Long save_pc;
   Long work_mode;
   Long data;
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
@@ -340,7 +336,6 @@ static int Addi(char code) {
   char mode;
   char reg;
   char size;
-  Long save_pc;
   int work_mode;
   Long dest_data;
 
@@ -348,7 +343,6 @@ static int Addi(char code) {
   short before;
 #endif
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
@@ -412,7 +406,6 @@ static int Subi(char code) {
   char mode;
   char reg;
   char size;
-  Long save_pc;
   int work_mode;
   Long dest_data;
 
@@ -420,7 +413,6 @@ static int Subi(char code) {
   short before;
 #endif
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
@@ -485,10 +477,8 @@ static int Eori(char code) {
   char reg;
   Long data;
   Long src_data;
-  Long save_pc;
   Long work_mode;
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
@@ -585,7 +575,6 @@ static int Cmpi(char code) {
   char reg;
   char size;
   Long src_data;
-  Long save_pc;
   short save_x;
   Long dest_data;
 
@@ -594,7 +583,6 @@ static int Cmpi(char code) {
   Long result;
 #endif
 
-  save_pc = pc;
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
@@ -642,15 +630,16 @@ static int Cmpi(char code) {
          FALSE = 実行継続
 */
 static int Btsti(char code) {
-  Long save_pc;
   char mode;
   char reg;
   UChar bitno;
   Long data;
   Long mask = 1;
   int size;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
   bitno = (UChar)imi_get(S_BYTE);
@@ -688,15 +677,16 @@ static int Btsti(char code) {
          FALSE = 実行継続
 */
 static int Btst(char code1, char code2) {
-  Long save_pc;
   char mode;
   char reg;
   UChar bitno;
   Long data;
   Long mask = 1;
   int size;
+#ifdef TRACE
+  Long save_pc = pc;
+#endif
 
-  save_pc = pc;
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
   bitno = ((code1 >> 1) & 0x07);
@@ -736,7 +726,6 @@ static int Btst(char code1, char code2) {
          FALSE = 実行継続
 */
 static int Bchgi(char code) {
-  Long save_pc;
   char mode;
   char reg;
   UChar bitno;
@@ -745,7 +734,6 @@ static int Bchgi(char code) {
   int work_mode;
   Long data;
 
-  save_pc = pc;
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
   bitno = (UChar)imi_get(S_BYTE);
@@ -800,7 +788,6 @@ static int Bchgi(char code) {
          FALSE = 実行継続
 */
 static int Bchg(char code1, char code2) {
-  Long save_pc;
   char mode;
   char reg;
   UChar bitno;
@@ -809,7 +796,6 @@ static int Bchg(char code1, char code2) {
   int size;
   int work_mode;
 
-  save_pc = pc;
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
   bitno = ((code1 >> 1) & 0x07);
@@ -865,17 +851,14 @@ static int Bchg(char code1, char code2) {
          FALSE = 実行継続
 */
 static int Bclri(char code) {
-  Long save_pc;
   char mode;
   char reg;
   UChar bitno;
-  short disp = 0;
   Long data;
   Long mask = 1;
   int size;
   int work_mode;
 
-  save_pc = pc;
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
   bitno = (UChar)imi_get(S_BYTE);
@@ -929,17 +912,14 @@ static int Bclri(char code) {
          FALSE = 実行継続
 */
 static int Bclr(char code1, char code2) {
-  Long save_pc;
   char mode;
   char reg;
   UChar bitno;
-  short disp = 0;
   Long data;
   Long mask = 1;
   int size;
   int work_mode;
 
-  save_pc = pc;
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
   bitno = ((code1 >> 1) & 0x07);
@@ -994,17 +974,14 @@ static int Bclr(char code1, char code2) {
          FALSE = 実行継続
 */
 static int Bseti(char code) {
-  Long save_pc;
   char mode;
   char reg;
   UChar bitno;
   Long data;
-  short disp = 0;
   ULong mask = 1;
   int size;
   int work_mode;
 
-  save_pc = pc;
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
   bitno = (UChar)imi_get(S_BYTE);
@@ -1058,17 +1035,14 @@ static int Bseti(char code) {
          FALSE = 実行継続
 */
 static int Bset(char code1, char code2) {
-  Long save_pc;
   char mode;
   char reg;
   UChar bitno;
   Long data;
-  short disp = 0;
   ULong mask = 1;
   int size;
   int work_mode;
 
-  save_pc = pc;
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
   bitno = ((code1 >> 1) & 0x07);
@@ -1123,8 +1097,8 @@ static int Bset(char code1, char code2) {
          FALSE = 実行継続
 */
 static int Movep_f(char code1, char code2) {
-  char d_reg;
-  char a_reg;
+  int d_reg;
+  int a_reg;
   short disp;
   Long adr;
 
@@ -1158,8 +1132,8 @@ static int Movep_f(char code1, char code2) {
          FALSE = 実行継続
 */
 static int Movep_t(char code1, char code2) {
-  char d_reg;
-  char a_reg;
+  int d_reg;
+  int a_reg;
   short disp;
   ULong data;
   Long adr;

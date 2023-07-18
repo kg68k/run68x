@@ -161,18 +161,15 @@ int line8(char *pc_ptr) {
 static int Divu(char code1, char code2) {
   char mode;
   char src_reg;
-  char dst_reg;
   UShort waru;
   ULong data;
   ULong ans;
   UShort mod;
-  Long save_pc;
   Long waru_l;
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = (code1 & 0x0E) >> 1;
   data = rd[dst_reg];
 
   /* ソースのアドレッシングモードに応じた処理 */
@@ -217,18 +214,15 @@ static int Divu(char code1, char code2) {
 static int Divs(char code1, char code2) {
   char mode;
   char src_reg;
-  char dst_reg;
   short waru;
   Long data;
   Long ans;
   short mod;
-  Long save_pc;
   Long waru_l;
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
-  dst_reg = ((code1 & 0x0E) >> 1);
+  int dst_reg = ((code1 & 0x0E) >> 1);
   data = rd[dst_reg];
 
   /* ソースのアドレッシングモードに応じた処理 */
@@ -277,11 +271,9 @@ static int Or1(char code1, char code2) {
   char src_reg;
   char dst_reg;
   Long data;
-  Long save_pc;
   Long src_data;
   Long work_mode;
 
-  save_pc = pc;
   size = ((code2 >> 6) & 0x03);
   mode = ((code2 & 0x38) >> 3);
   src_reg = ((code1 & 0x0E) >> 1);
@@ -335,10 +327,8 @@ static int Or2(char code1, char code2) {
   char src_reg;
   char dst_reg;
   Long src_data;
-  Long save_pc;
   Long data;
 
-  save_pc = pc;
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
   dst_reg = ((code1 & 0x0E) >> 1);

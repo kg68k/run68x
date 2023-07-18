@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: getini.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
 
 /*
@@ -29,6 +46,15 @@
 
 #include "run68.h"
 
+#if !defined(_WIN32) && !defined(DOSX)
+#include <ctype.h>
+#define _strlwr(p)                         \
+  do {                                     \
+    char *s;                               \
+    for (s = p; *s; s++) *s = tolower(*s); \
+  } while (0)
+#endif
+
 /* 文字列末尾の CR LF を \0 で上書きすることで除去 */
 static void chomp(char *buf) {
   while (strlen(buf) != 0 &&
@@ -46,7 +72,6 @@ void read_ini(char *path, char *prog) {
   int i;
   int c;
   char *p;
-  long l;
 
   /* 情報構造体の初期化 */
   ini_info.env_lower = FALSE;
@@ -148,7 +173,7 @@ void readenv_from_ini(char *path) {
   char *mem_ptr; /* メモリ管理ブロック */
   char *read_ptr;
   int env_len = 0; /* 環境の長さ */
-  BOOL env_flag;
+  BOOL env_flag = FALSE;  // ファイル先頭は [all] セクション
 
   /* INIファイルの名前(パス含む)を得る */
   strcpy(buf, path);
@@ -182,7 +207,6 @@ void readenv_from_ini(char *path) {
         mem_ptr = prog_ptr + ra[3] + 4 + env_len;
         strcpy(mem_ptr, buf);
         if (ini_info.env_lower == TRUE) {
-          strcpy(buf, buf);
           _strlwr(buf);
           read_ptr = buf;
           while (*mem_ptr != '\0' && *mem_ptr != '=')

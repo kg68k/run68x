@@ -63,7 +63,7 @@ FILE *prog_open(char *fname, int mes_flag) {
   char dir[MAX_PATH], fullname[MAX_PATH], cwd[MAX_PATH];
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
-  char env_p[4096], *p;
+  char *p;
 #if defined(WIN32) || defined(DOSX)
   char sep_chr = '\\';
   char sep_str[] = "\\";
@@ -89,10 +89,14 @@ FILE *prog_open(char *fname, int mes_flag) {
 #if defined(WIN32)
   GetCurrentDirectory(sizeof(cwd), cwd);
 #else
-  const char* dummy_result = getcwd(cwd, sizeof(cwd));
+  if (getcwd(cwd, sizeof(cwd)) == NULL) {
+    fprintf(stderr, "カレントディレクトリのパス名が長すぎます\n");
+    return NULL;
+  }
 #endif
   /* PATH環境変数を取得する */
 #if defined(WIN32)
+  char env_p[4096];
   Getenv_common("PATH", env_p);
   p = env_p;
 #else

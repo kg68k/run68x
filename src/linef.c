@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: linef.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
 
 /*
@@ -30,6 +47,7 @@
 
 #undef MAIN
 
+#include <ctype.h>
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
@@ -591,15 +609,10 @@ static void Ltod(Long num) {
 */
 static void Dtos(Long d0, Long d1, Long a0) {
   DBL arg1;
-  char *p;
-  int len;
 
   To_dbl(&arg1, d0, d1);
-
-  p = prog_ptr + a0;
-  const char* dummy_result = _gcvt(arg1.dbl, 14, p);
-  len = strlen(p);
-  if (p[len - 1] == '.') p[len - 1] = '\0';
+  char *p = prog_ptr + a0;
+  sprintf(p, "%.14g", arg1.dbl);
   ra[0] += strlen(p);
 }
 
@@ -611,7 +624,6 @@ static void Ltos(Long num, Long adr) {
   char *p;
 
   p = prog_ptr + adr;
-  //	_ltoa( num, p, 10 );
   sprintf(p, "%d", num);
   ra[0] += strlen(p);
 }
@@ -624,7 +636,6 @@ static void Htos(Long num, Long adr) {
   char *p;
 
   p = prog_ptr + adr;
-  //	_ltoa( num, p, 16 );
   sprintf(p, "%X", num);
   ra[0] += strlen(p);
 }
@@ -637,7 +648,6 @@ static void Otos(Long num, Long adr) {
   char *p;
 
   p = prog_ptr + adr;
-  //	_ltoa( num, p, 8 );
   sprintf(p, "%o", num);
   ra[0] += strlen(p);
 }
@@ -647,11 +657,22 @@ static void Otos(Long num, Long adr) {
  戻り値：なし
 */
 static void Btos(Long num, Long adr) {
-  char *p;
+  char *const buffer = prog_ptr + adr;
+  char *p = buffer;
 
-  p = prog_ptr + adr;
-  _ltoa(num, p, 2);
-  ra[0] += strlen(p);
+  if (num == 0) {
+    *p++ = '0';
+  } else {
+    ULong mask = 1u << 31;
+    for (; mask; mask >>= 1) {  // 上位桁の0は出力しない
+      if ((num & mask) != 0) break;
+    }
+    for (; mask; mask >>= 1) {
+      *p++ = (num & mask) ? '1' : '0';
+    }
+  }
+  *p = '\0';
+  ra[0] += buffer - p;  // a0は出力文字列末尾の\0を指す
 }
 
 /*
@@ -659,42 +680,44 @@ static void Btos(Long num, Long adr) {
  戻り値：なし
 */
 static void Val(Long str) {
-  char buf[128];
   DBL ret;
-  char *p;
-  Long tmp;
+  char *p = prog_ptr + str;
   int base = 10;
-  char c;
 
-  p = prog_ptr + str;
   if (p[0] == '&') {
-    c = toupper(p[1]);
+    char c = toupper(p[1]);
     if (c == 'H')
       base = 16;
     else if (c == 'O')
       base = 8;
     else if (c == 'B')
       base = 2;
-  }
-  if (base != 10) {
-    tmp = strtol(p + 2, NULL, base);
-    _ltoa(tmp, buf, 10);
-    p = buf;
-  }
-
-  errno = 0;
-  ret.dbl = atof(p);
-  if (errno == ERANGE) {
-    CCR_C_ON();
-    CCR_N_OFF();
-    CCR_V_ON();
+    else {
+      CCR_C_ON();
+      CCR_N_ON();
+      CCR_V_OFF();
+      return;
+    }
+    errno = 0;
+    unsigned long ul = strtoul(p + 2, NULL, base);
+    if (ul == ULONG_MAX && errno == ERANGE) {
+      CCR_C_ON();
+      CCR_N_OFF();
+      CCR_V_ON();
+      return;
+    }
+    ret.dbl = (double)ul;
   } else {
-    CCR_C_OFF();
-    if (base != 10)
-      ra[0] += 2 + Strl(p + 2, base);
-    else
-      ra[0] += Strl(p, 10);
+    errno = 0;
+    ret.dbl = strtod(p, NULL);
+    if (errno != 0) {
+      CCR_C_ON();
+      CCR_N_OFF();
+      CCR_V_ON();
+      return;
+    }
   }
+  ra[0] += Strl((base == 10) ? p : p + 2, base);
 
   From_dbl(&ret, 0);
 
@@ -704,6 +727,7 @@ static void Val(Long str) {
   } else {
     rd[2] &= 0xFFFF0000;
   }
+  CCR_C_OFF();
 }
 
 /*

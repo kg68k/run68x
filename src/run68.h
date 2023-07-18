@@ -1,3 +1,20 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
 /* $Id: run68.h,v 1.5 2009/08/08 06:49:44 masamic Exp $ */
 
 /*
@@ -75,6 +92,16 @@
 #define _RUN68_H_
 
 #if defined(__GNUC__)
+#define NORETURN __attribute__((noreturn))
+#elif defined(_MSC_VER)
+#define NORETURN __declspec(noreturn)
+#endif
+
+#ifndef NORETURN
+#define NORETURN /* NORETURN */
+#endif
+
+#if defined(__GNUC__)
 #if !defined(__int64)
 #define __int64 Long Long
 #endif
@@ -116,14 +143,7 @@ typedef uint32_t ULong;  // 64bit 環境対応
 #include <limits.h>
 #define MAX_PATH PATH_MAX
 #define _fcvt fcvt
-#define _gcvt gcvt
 #define _stricmp strcasecmp
-#define _strlwr(p)                         \
-  {                                        \
-    char *s;                               \
-    for (s = p; *s; s++) *s = tolower(*s); \
-  }
-#define _ltoa(v, p, n) snprintf(p, n, "%l", v)
 #define BOOL int
 #endif
 #define TRUE -1
@@ -231,7 +251,7 @@ typedef struct {
   unsigned date;
   unsigned time;
   short mode;
-  char nest;
+  unsigned int nest;
   char name[89];
 } FILEINFO;
 
@@ -282,11 +302,11 @@ int make_psp(char *, Long, Long, Long, Long);
 /* exec.c */
 int prog_exec(void);
 int get_cond(char);
-void err68(char *);
-void err68a(char *mes, char *file, int line);
-void err68b(char *mes, Long pc, Long ppc);
-void inc_ra(char, char);
-void dec_ra(char, char);
+NORETURN void err68(char *);
+NORETURN void err68a(char *mes, char *file, int line);
+NORETURN void err68b(char *mes, Long pc, Long ppc);
+void inc_ra(int reg, char size);
+void dec_ra(int, char size);
 void text_color(short);
 Long get_locate(void);
 void OPBuf_insert(const EXEC_INSTRUCTION_INFO *op);
@@ -304,6 +324,7 @@ Long idx_get(void);
 Long imi_get(char);
 Long mem_get(Long, char);
 void mem_set(Long, Long, char);
+NORETURN void run68_abort(Long);
 
 /* doscall.c */
 int dos_call(UChar);
@@ -381,7 +402,7 @@ Long superjsr_ret;      /* DOSCALL SUPER_JSRの戻りアドレス */
 Long psp[NEST_MAX];     /* PSP */
 Long nest_pc[NEST_MAX]; /* 親プロセスへの戻りアドレスを保存 */
 Long nest_sp[NEST_MAX]; /* 親プロセスのスタックポインタを保存 */
-char nest_cnt;          /* 子プロセスを起動するたびに＋１ */
+unsigned int nest_cnt;  /* 子プロセスを起動するたびに＋１ */
 Long mem_aloc;          /* メインメモリの大きさ */
 #else
 extern FILEINFO finfo[FILE_MAX];
@@ -398,7 +419,7 @@ extern Long superjsr_ret;
 extern Long psp[NEST_MAX];
 extern Long nest_pc[NEST_MAX];
 extern Long nest_sp[NEST_MAX];
-extern char nest_cnt;
+extern unsigned int nest_cnt;
 extern Long mem_aloc;
 #endif
 
