@@ -90,6 +90,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #define prog_ptr_u ((unsigned char *)prog_ptr)
 
 static int exec_trap(BOOL *restart);
@@ -130,6 +134,9 @@ Long mem_aloc;
 /* アボート処理のためのジャンプバッファ */
 jmp_buf jmp_when_abort;
 
+/* 命令実行情報(グローバル変数) */
+EXEC_INSTRUCTION_INFO OP_info;
+
 #ifndef _WIN32
 char *strlwr(char *str) {
   unsigned char *p = (unsigned char *)str;
@@ -143,8 +150,26 @@ char *strlwr(char *str) {
 }
 #endif
 
-/* 命令実行情報(グローバル変数) */
-EXEC_INSTRUCTION_INFO OP_info;
+static void print_title(void) {
+  const char *title =  //
+      "run68x " RUN68X_VERSION
+      "  Copyright (C) 2023 TcbnErik\n"
+      "  based on "
+      "X68000 console emulator Ver." RUN68VERSION "\n";
+  fprintf(stderr, "%s", title);
+  fprintf(stderr, "          %s\n", "Created in 1996 by Yokko");
+  fprintf(stderr, "          %s\n",
+          "Maintained since Oct. 1999 by masamic and Chack'n");
+}
+
+static void print_usage(void) {
+  const char *usage =
+      "Usage: run68 [options] execute_filename [commandline]\n"
+      "             -f         function call trace\n"
+      "             -t         mpu trace\n"
+      "             -debug     run with debugger\n";
+  fprintf(stderr, "%s", usage);
+}
 
 int main(int argc, char *argv[], char *envp[]) {
   char fname[89]; /* 実行ファイル名 */
@@ -226,36 +251,9 @@ Restart:
   }
   argbase = i; /* argbase以前の引数はすべてオプションである。*/
   if (argc - argbase == 0) {
-#ifdef _WIN32
-    strcpy(fname, "run68.exe");
-#else
-    strcpy(fname, "run68");
-#endif
-    fprintf(stderr, "X68000 console emulator Ver.%s (for ", RUN68VERSION);
-#if defined(_WIN32)
-    fprintf(stderr, "Windows Vista/7/8/10");
-#elif defined(__APPLE__)
-    fprintf(stderr, "MacOS");
-#elif defined(__EMSCRIPTEN__)
-    fprintf(stderr, "Emscripten");
-#else
-    fprintf(stderr, "POSIX");
-#endif
-    fprintf(stderr, ")\n");
-    fprintf(stderr, "          %s%s\n", "Build Date: ", __DATE__);
-    fprintf(stderr, "          %s\n", "Created in 1996 by Yokko");
-    fprintf(stderr, "          %s\n",
-            "Maintained since Oct. 1999 by masamic and Chack'n");
-  }
-  if (argc - argbase == 0) {
-    fprintf(stderr, "Usage: %s {options} execute file name [command line]\n",
-            fname);
-    fprintf(stderr, "             -f         function call trace\n");
-    fprintf(stderr, "             -t         mpu trace\n");
-    fprintf(stderr, "             -debug     run with debugger\n");
-    //		fprintf(stderr, "             -S  size
-    // 実行時スタックサイズ指定(単位KB、未実装)\n");
-    return (1);
+    print_title();
+    print_usage();
+    return EXIT_FAILURE;
   }
 
   /* iniファイルの情報を読み込む */
@@ -266,7 +264,7 @@ Restart:
   /* メモリを確保する */
   if ((prog_ptr = malloc(mem_aloc)) == NULL) {
     fprintf(stderr, "メモリが確保できません\n");
-    return (1);
+    return EXIT_FAILURE;
   }
   /* A0,A2,A3レジスタに値を設定 */
   ra[0] = STACK_TOP + STACK_SIZE; /* メモリ管理ブロックのアドレス */
@@ -302,9 +300,9 @@ Restart:
   mem_set(ra[3] + 4 + env_len, 0, S_BYTE);
 #endif
   /* 実行ファイルのオープン */
-  if (strlen(argv[1]) > 88) {
+  if (strlen(argv[argbase]) >= sizeof(fname)) {
     fprintf(stderr, "ファイルのパス名が長すぎます\n");
-    return (1);
+    return EXIT_FAILURE;
   }
   strcpy(fname, argv[argbase]);
   /*
@@ -313,7 +311,7 @@ Restart:
    */
   if ((fp = prog_open(fname, TRUE)) == NULL) {
     fprintf(stderr, "run68:Program '%s' was not found.\n", argv[argbase]);
-    return (1);
+    return EXIT_FAILURE;
   }
 
   /* プログラムをメモリに読み込む */
@@ -321,7 +319,7 @@ Restart:
   pc = prog_read(fp, fname, PROG_TOP, &prog_size, &prog_size2, TRUE);
   if (pc < 0) {
     free((void *)prog_ptr);
-    return (1);
+    return EXIT_FAILURE;
   }
 
   /* A1,A4レジスタに値を設定 */
@@ -358,7 +356,7 @@ Restart:
   if (make_psp(fname, HUMAN_HEAD, mem_aloc, HUMAN_HEAD, prog_size2) == FALSE) {
     free((void *)prog_ptr);
     fprintf(stderr, "実行ファイル名が長すぎます\n");
-    return (1);
+    return EXIT_FAILURE;
   }
 
   /* ファイル管理テーブルの初期化 */

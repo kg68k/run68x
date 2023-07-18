@@ -90,6 +90,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
+#define RUN68X_VERSION "0.0.0"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if defined(__GNUC__)
