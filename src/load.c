@@ -25,9 +25,10 @@
 #include <unistd.h>
 #endif
 
+#include "mem.h"
 #include "run68.h"
 
-static UChar xhead[XHEAD_SIZE];
+static UByte xhead[XHEAD_SIZE];
 
 static Long xhead_getl(int);
 
@@ -152,11 +153,10 @@ ErrorReturn:
 static bool xrelocate(Long reloc_adr, Long reloc_size, Long read_top) {
   Long prog_adr;
   Long data;
-  UShort disp;
 
   prog_adr = read_top;
   for (; reloc_size > 0; reloc_size -= 2, reloc_adr += 2) {
-    disp = (UShort)mem_get(read_top + reloc_adr, S_WORD);
+    UWord disp = mem_get(read_top + reloc_adr, S_WORD);
     if (disp == 1) return false;
     prog_adr += disp;
     data = mem_get(prog_adr, S_LONG) + read_top;
@@ -296,10 +296,9 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
  戻り値：データの値
 */
 static Long xhead_getl(int adr) {
-  UChar *p;
   Long d;
 
-  p = &(xhead[adr]);
+  UByte *p = &(xhead[adr]);
 
   d = *(p++);
   d = ((d << 8) | *(p++));

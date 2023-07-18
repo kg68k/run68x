@@ -15,6 +15,8 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
+#include "mem.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -25,27 +27,21 @@
  　　　　の値を得る
  戻り値：その値
 */
-Long idx_get() {
-  char *mem;
-  char idx2;
-  Long idx;
+Long idx_get(void) {
+  char *mem = prog_ptr + pc;
 
-  mem = prog_ptr + pc;
-  idx2 = *(mem++);
-  int idx_reg = ((idx2 >> 4) & 0x07);
-  if ((idx2 & 0x80) == 0)
-    idx = rd[idx_reg];
-  else
-    idx = ra[idx_reg];
-  if ((idx2 & 0x08) == 0) { /* WORD */
-    if ((idx & 0x8000) != 0)
-      idx |= 0xFFFF0000;
-    else
-      idx &= 0x0000FFFF;
-  }
+  // Brief Extension Word Format
+  //   D/A | REG | REG | REG | W/L | SCALE | SCALE | 0
+  //   M68000ではSCALEは無効、最下位ビットが1でもBrief Formatとして解釈される。
+  UByte ext = *mem++;
+  Byte disp8 = *mem;
   pc += 2;
 
-  return (idx + *mem);
+  int idx_reg = ((ext >> 4) & 0x07);
+  Long idx = (ext & 0x80) ? ra[idx_reg] : rd[idx_reg];
+  if ((ext & 0x08) == 0) idx = extl((Word)idx);  // Sign-Extended Word
+
+  return idx + extbl(disp8);
 }
 
 /*
@@ -54,10 +50,8 @@ Long idx_get() {
  戻り値：データの値
 */
 Long imi_get(char size) {
-  UChar *mem;
   Long d;
-
-  mem = (UChar *)prog_ptr + pc;
+  UByte *mem = (UByte *)prog_ptr + pc;
 
   switch (size) {
     case S_BYTE:
@@ -125,13 +119,12 @@ static int mem_wrt_chk(Long adr) {
  戻り値：データの値
 */
 Long mem_get(Long adr, char size) {
-  UChar *mem;
   Long d;
 
   if (adr < ENV_TOP || adr >= mem_aloc) {
     if (!mem_red_chk(adr)) return (0);
   }
-  mem = (UChar *)prog_ptr + adr;
+  UByte *mem = (UByte *)prog_ptr + adr;
 
   switch (size) {
     case S_BYTE:
@@ -154,12 +147,11 @@ Long mem_get(Long adr, char size) {
  戻り値：なし
 */
 void mem_set(Long adr, Long d, char size) {
-  UChar *mem;
-
   if (adr < ENV_TOP || adr >= mem_aloc) {
     if (!mem_wrt_chk(adr)) return;
   }
-  mem = (UChar *)prog_ptr + adr;
+
+  UByte *mem = (UByte *)prog_ptr + adr;
 
   switch (size) {
     case S_BYTE:

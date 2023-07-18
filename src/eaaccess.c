@@ -1,38 +1,25 @@
-/* $Id: eaaccess.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.2  2009/08/05 14:44:33  masamic
- * Some Bug fix, and implemented some instruction
- * Following Modification contributed by TRAP.
- *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
- * word size.
- * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
- * Add: Nbcd, Sbcd.
- *
- * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
- * First imported source code and docs
- *
- * Revision 1.6  2000/01/09  06:49:20  yfujii
- * Push/Pop instruction's word alignment is adjusted.
- *
- * Revision 1.3  1999/12/07  12:42:08  yfujii
- * *** empty log message ***
- *
- * Revision 1.3  1999/11/04  09:05:57  yfujii
- * Wrong addressing mode selection problem is fixed.
- *
- * Revision 1.1  1999/11/01  10:36:33  masamichi
- * Initial revision
- *
- *
- */
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
 /* Get from / Set to Effective Address */
 
 #include <stdbool.h>
 
+#include "mem.h"
 #include "run68.h"
 
 /*
@@ -56,14 +43,10 @@
  */
 
 bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data) {
-  short disp;
-  Long idx;
-
   /* 操作しやすいようにモードを統合 */
   int gmode = (mode < 7) ? mode : (7 + reg); /* gmode = 0-11 */
 
   /* AceptAdrMode で許されたアドレッシングモードでなければエラー */
-
   if ((AceptAdrMode & (1 << gmode)) == 0) {
     err68a("アドレッシングモードが異常です。", __FILE__, __LINE__);
   }
@@ -74,28 +57,22 @@ bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data) {
       *data = ra[reg];
       break;
     case EA_AID:
-      disp = (short)imi_get(S_WORD);
-      *data = ra[reg] + (int)disp;
+      *data = ra[reg] + extl(imi_get_word());
       break;
     case EA_AIX:
-      idx = idx_get();
-      *data = ra[reg] + idx;
+      *data = ra[reg] + idx_get();
       break;
     case EA_SRT:
-      idx = imi_get(S_WORD);
-      if ((idx & 0x8000) != 0) idx |= 0xFFFF0000;
-      *data = idx;
+      *data = extl(imi_get_word());
       break;
     case EA_LNG:
       *data = imi_get(S_LONG);
       break;
     case EA_PC:
-      disp = (short)imi_get(S_WORD);
-      *data = save_pc + (int)disp;
+      *data = save_pc + extl(imi_get_word());
       break;
     case EA_PCX:
-      idx = idx_get();
-      *data = save_pc + idx;
+      *data = save_pc + idx_get();
       break;
     default:
       err68a("アドレッシングモードが異常です。", __FILE__, __LINE__);
@@ -125,16 +102,12 @@ bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data) {
  */
 
 bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data) {
-  short disp;
-  Long idx;
-  int gmode;
   Long save_pc = pc;
 
   /* 操作しやすいようにモードを統合 */
-  gmode = mode < 7 ? mode : 7 + reg; /* gmode = 0-11 */
+  int gmode = mode < 7 ? mode : 7 + reg; /* gmode = 0-11 */
 
   /* AceptAdrMode で許されたアドレッシングモードでなければエラー */
-
   if ((AceptAdrMode & (1 << gmode)) == 0) {
     err68a("アドレッシングモードが異常です。", __FILE__, __LINE__);
   }
@@ -189,29 +162,22 @@ bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data) {
       *data = mem_get(ra[reg], (char)size);
       break;
     case EA_AID:
-      disp = (short)imi_get(S_WORD);
-      *data = mem_get(ra[reg] + disp, (char)size);
+      *data = mem_get(ra[reg] + extl(imi_get_word()), (char)size);
       break;
     case EA_AIX:
-      idx = idx_get();
-      *data = mem_get(ra[reg] + (int)idx, (char)size);
+      *data = mem_get(ra[reg] + idx_get(), (char)size);
       break;
     case EA_SRT:
-      idx = imi_get(S_WORD);
-      if ((idx & 0x8000) != 0) idx |= 0xFFFF0000;
-      *data = mem_get(idx, (char)size);
+      *data = mem_get(extl(imi_get_word()), (char)size);
       break;
     case EA_LNG:
-      idx = imi_get(S_LONG);
-      *data = mem_get(idx, (char)size);
+      *data = mem_get(imi_get(S_LONG), (char)size);
       break;
     case EA_PC:
-      disp = (short)imi_get(S_WORD);
-      *data = mem_get(save_pc + disp, (char)size);
+      *data = mem_get(save_pc + extl(imi_get_word()), (char)size);
       break;
     case EA_PCX:
-      idx = idx_get();
-      *data = mem_get(save_pc + idx, (char)size);
+      *data = mem_get(save_pc + idx_get(), (char)size);
       break;
     case EA_IM:
       *data = imi_get((char)size);
@@ -243,13 +209,10 @@ bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data) {
  */
 
 bool set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data) {
-  short disp;
-  Long idx;
-  int gmode;
   Long save_pc = pc;
 
   /* 操作しやすいようにモードを統合 */
-  gmode = mode < 7 ? mode : 7 + reg; /* gmode = 0-11 */
+  int gmode = mode < 7 ? mode : 7 + reg; /* gmode = 0-11 */
 
   /* AceptAdrMode で許されたアドレッシングモードでなければエラー */
 
@@ -308,29 +271,22 @@ bool set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data) {
       mem_set(ra[reg], data, (char)size);
       break;
     case EA_AID:
-      disp = (short)imi_get(S_WORD);
-      mem_set(ra[reg] + (int)disp, data, (char)size);
+      mem_set(ra[reg] + extl(imi_get_word()), data, (char)size);
       break;
     case EA_AIX:
-      idx = idx_get();
-      mem_set(ra[reg] + idx, data, (char)size);
+      mem_set(ra[reg] + idx_get(), data, (char)size);
       break;
     case EA_SRT:
-      idx = imi_get(S_WORD);
-      if ((idx & 0x8000) != 0) idx |= 0xFFFF0000;
-      mem_set(idx, data, (char)size);
+      mem_set(extl(imi_get_word()), data, (char)size);
       break;
     case EA_LNG:
-      idx = imi_get(S_LONG);
-      mem_set(idx, data, (char)size);
+      mem_set(imi_get(S_LONG), data, (char)size);
       break;
     case EA_PC:
-      disp = (short)imi_get(S_WORD);
-      mem_set(save_pc + (int)disp, data, (char)size);
+      mem_set(save_pc + extl(imi_get_word()), data, (char)size);
       break;
     case EA_PCX:
-      idx = idx_get();
-      mem_set(save_pc + idx, data, (char)size);
+      mem_set(save_pc + idx_get(), data, (char)size);
       break;
     default:
       err68a("アドレッシングモードが異常です。", __FILE__, __LINE__);
@@ -366,3 +322,34 @@ bool get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size,
   pc = save_pc;
   return retcode;
 }
+
+/* $Id: eaaccess.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.2  2009/08/05 14:44:33  masamic
+ * Some Bug fix, and implemented some instruction
+ * Following Modification contributed by TRAP.
+ *
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
+ * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
+ * Add: Nbcd, Sbcd.
+ *
+ * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.6  2000/01/09  06:49:20  yfujii
+ * Push/Pop instruction's word alignment is adjusted.
+ *
+ * Revision 1.3  1999/12/07  12:42:08  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.3  1999/11/04  09:05:57  yfujii
+ * Wrong addressing mode selection problem is fixed.
+ *
+ * Revision 1.1  1999/11/01  10:36:33  masamichi
+ * Initial revision
+ *
+ *
+ */

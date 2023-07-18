@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "mem.h"
 #include "run68.h"
 
 #ifndef _WIN32

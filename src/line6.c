@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "mem.h"
 #include "run68.h"
 
 /*
@@ -33,36 +34,33 @@
          false = 実行継続
 */
 bool line6(char *pc_ptr) {
-  char cond;
-  char disp;
-  short disp_w;
-
-  cond = (*pc_ptr & 0x0F);
-  disp = *(pc_ptr + 1);
+  int cond = (*pc_ptr & 0x0f);
+  Byte disp8 = *(pc_ptr + 1);
   pc += 2;
 
-  if (cond == 0x01) { /* bsr */
+  if (cond == 0x01) {  // bsr
     ra[7] -= 4;
-    if (disp == 0) {
-      disp_w = (short)imi_get(S_WORD);
+    if (disp8 == 0) {
+      Word disp16 = imi_get_word();
       mem_set(ra[7], pc, S_LONG);
-      pc += (disp_w - 2);
+      pc += extl(disp16) - 2;
     } else {
       mem_set(ra[7], pc, S_LONG);
-      pc += disp;
+      pc += extbl(disp8);
     }
     return false;
   }
 
   if (get_cond(cond)) {
-    if (disp == 0) {
-      disp_w = (short)imi_get(S_WORD);
-      pc += (disp_w - 2);
+    if (disp8 == 0) {
+      Word disp16 = imi_get_word();
+      pc += extl(disp16) - 2;
     } else {
-      pc += disp;
+      pc += extbl(disp8);
     }
   } else {
-    if (disp == 0) pc += 2;
+    // Bcc.W の分岐不成立ならワードディスプレースメントを飛ばす
+    if (disp8 == 0) pc += 2;
   }
 
   return false;

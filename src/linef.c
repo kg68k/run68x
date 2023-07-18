@@ -23,16 +23,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
 #include "run68.h"
 
 typedef union {
   double dbl;
-  UChar c[8];
+  UByte c[8];
 } DBL;
 
 typedef union {
   float flt;
-  UChar c[4];
+  UByte c[4];
 } FLT;
 
 static Long Lmul(Long, Long);
@@ -103,7 +104,7 @@ static void Pow(Long, Long, Long, Long);
  戻り値： true = 実行終了
          false = 実行継続
 */
-static bool fefunc(UChar code) {
+static bool fefunc(UByte code) {
   Long adr;
   short save_s;
 

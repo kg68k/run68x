@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "mem.h"
 #include "run68.h"
 
 /*
@@ -524,7 +525,6 @@ static bool Cmpi(char code) {
 static bool Btsti(char code) {
   char mode;
   char reg;
-  UChar bitno;
   Long data;
   Long mask = 1;
   int size;
@@ -534,7 +534,7 @@ static bool Btsti(char code) {
 
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
-  bitno = (UChar)imi_get(S_BYTE);
+  unsigned int bitno = imi_get(S_BYTE);
   if (mode == MD_DD) {
     bitno = (bitno % 32);
     size = S_LONG;
@@ -571,7 +571,6 @@ static bool Btsti(char code) {
 static bool Btst(char code1, char code2) {
   char mode;
   char reg;
-  UChar bitno;
   Long data;
   Long mask = 1;
   int size;
@@ -581,9 +580,8 @@ static bool Btst(char code1, char code2) {
 
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
-  bitno = ((code1 >> 1) & 0x07);
-  bitno = (UChar)(rd[bitno]);
 
+  unsigned int bitno = rd[(code1 >> 1) & 0x07];
   if (mode == MD_DD) {
     bitno = (bitno % 32);
     size = S_LONG;
@@ -620,7 +618,6 @@ static bool Btst(char code1, char code2) {
 static bool Bchgi(char code) {
   char mode;
   char reg;
-  UChar bitno;
   Long mask = 1;
   int size;
   int work_mode;
@@ -628,7 +625,7 @@ static bool Bchgi(char code) {
 
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
-  bitno = (UChar)imi_get(S_BYTE);
+  unsigned int bitno = imi_get(S_BYTE);
 
   if (mode == MD_DD) {
     bitno = (bitno % 32);
@@ -682,7 +679,6 @@ static bool Bchgi(char code) {
 static bool Bchg(char code1, char code2) {
   char mode;
   char reg;
-  UChar bitno;
   Long data;
   Long mask = 1;
   int size;
@@ -690,9 +686,8 @@ static bool Bchg(char code1, char code2) {
 
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
-  bitno = ((code1 >> 1) & 0x07);
-  bitno = (UChar)(rd[bitno]);
 
+  unsigned int bitno = rd[(code1 >> 1) & 0x07];
   if (mode == MD_DD) {
     bitno = (bitno % 32);
     size = S_LONG;
@@ -745,7 +740,6 @@ static bool Bchg(char code1, char code2) {
 static bool Bclri(char code) {
   char mode;
   char reg;
-  UChar bitno;
   Long data;
   Long mask = 1;
   int size;
@@ -753,8 +747,8 @@ static bool Bclri(char code) {
 
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
-  bitno = (UChar)imi_get(S_BYTE);
 
+  unsigned int bitno = imi_get(S_BYTE);
   if (mode == MD_DD) {
     bitno = (bitno % 32);
     size = S_LONG;
@@ -806,7 +800,6 @@ static bool Bclri(char code) {
 static bool Bclr(char code1, char code2) {
   char mode;
   char reg;
-  UChar bitno;
   Long data;
   Long mask = 1;
   int size;
@@ -814,9 +807,8 @@ static bool Bclr(char code1, char code2) {
 
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
-  bitno = ((code1 >> 1) & 0x07);
-  bitno = (UChar)(rd[bitno]);
 
+  unsigned int bitno = rd[(code1 >> 1) & 0x07];
   if (mode == MD_DD) {
     bitno = (bitno % 32);
     size = S_LONG;
@@ -868,7 +860,6 @@ static bool Bclr(char code1, char code2) {
 static bool Bseti(char code) {
   char mode;
   char reg;
-  UChar bitno;
   Long data;
   ULong mask = 1;
   int size;
@@ -876,8 +867,8 @@ static bool Bseti(char code) {
 
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
-  bitno = (UChar)imi_get(S_BYTE);
 
+  unsigned int bitno = imi_get(S_BYTE);
   if (mode == MD_DD) {
     bitno = (bitno % 32);
     size = S_LONG;
@@ -929,7 +920,6 @@ static bool Bseti(char code) {
 static bool Bset(char code1, char code2) {
   char mode;
   char reg;
-  UChar bitno;
   Long data;
   ULong mask = 1;
   int size;
@@ -937,9 +927,8 @@ static bool Bset(char code1, char code2) {
 
   mode = (code2 & 0x38) >> 3;
   reg = (code2 & 0x07);
-  bitno = ((code1 >> 1) & 0x07);
-  bitno = (UChar)(rd[bitno]);
 
+  unsigned int bitno = rd[(code1 >> 1) & 0x07];
   if (mode == MD_DD) {
     bitno = (bitno % 32);
     size = S_LONG;
@@ -991,13 +980,10 @@ static bool Bset(char code1, char code2) {
 static bool Movep_f(char code1, char code2) {
   int d_reg;
   int a_reg;
-  short disp;
-  Long adr;
 
   d_reg = ((code1 >> 1) & 0x07);
   a_reg = (code2 & 0x07);
-  disp = (UChar)imi_get(S_WORD);
-  adr = ra[a_reg] + disp;
+  Long adr = ra[a_reg] + extl(imi_get_word());
 
   if ((code2 & 0x40) != 0) {
     /* LONG */
@@ -1026,14 +1012,11 @@ static bool Movep_f(char code1, char code2) {
 static bool Movep_t(char code1, char code2) {
   int d_reg;
   int a_reg;
-  short disp;
   ULong data;
-  Long adr;
 
   d_reg = ((code1 >> 1) & 0x07);
   a_reg = (code2 & 0x07);
-  disp = (UChar)imi_get(S_WORD);
-  adr = ra[a_reg] + disp;
+  Long adr = ra[a_reg] + extl(imi_get_word());
 
   data = mem_get(adr, S_BYTE);
   data = ((data << 8) | (mem_get(adr + 2, S_BYTE) & 0xFF));

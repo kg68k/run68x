@@ -143,7 +143,7 @@ void put_fnckey2(int no, char *p) {
  　機能：キーコードを変換する
  戻り値：変換後のキーコード
 */
-UChar cnv_key98(UChar c) {
+UByte cnv_key98(UByte c) {
   switch (c) {
     case 0x0A: /* ↓ */
       c = 0x1F;

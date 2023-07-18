@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "mem.h"
 #include "run68.h"
 
 #if defined(DEBUG_JSR)

@@ -15,50 +15,11 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/* $Id: disassemble.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.2  2009/08/05 14:44:33  masamic
- * Some Bug fix, and implemented some instruction
- * Following Modification contributed by TRAP.
- *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
- * word size.
- * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
- * Add: Nbcd, Sbcd.
- *
- * Revision 1.1.1.1  2001/05/23 11:22:06  masamic
- * First imported source code and docs
- *
- * Revision 1.5  2000/01/09  04:22:42  yfujii
- * Automaton for making register list is fixed for buginfo0002.
- *
- * Revision 1.4  1999/12/23  08:08:16  yfujii
- * Wrong instruction strings generated for some instructions, are fixed.
- *
- * Revision 1.3  1999/12/07  12:41:31  yfujii
- * *** empty log message ***
- *
- * Revision 1.3  1999/11/30  13:27:38  yfujii
- * Wrong interpretation of 'DBcc' instruction is fixed.
- * Wrong interpretation of 'MOVE #$xxxx,$yyyyyy' is fixed.
- *
- * Revision 1.2  1999/11/22  03:58:02  yfujii
- * Wrong treatment of 'movem' instruction is fixed.
- *
- * Revision 1.1  1999/11/01  06:22:26  yfujii
- * Initial revision
- *
- */
-
 #include <stdbool.h>
 #include <string.h>
 
+#include "mem.h"
 #include "run68.h"
-
-/* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
-#define prog_ptr_u ((unsigned char *)prog_ptr)
 
 static char *disa0(Long addr, unsigned short code, Long *next_addr,
                    char *mnemonic);
@@ -99,8 +60,7 @@ char *disassemble(Long addr, Long *next_addr) {
   ptr = NULL;
   *next_addr = addr;
   mnemonic[0] = '\0';
-  code = (((unsigned short)prog_ptr_u[addr]) << 8) +
-         (unsigned short)prog_ptr_u[addr + 1];
+  code = ((prog_ptr[addr]) << 8) + prog_ptr[addr + 1];
   switch ((code & 0xf000) >> 12) {
     case 0x0:
       ptr = disa0(addr, code, next_addr, mnemonic);
@@ -208,15 +168,13 @@ static bool effective_address(Long addr, short mode, short reg, char size,
       break;
     case 5: /* パターン5:ディスプレースメント付きアドレスレジスタ間接 */
       /* ディスプレースメントは符号付きのワード値である */
-      disp = (short)((unsigned short)prog_ptr_u[addr] << 8) +
-             (unsigned short)prog_ptr_u[addr + 1];
+      disp = (prog_ptr[addr] << 8) + prog_ptr[addr + 1];
       sprintf(str, "%d(a%1d)", disp, reg);
       *next_addr = addr + 2;
       break;
     case 6: /* パターン6:インデックス付きアドレスレジスタ間接 */
-      ext = (short)((unsigned short)prog_ptr_u[addr] << 8) +
-            (unsigned short)prog_ptr_u[addr + 1];
-      sprintf(str, "%d(a%1d,%c%1d.%c)", (signed char)(ext & 0xff), reg,
+      ext = (prog_ptr[addr] << 8) + prog_ptr[addr + 1];
+      sprintf(str, "%d(a%1d,%c%1d.%c)", (int)extbl(ext), reg,
               ext & 0x8000 ? 'a' : 'd', (ext & 0x7000) >> 12,
               ext & 0x0800 ? 'l' : 'w');
       *next_addr = addr + 2;
@@ -224,30 +182,25 @@ static bool effective_address(Long addr, short mode, short reg, char size,
     case 7: /* regフィールドで更に場合分け */
       switch (reg) {
         case 0x0: /* パターン7:絶対ショートアドレス */
-          absw = ((unsigned short)prog_ptr_u[addr] << 8) +
-                 (unsigned short)prog_ptr_u[addr + 1];
+          absw = (prog_ptr[addr] << 8) + prog_ptr[addr + 1];
           sprintf(str, "$%06x", absw);
           *next_addr = addr + 2;
           break;
         case 0x1: /* パターン8:絶対ロングアドレス */
-          absl = ((ULong)prog_ptr_u[addr] << 24) +
-                 ((ULong)prog_ptr_u[addr + 1] << 16) +
-                 ((ULong)prog_ptr_u[addr + 2] << 8) +
-                 (ULong)prog_ptr_u[addr + 3];
+          absl = (prog_ptr[addr] << 24) + (prog_ptr[addr + 1] << 16) +
+                 (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
           sprintf(str, "$%06x", absl);
           *next_addr = addr + 4;
           break;
         case 0x2: /* パターン9:ディスプレースメント付きPC相対 */
           /* ディスプレースメントは符号付きのワード値である */
-          disp = (short)((unsigned short)prog_ptr_u[addr] << 8) +
-                 (unsigned short)prog_ptr_u[addr + 1];
+          disp = (prog_ptr[addr] << 8) + prog_ptr[addr + 1];
           sprintf(str, "%d(pc)", disp);
           *next_addr = addr + 2;
           break;
         case 0x3: /* パターン10:インデックス付きPC相対 */
-          ext = (short)((unsigned short)prog_ptr_u[addr] << 8) +
-                (unsigned short)prog_ptr_u[addr + 1];
-          sprintf(str, "%d(pc,%c%1d.%c)", (signed char)(ext & 0xff),
+          ext = (prog_ptr[addr] << 8) + prog_ptr[addr + 1];
+          sprintf(str, "%d(pc,%c%1d.%c)", (int)extbl(ext),
                   ext & 0x8000 ? 'a' : 'd', (ext & 0x7000) >> 12,
                   ext & 0x0800 ? 'l' : 'w');
           *next_addr = addr + 2;
@@ -256,19 +209,16 @@ static bool effective_address(Long addr, short mode, short reg, char size,
           /* ステータスレジスタの場合はここには現れない */
           switch (size) {
             case 'b':
-              imm = (ULong)prog_ptr_u[addr + 1];
+              imm = prog_ptr[addr + 1];
               *next_addr = addr + 2;
               break;
             case 'w':
-              imm =
-                  ((ULong)prog_ptr_u[addr] << 8) + (ULong)prog_ptr_u[addr + 1];
+              imm = (prog_ptr[addr] << 8) + prog_ptr[addr + 1];
               *next_addr = addr + 2;
               break;
             case 'l':
-              imm = ((ULong)prog_ptr_u[addr] << 24) +
-                    ((ULong)prog_ptr_u[addr + 1] << 16) +
-                    ((ULong)prog_ptr_u[addr + 2] << 8) +
-                    (ULong)prog_ptr_u[addr + 3];
+              imm = (prog_ptr[addr] << 24) + (prog_ptr[addr + 1] << 16) +
+                    (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
               *next_addr = addr + 4;
               break;
             default:
@@ -304,7 +254,7 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
     case 0x0a3c: /* XOR Immediate to CCR */
       strcpy(mnemonic, "xor");
     L0:
-      d1 = (unsigned short)prog_ptr_u[addr + 3];
+      d1 = prog_ptr[addr + 3];
       fill_space(mnemonic, 8);
       p = mnemonic + strlen(mnemonic);
       sprintf(p, "#$%02x,ccr", d1);
@@ -319,8 +269,7 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
     case 0x0a7c: /* EOR Immediate to SR */
       strcpy(mnemonic, "eor");
     L1:
-      d1 = ((unsigned short)prog_ptr_u[addr + 2] << 8) +
-           (unsigned short)prog_ptr_u[addr + 3];
+      d1 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
       fill_space(mnemonic, 8);
       p = mnemonic + strlen(mnemonic);
       sprintf(p, "#$%04x,sr", d1);
@@ -356,8 +305,7 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
           strcpy(mnemonic, "bset");
       }
       *next_addr = addr + 4;
-      d1 = ((unsigned short)prog_ptr_u[addr + 2] << 8) +
-           (unsigned short)prog_ptr_u[addr + 3];
+      d1 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
       size = ' '; /* Data registers are Long only. Others are byte only. */
       fill_space(mnemonic, 8);
       p = mnemonic + strlen(mnemonic);
@@ -374,22 +322,20 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
         case 0x0000:
           strcat(mnemonic, ".b");
           *next_addr = addr + 4;
-          d1 = (unsigned short)prog_ptr_u[addr + 3];
+          d1 = prog_ptr[addr + 3];
           size = 'b';
           break;
         case 0x0040:
           strcat(mnemonic, ".w");
           *next_addr = addr + 4;
-          d1 = ((unsigned short)prog_ptr_u[addr + 2] << 8) +
-               (unsigned short)prog_ptr_u[addr + 3];
+          d1 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
           size = 'w';
           break;
         case 0x0080:
           strcat(mnemonic, ".l");
           *next_addr = addr + 6;
-          d1 = ((ULong)prog_ptr_u[addr + 2] << 24) +
-               ((ULong)prog_ptr_u[addr + 3] << 16) +
-               ((ULong)prog_ptr_u[addr + 4] << 8) + (ULong)prog_ptr_u[addr + 5];
+          d1 = (prog_ptr[addr + 2] << 24) + (prog_ptr[addr + 3] << 16) +
+               (prog_ptr[addr + 4] << 8) + prog_ptr[addr + 5];
           size = 'l';
           break;
         case 0x00c0:
@@ -448,8 +394,7 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
       L4:
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
-        d1 = ((unsigned short)prog_ptr_u[addr + 2] << 8) +
-             (unsigned short)prog_ptr_u[addr + 3];
+        d1 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
         sprintf(p, "%d(a%1d),d%1d", d1, code & 0x07, (code & 0x0e00) >> 9);
         *next_addr = addr + 4;
         goto EndOfFunc;
@@ -461,8 +406,7 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
       L5:
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
-        d1 = ((unsigned short)prog_ptr_u[addr + 2] << 8) +
-             (unsigned short)prog_ptr_u[addr + 3];
+        d1 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
         sprintf(p, "d%1d,%d(a%1d)", (code & 0x0e00) >> 9, d1, code & 0x07);
         *next_addr = addr + 4;
         goto EndOfFunc;
@@ -476,8 +420,8 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
 AddEA:
   p = &mnemonic[strlen(mnemonic)];
   /* 即値は有り得ないのでデータサイズには' 'を与える。*/
-  effective_address(*next_addr, (short)((code & 0x38) >> 3),
-                    (short)(code & 0x7), size, p, next_addr);
+  effective_address(*next_addr, (code & 0x38) >> 3, code & 0x7, size, p,
+                    next_addr);
 EndOfFunc:
   return mnemonic;
 ErrorReturn:
@@ -519,11 +463,11 @@ static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr,
     }
   }
   fill_space(mnemonic, 8);
-  b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                        (short)(code & 0x7), size, sstr, &addr);
+  b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, sstr,
+                        &addr);
   if (!b) goto ErrorReturn;
-  b = effective_address(addr, (short)((code & 0x1c0) >> 6),
-                        (short)((code & 0xe00) >> 9), size, dstr, next_addr);
+  b = effective_address(addr, (code & 0x1c0) >> 6, (code & 0xe00) >> 9, size,
+                        dstr, next_addr);
   if (!b) goto ErrorReturn;
   strcat(mnemonic, sstr);
   strcat(mnemonic, ",");
@@ -582,8 +526,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       sprintf(mnemonic, "ext.l   d%1d", code & 0x7);
       goto EndOfFunc;
     case 0x4e50:
-      disp = (signed short)(((unsigned short)prog_ptr_u[addr + 2] << 8) +
-                            (unsigned short)prog_ptr_u[addr + 3]);
+      disp = (signed short)((prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3]);
       sprintf(mnemonic, "link    a%1d,#%d", code & 0x7, disp);
       *next_addr += 2;
       goto EndOfFunc;
@@ -613,8 +556,8 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       strcat(mnemonic, "move.w  ");
       size = 'w';
       p = mnemonic + strlen(mnemonic);
-      b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, p, next_addr);
+      b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                            next_addr);
       strcat(mnemonic, ",ccr");
       if (!b) goto ErrorReturn;
       goto EndOfFunc;
@@ -622,8 +565,8 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       strcat(mnemonic, "move.w  ");
       size = 'w';
       p = mnemonic + strlen(mnemonic);
-      b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, p, next_addr);
+      b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                            next_addr);
       strcat(mnemonic, ",sr");
       if (!b) goto ErrorReturn;
       goto EndOfFunc;
@@ -716,8 +659,8 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       size = 'l';
     L0:
       p = mnemonic + strlen(mnemonic);
-      b = effective_address(addr + 4, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, p, next_addr);
+      b = effective_address(addr + 4, (code & 0x38) >> 3, code & 0x7, size, p,
+                            next_addr);
       strcat(mnemonic, ",");
       if (!b) goto ErrorReturn;
       goto L1;
@@ -730,8 +673,7 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       size = 'l';
     L1:
       /* MOVEM命令のレジスタリストをAutomatonで文字列に変換する */
-      regmask = ((unsigned short)prog_ptr_u[addr + 2] << 8) +
-                (unsigned short)prog_ptr_u[addr + 3];
+      regmask = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
       /* データレジスタ */
       stat = 0;
       for (i = 0; i < 8; i++) {
@@ -839,8 +781,8 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       if ((code & 0x0400) == 0) {
         strcat(mnemonic, ",");
         p = mnemonic + strlen(mnemonic);
-        b = effective_address(addr + 4, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), size, p, next_addr);
+        b = effective_address(addr + 4, (code & 0x38) >> 3, code & 0x7, size, p,
+                              next_addr);
         if (!b) goto ErrorReturn;
       }
       goto EndOfFunc;
@@ -851,8 +793,8 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       strcat(mnemonic, "chk.w   ");
       size = 'w';
       p = mnemonic + strlen(mnemonic);
-      b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, p, next_addr);
+      b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                            next_addr);
       p = mnemonic + strlen(mnemonic);
       if (!b) goto ErrorReturn;
       sprintf(p, ",d%1d", (code & 0xe00) >> 9);
@@ -861,8 +803,8 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
       strcat(mnemonic, "lea.l   ");
       size = 'l';
       p = mnemonic + strlen(mnemonic);
-      b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                            (short)(code & 0x7), size, p, next_addr);
+      b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                            next_addr);
       p = mnemonic + strlen(mnemonic);
       if (!b) goto ErrorReturn;
       sprintf(p, ",a%1d", (code & 0xe00) >> 9);
@@ -874,8 +816,8 @@ static char *disa4(Long addr, unsigned short code, Long *next_addr,
   goto ErrorReturn;
 AddEA:
   p = mnemonic + strlen(mnemonic);
-  b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                        (short)(code & 0x7), size, p, next_addr);
+  b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                        next_addr);
   if (!b) goto ErrorReturn;
 EndOfFunc:
   return mnemonic;
@@ -888,7 +830,6 @@ static char *disa5(Long addr, unsigned short code, Long *next_addr,
   char size = ' ';
   char *p;
   bool b;
-  signed short offset;
 
   if ((code & 0xf8) == 0xc8) {
     /* DBcc */
@@ -951,7 +892,7 @@ static char *disa5(Long addr, unsigned short code, Long *next_addr,
     fill_space(mnemonic, 8);
     if ((code & 0xf8) != 0xc8) goto AddEA; /* It must be Scc. */
     /* DBcc */
-    offset = (signed short)((prog_ptr_u[addr + 2] << 8) + prog_ptr_u[addr + 3]);
+    Word offset = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
     p = mnemonic + strlen(mnemonic);
     sprintf(p, "d%1d,$%06x", code & 7, addr + 2 + offset);
     *next_addr = addr + 4;
@@ -986,8 +927,8 @@ static char *disa5(Long addr, unsigned short code, Long *next_addr,
   }
 AddEA:
   p = mnemonic + strlen(mnemonic);
-  b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                        (short)(code & 0x7), size, p, next_addr);
+  b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                        next_addr);
   if (!b) goto ErrorReturn;
 EndOfFunc:
   return mnemonic;
@@ -1057,9 +998,7 @@ static char *disa6(Long addr, unsigned short code, Long *next_addr,
     (*next_addr) = addr + 2;
     strcat(mnemonic, ".b");
   } else {
-    jaddr = addr + 2 +
-            (short)(((unsigned short)prog_ptr[addr + 2] << 8) +
-                    (unsigned short)prog_ptr[addr + 3]);
+    jaddr = addr + 2 + ((prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3]);
     (*next_addr) = addr + 4;
     strcat(mnemonic, ".w");
   }
@@ -1077,7 +1016,7 @@ static char *disa7(Long addr, unsigned short code, Long *next_addr,
     *next_addr = addr;
     return NULL;
   } else {
-    sprintf(mnemonic, "moveq.l #%d,d%1d", (Long)((signed char)(code & 0xff)),
+    sprintf(mnemonic, "moveq.l #%d,d%1d", (int)extbl(code),
             (code & 0x0e00) >> 9);
   }
   *next_addr = addr + 2;
@@ -1112,8 +1051,8 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
   L0:
     fill_space(mnemonic, 8);
     p = mnemonic + strlen(mnemonic);
-    b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                          (short)(code & 0x7), size, p, &addr);
+    b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                          &addr);
     if (!b) goto ErrorReturn;
     goto EndOfFunc;
   } else {
@@ -1133,8 +1072,8 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
         size = 'l';
         strcat(mnemonic, "or.l");
       L1:
-        b = effective_address(addr, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), size, ea, &addr);
+        b = effective_address(addr, (code & 0x38) >> 3, code & 0x7, size, ea,
+                              &addr);
         if (!b) goto ErrorReturn;
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
@@ -1152,8 +1091,8 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
         size = 'l';
         strcat(mnemonic, "or.l");
       L2:
-        b = effective_address(addr, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), ' ', ea, &addr);
+        b = effective_address(addr, (code & 0x38) >> 3, code & 0x7, ' ', ea,
+                              &addr);
         if (!b) goto ErrorReturn;
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
@@ -1238,8 +1177,8 @@ static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
       L2:
         fill_space(mnemonic, 8);
         p = mnemonic + strlen(mnemonic);
-        b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), size, p, next_addr);
+        b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                              next_addr);
         if (!b) goto ErrorReturn;
         p = mnemonic + strlen(mnemonic);
         sprintf(p, ",%c%1d", reg, (code & 0xe00) >> 9);
@@ -1257,8 +1196,8 @@ static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
         p = mnemonic + strlen(mnemonic);
         sprintf(p, "d%1d,", (code & 0xe00) >> 9);
         p = mnemonic + strlen(mnemonic);
-        b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                              (short)(code & 0x7), ' ', p, next_addr);
+        b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, ' ', p,
+                              next_addr);
         if (!b) goto ErrorReturn;
         break;
       default:
@@ -1335,8 +1274,8 @@ static char *disab(Long addr, unsigned short code, Long *next_addr,
     }
   }
   p = mnemonic + strlen(mnemonic);
-  b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                        (short)(code & 0x7), size, p, next_addr);
+  b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+                        next_addr);
   if (!b) goto ErrorReturn;
   if ((code & 0xf100) == 0xb100 && reg != 'a') {
     /* EOR */
@@ -1407,8 +1346,8 @@ static char *disac(Long addr, unsigned short code, Long *next_addr,
           sprintf(mnemonic, "and.%c   ", size);
         L2:
           p = mnemonic + strlen(mnemonic);
-          b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                                (short)(code & 0x7), size, p, next_addr);
+          b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size,
+                                p, next_addr);
           if (!b) goto ErrorReturn;
           p = mnemonic + strlen(mnemonic);
           sprintf(p, ",d%1d", (code & 0xe00) >> 9);
@@ -1424,8 +1363,8 @@ static char *disac(Long addr, unsigned short code, Long *next_addr,
         L1:
           sprintf(mnemonic, "and.%c   d%1d,", size, (code & 0xe00) >> 9);
           p = mnemonic + strlen(mnemonic);
-          b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                                (short)(code & 0x7), size, p, next_addr);
+          b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size,
+                                p, next_addr);
           if (!b) goto ErrorReturn;
           goto EndOfFunc;
       }
@@ -1477,8 +1416,8 @@ static char *disae(Long addr, unsigned short code, Long *next_addr,
         break;
     }
     p = mnemonic + strlen(mnemonic);
-    b = effective_address(addr + 2, (short)((code & 0x38) >> 3),
-                          (short)(code & 0x7), ' ', p, next_addr);
+    b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, ' ', p,
+                          next_addr);
     if (!b) goto ErrorReturn;
   } else {
     switch ((code & 0xc0) >> 6) {
@@ -1525,3 +1464,40 @@ static char *disae(Long addr, unsigned short code, Long *next_addr,
 ErrorReturn:
   return NULL;
 }
+
+/* $Id: disassemble.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.2  2009/08/05 14:44:33  masamic
+ * Some Bug fix, and implemented some instruction
+ * Following Modification contributed by TRAP.
+ *
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
+ * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
+ * Add: Nbcd, Sbcd.
+ *
+ * Revision 1.1.1.1  2001/05/23 11:22:06  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.5  2000/01/09  04:22:42  yfujii
+ * Automaton for making register list is fixed for buginfo0002.
+ *
+ * Revision 1.4  1999/12/23  08:08:16  yfujii
+ * Wrong instruction strings generated for some instructions, are fixed.
+ *
+ * Revision 1.3  1999/12/07  12:41:31  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.3  1999/11/30  13:27:38  yfujii
+ * Wrong interpretation of 'DBcc' instruction is fixed.
+ * Wrong interpretation of 'MOVE #$xxxx,$yyyyyy' is fixed.
+ *
+ * Revision 1.2  1999/11/22  03:58:02  yfujii
+ * Wrong treatment of 'movem' instruction is fixed.
+ *
+ * Revision 1.1  1999/11/01  06:22:26  yfujii
+ * Initial revision
+ *
+ */

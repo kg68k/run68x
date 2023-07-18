@@ -184,8 +184,6 @@ static bool Exg(char code1, char code2) {
 static bool Mulu(char code1, char code2) {
   char src_reg;
   char mode;
-  UShort src_data;
-  UShort dst_data;
   ULong ans;
   Long src_data_l;
 #ifdef TRACE
@@ -195,14 +193,13 @@ static bool Mulu(char code1, char code2) {
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
   int dst_reg = ((code1 & 0x0E) >> 1);
-
-  dst_data = (rd[dst_reg] & 0xFFFF);
+  UWord dst_data = (rd[dst_reg] & 0xFFFF);
 
   /* ソースのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &src_data_l)) {
     return true;
   }
-  src_data = (UShort)src_data_l;
+  UWord src_data = (UWord)src_data_l;
 
   ans = src_data * dst_data;
   rd[dst_reg] = ans;
@@ -224,8 +221,6 @@ static bool Mulu(char code1, char code2) {
 static bool Muls(char code1, char code2) {
   char src_reg;
   char mode;
-  short src_data;
-  short dst_data;
   Long ans;
   Long src_data_l;
 #ifdef TRACE
@@ -236,13 +231,13 @@ static bool Muls(char code1, char code2) {
   src_reg = (code2 & 0x07);
   int dst_reg = ((code1 & 0x0E) >> 1);
 
-  dst_data = (rd[dst_reg] & 0xFFFF);
+  Word dst_data = (rd[dst_reg] & 0xFFFF);
 
   /* ソースのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &src_data_l)) {
     return true;
   }
-  src_data = (UShort)src_data_l;
+  Word src_data = (Word)src_data_l;
 
   ans = src_data * dst_data;
   rd[dst_reg] = ans;

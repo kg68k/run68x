@@ -15,33 +15,6 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/* $Id: debugger.c,v 1.2 2009-08-08 06:49:44 masamic Exp $*/
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:06  masamic
- * First imported source code and docs
- *
- * Revision 1.5  1999/12/23  08:07:58  yfujii
- * Help messages are changed.
- *
- * Revision 1.4  1999/12/07  12:40:12  yfujii
- * *** empty log message ***
- *
- * Revision 1.4  1999/12/01  13:53:48  yfujii
- * Help messages are modified.
- *
- * Revision 1.3  1999/11/29  06:16:47  yfujii
- * Disassemble and step command are implemented.
- *
- * Revision 1.2  1999/11/01  06:23:33  yfujii
- * Some debugging functions are introduced.
- *
- * Revision 1.1  1999/10/29  13:41:07  yfujii
- * Initial revision
- *
- */
-
 #include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
@@ -70,8 +43,6 @@ static char *command_name[] = {
     "WATCHC" /* 命令ウォッチ */
 };
 
-/* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
-#define prog_ptr_u ((unsigned char *)prog_ptr)
 ULong stepcount;
 
 static RUN68_COMMAND analyze(const char *line, int *argc, char **argv);
@@ -84,7 +55,20 @@ static void display_registers();
 static void set_breakpoint(int argc, char **argv);
 static void clear_breakpoint();
 static ULong get_stepcount(int argc, char **argv);
-static unsigned short watchcode(int argc, char **argv);
+
+static UWord watchcode(int argc, char **argv) {
+  unsigned short wcode;
+
+  if (argc < 2) {
+    fprintf(stderr, "run68-watchcode:Too few arguments.\n");
+    return 0x4afc;
+  } else if (determine_string(argv[1]) != 2) {
+    fprintf(stderr, "run68-watchcode:Instruction code expression error.\n");
+    return 0x4afc;
+  }
+  sscanf(&argv[1][1], "%hx", &wcode);
+  return (UWord)wcode;
+}
 
 /*
    機能：
@@ -115,8 +99,7 @@ RUN68_COMMAND debugger(bool running) {
     }
     while (addr < naddr) {
       char *p = hex + strlen(hex);
-      code = (((unsigned short)prog_ptr_u[addr]) << 8) +
-             (unsigned short)prog_ptr_u[addr + 1];
+      code = ((prog_ptr[addr]) << 8) + prog_ptr[addr + 1];
       sprintf(p, "%04X ", code);
       addr += 2;
     }
@@ -361,8 +344,7 @@ static void run68_dump(int argc, char **argv) {
     }
   }
   for (i = 0; i < size; i++) {
-    ULong d;
-    d = (unsigned char)prog_ptr_u[sadr + i];
+    ULong d = prog_ptr[sadr + i];
     if (i % 16 == 0) {
       fprintf(stderr, "%06X:", sadr + i);
     } else if (i % 8 == 0) {
@@ -379,7 +361,7 @@ static void run68_dump(int argc, char **argv) {
       }
       fprintf(stderr, ":");
       for (j = i & 0xfffffff0; j <= i; j++) {
-        d = (unsigned char)prog_ptr_u[sadr + j];
+        d = prog_ptr[sadr + j];
         fprintf(stderr, "%c", (' ' <= d && d <= 0x7e) ? d : '.');
       }
       fprintf(stderr, "\n");
@@ -477,8 +459,7 @@ static void display_list(int argc, char **argv) {
     }
     while (addr < naddr) {
       char *p = hex + strlen(hex);
-      code = (((unsigned short)prog_ptr_u[addr]) << 8) +
-             (unsigned short)prog_ptr_u[addr + 1];
+      code = ((prog_ptr[addr]) << 8) + prog_ptr[addr + 1];
       sprintf(p, "%04X ", code);
       addr += 2;
     }
@@ -507,16 +488,29 @@ static ULong get_stepcount(int argc, char **argv) {
   return count;
 }
 
-static unsigned short watchcode(int argc, char **argv) {
-  unsigned short wcode;
+/* $Id: debugger.c,v 1.2 2009-08-08 06:49:44 masamic Exp $*/
 
-  if (argc < 2) {
-    fprintf(stderr, "run68-watchcode:Too few arguments.\n");
-    return 0x4afc;
-  } else if (determine_string(argv[1]) != 2) {
-    fprintf(stderr, "run68-watchcode:Instruction code expression error.\n");
-    return 0x4afc;
-  }
-  sscanf(&argv[1][1], "%hx", &wcode);
-  return wcode;
-}
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:06  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.5  1999/12/23  08:07:58  yfujii
+ * Help messages are changed.
+ *
+ * Revision 1.4  1999/12/07  12:40:12  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.4  1999/12/01  13:53:48  yfujii
+ * Help messages are modified.
+ *
+ * Revision 1.3  1999/11/29  06:16:47  yfujii
+ * Disassemble and step command are implemented.
+ *
+ * Revision 1.2  1999/11/01  06:23:33  yfujii
+ * Some debugging functions are introduced.
+ *
+ * Revision 1.1  1999/10/29  13:41:07  yfujii
+ * Initial revision
+ *
+ */

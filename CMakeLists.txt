@@ -34,6 +34,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/linef.c
   src/load.c
   src/mem.c
+  src/mem.h
   src/run68.c
   src/run68.h
 )
@@ -51,9 +52,9 @@ target_compile_features(${PROJECT_NAME} PRIVATE c_std_11)
 target_compile_definitions(${PROJECT_NAME} PRIVATE ENV_FROM_INI)
 
 if(MSVC)
-  target_compile_options(${PROJECT_NAME} PRIVATE /source-charset:utf-8)
+  target_compile_options(${PROJECT_NAME} PRIVATE /source-charset:utf-8 /J)
 else()
-  target_compile_options(${PROJECT_NAME} PRIVATE -O3 -Wall -Wextra -Werror -Wno-unused-parameter)
+  target_compile_options(${PROJECT_NAME} PRIVATE -funsigned-char -O3 -Wall -Wextra -Werror -Wno-unused-parameter)
 
   # linef.c uses math functions.
   target_link_libraries(${PROJECT_NAME} PRIVATE m)

@@ -1,25 +1,25 @@
-/* $Id: iocscall.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
- * First imported source code and docs
- *
- * Revision 1.3  1999/12/07  12:42:59  yfujii
- * *** empty log message ***
- *
- * Revision 1.3  1999/10/25  03:24:58  yfujii
- * Trace output is now controlled with command option.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "mem.h"
 #include "run68.h"
 
 #ifdef _WIN32
@@ -34,7 +34,7 @@
 
 #include <time.h>
 
-static Long Putc(UShort);
+static Long Putc(UWord);
 static Long Color(short);
 static void Putmes(void);
 static Long Dateget(void);
@@ -53,13 +53,11 @@ static void Dmamove(Long, Long, Long, Long);
          false = 実行継続
 */
 bool iocs_call() {
-  UChar *data_ptr;
   ULong ul;
-  UChar no;
   int x, y;
   short save_s;
 
-  no = rd[0] & 0xff;
+  UByte no = rd[0] & 0xff;
 
   if (func_trace_f) {
     printf("IOCS(%02X): PC=%06X\n", no, pc);
@@ -69,29 +67,27 @@ bool iocs_call() {
       rd[0] = Putc((rd[1] & 0xFFFF));
       break;
     case 0x21: /* B_PRINT */
-      data_ptr = (UChar *)prog_ptr + ra[1];
+    {
+      char *p = prog_ptr + ra[1];
 #if defined(USE_ICONV)
-      {
-        // SJIS to UTF-8
-        char utf8_buf[8192];
-        iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
-        size_t inbytes = strlen((char *)data_ptr);
-        size_t outbytes = sizeof(utf8_buf) - 1;
-        char *ptr_in = (char *)data_ptr;
-        char *ptr_out = utf8_buf;
-        memset(utf8_buf, 0x00, sizeof(utf8_buf));
-        iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
-        iconv_close(icd);
+      // SJIS to UTF-8
+      char utf8_buf[8192];
+      iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+      size_t inbytes = strlen(p);
+      size_t outbytes = sizeof(utf8_buf) - 1;
+      char *ptr_in = p;
+      char *ptr_out = utf8_buf;
+      memset(utf8_buf, 0x00, sizeof(utf8_buf));
+      iconv(icd, &ptr_in, &inbytes, &ptr_out, &outbytes);
+      iconv_close(icd);
 
-        printf("%s", utf8_buf);
-      }
+      printf("%s", utf8_buf);
 #else
-      printf("%s", data_ptr);
+      printf("%s", p);
 #endif
-
-      ra[1] += strlen((char *)data_ptr);
+      ra[1] += strlen(p);
       rd[0] = get_locate();
-      break;
+    } break;
     case 0x22: /* B_COLOR */
       rd[0] = Color((rd[1] & 0xFFFF));
       break;
@@ -239,12 +235,12 @@ bool iocs_call() {
  　機能：文字を表示する
  戻り値：カーソル位置
 */
-static Long Putc(UShort code) {
+static Long Putc(UWord code) {
   if (code == 0x1A) {
     printf("%c[0J", 0x1B); /* 最終行左端まで消去 */
   } else {
     if (code >= 0x0100) putchar(code >> 8);
-    putchar(code);
+    putchar(code & 0xff);
   }
   return (get_locate());
 }
@@ -353,10 +349,10 @@ static Long Timeget() {
  戻り値：バイナリの日付データ
 */
 static Long Datebin(Long bcd) {
-  UShort youbi;
-  UShort year;
-  UShort month;
-  UShort day;
+  unsigned int youbi;
+  unsigned int year;
+  unsigned int month;
+  unsigned int day;
 
   youbi = (bcd >> 24);
   year = ((bcd >> 20) & 0xF) * 10 + ((bcd >> 16) & 0xF) + 1980;
@@ -371,9 +367,9 @@ static Long Datebin(Long bcd) {
  戻り値：バイナリの時刻データ
 */
 static Long Timebin(Long bcd) {
-  UShort hh;
-  UShort mm;
-  UShort ss;
+  unsigned int hh;
+  unsigned int mm;
+  unsigned int ss;
 
   hh = ((bcd >> 20) & 0xF) * 10 + ((bcd >> 16) & 0xF);
   mm = ((bcd >> 12) & 0xF) * 10 + ((bcd >> 8) & 0xF);
@@ -388,9 +384,9 @@ static Long Timebin(Long bcd) {
 */
 static Long Dateasc(Long data, Long adr) {
   char *data_ptr;
-  UShort year;
-  UShort month;
-  UShort day;
+  unsigned int year;
+  unsigned int month;
+  unsigned int day;
   int form;
 
   data_ptr = prog_ptr + adr;
@@ -433,9 +429,9 @@ static Long Dateasc(Long data, Long adr) {
 */
 static Long Timeasc(Long data, Long adr) {
   char *data_ptr;
-  UShort hh;
-  UShort mm;
-  UShort ss;
+  unsigned int hh;
+  unsigned int mm;
+  unsigned int ss;
 
   data_ptr = prog_ptr + adr;
 
@@ -533,3 +529,21 @@ static void Dmamove(Long md, Long size, Long adr1, Long adr2) {
   p2 = prog_ptr + adr2;
   memcpy(p2, p1, size);
 }
+
+/* $Id: iocscall.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.3  1999/12/07  12:42:59  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.3  1999/10/25  03:24:58  yfujii
+ * Trace output is now controlled with command option.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

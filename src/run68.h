@@ -31,20 +31,25 @@
 #define NORETURN /* NORETURN */
 #endif
 
+#include <limits.h>
 #include <setjmp.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
-typedef int8_t Char;
-typedef uint8_t UChar;
-typedef int16_t Short;
-typedef uint16_t UShort;
-typedef int32_t Long;    // 64bit 環境対応
-typedef uint32_t ULong;  // 64bit 環境対応
+#if CHAR_MIN != 0
+#error "plain 'char' type must be unsigned."
+#endif
+
+// M680x0 データ型
+typedef int8_t Byte;
+typedef uint8_t UByte;
+typedef int16_t Word;
+typedef uint16_t UWord;
+typedef int32_t Long;
+typedef uint32_t ULong;
 
 #ifndef _WIN32
-#include <limits.h>
 #define MAX_PATH PATH_MAX
 #define _fcvt fcvt
 #define _stricmp strcasecmp
@@ -189,7 +194,7 @@ extern Long ra[8];      // アドレスレジスタ
 extern Long rd[8 + 1];  // データレジスタ
 extern Long usp;        // USP
 extern Long pc;         // プログラムカウンタ
-extern short sr;        // ステータスレジスタ
+extern UWord sr;        // ステータスレジスタ
 extern char *prog_ptr;  // プログラムをロードしたメモリへのポインタ
 extern int trap_count;          // 割り込み処理中なら0
 extern Long superjsr_ret;       // DOSCALL SUPER_JSRの戻りアドレス
@@ -201,7 +206,7 @@ extern jmp_buf jmp_when_abort;  // アボート処理のためのジャンプバ
 extern Long mem_aloc;           // メインメモリの大きさ
 extern bool func_trace_f;  // -f ファンクションコールトレース
 extern Long trap_pc;       // -tr MPU命令トレースを行うアドレス
-extern unsigned short cwatchpoint;  // 命令ウォッチ
+extern UWord cwatchpoint;  // 命令ウォッチ
 
 /* getini.c */
 void read_ini(char *path, char *prog);
@@ -232,16 +237,9 @@ void OPBuf_display(int n);
 Long add_long(Long src, Long dest, int size);
 Long sub_long(Long src, Long dest, int size);
 
-/* mem.c */
-Long idx_get(void);
-Long imi_get(char);
-Long mem_get(Long, char);
-void mem_set(Long, Long, char);
-NORETURN void run68_abort(Long);
-
 /* doscall.c */
 void close_all_files(void);
-bool dos_call(UChar);
+bool dos_call(UByte);
 Long Getenv_common(const char *name_p, char *buf_p);
 
 /* iocscall.c */
@@ -250,7 +248,7 @@ bool iocs_call(void);
 /* key.c */
 void get_fnckey(int, char *);
 void put_fnckey(int, char *);
-UChar cnv_key98(UChar);
+UByte cnv_key98(UByte);
 
 /* line?.c */
 bool line0(char *);
@@ -302,6 +300,11 @@ void check(char *mode, Long src, Long dest, Long result, int size,
 
 // dissassemble.c
 char *disassemble(Long addr, Long *next_addr);
+
+// 符号拡張
+static inline Word extw(Byte b) { return (Word)b; }
+static inline Long extbl(Byte b) { return (Long)b; }
+static inline Long extl(Word w) { return (Long)w; }
 
 /*
 ０ライン命令：movep, addi, subi, cmpi, andi, eori, ori, btst, bset, bclr, bchg

@@ -1,48 +1,27 @@
-/* $Id: exec.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
- * First imported source code and docs
- *
- * Revision 1.9  1999/12/07  12:42:21  yfujii
- * *** empty log message ***
- *
- * Revision 1.9  1999/11/29  06:22:21  yfujii
- * The way of recording instruction history is changed.
- *
- * Revision 1.8  1999/11/01  06:23:33  yfujii
- * Some debugging functions are introduced.
- *
- * Revision 1.7  1999/10/28  06:34:08  masamichi
- * Modified trace behavior
- *
- * Revision 1.6  1999/10/26  02:12:07  yfujii
- * Fixed a bug of displaying code in the wrong byte order.
- *
- * Revision 1.5  1999/10/26  01:31:54  yfujii
- * Execution history and address trap is added.
- *
- * Revision 1.4  1999/10/22  03:23:18  yfujii
- * #include <dos.h> is removed.
- *
- * Revision 1.3  1999/10/20  02:43:59  masamichi
- * Add for showing more information about errors.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
 #include "run68.h"
-
-/* prog_ptr_uは符号付きcharで不便なので、符号なしcharに変換しておく。*/
-#define prog_ptr_u ((unsigned char *)prog_ptr)
 
 /*
  　機能：1命令実行する
@@ -331,7 +310,7 @@ void text_color(short c) {
  戻り値：カーソル位置
 */
 Long get_locate() {
-  UShort x = 0, y = 0;
+  UWord x = 0, y = 0;  // 未対応
 
   return ((x << 16) | y);
 }
@@ -430,8 +409,7 @@ void OPBuf_display(int n) {
     sprintf(hex, "$%06X ", addr);
     while (addr < naddr) {
       char *p = hex + strlen(hex);
-      code = (((unsigned short)prog_ptr_u[addr]) << 8) +
-             (unsigned short)prog_ptr_u[addr + 1];
+      code = ((prog_ptr[addr]) << 8) + prog_ptr[addr + 1];
       sprintf(p, "%04X ", code);
       addr += 2;
     }
@@ -482,10 +460,8 @@ int get_idx(int *pc, char *regstr) {
  戻り値：データの値
 */
 Long get_imi(int *pc, char size) {
-  UChar *mem;
   Long d;
-
-  mem = (UChar *)prog_ptr + (*pc);
+  UByte *mem = (UByte *)prog_ptr + (*pc);
 
   switch (size) {
     case S_BYTE:
@@ -587,3 +563,39 @@ void get_operand(char *buf, int *pc, int AddressingMode, int RegisterNumber,
       break;
   }
 }
+
+/* $Id: exec.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.9  1999/12/07  12:42:21  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.9  1999/11/29  06:22:21  yfujii
+ * The way of recording instruction history is changed.
+ *
+ * Revision 1.8  1999/11/01  06:23:33  yfujii
+ * Some debugging functions are introduced.
+ *
+ * Revision 1.7  1999/10/28  06:34:08  masamichi
+ * Modified trace behavior
+ *
+ * Revision 1.6  1999/10/26  02:12:07  yfujii
+ * Fixed a bug of displaying code in the wrong byte order.
+ *
+ * Revision 1.5  1999/10/26  01:31:54  yfujii
+ * Execution history and address trap is added.
+ *
+ * Revision 1.4  1999/10/22  03:23:18  yfujii
+ * #include <dos.h> is removed.
+ *
+ * Revision 1.3  1999/10/20  02:43:59  masamichi
+ * Add for showing more information about errors.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

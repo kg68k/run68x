@@ -47,6 +47,7 @@
 #include "ansicolor-w32.h"
 #include "host_win32.h"
 #include "human68k.h"
+#include "mem.h"
 #include "run68.h"
 
 static Long Gets(Long);
@@ -92,8 +93,8 @@ static Long Nameck(Long, Long);
 static Long Conctrl(short, Long);
 static Long Keyctrl(short, Long);
 static void Fnckey(short, Long);
-static Long Intvcg(UShort);
-static Long Intvcs(UShort, Long);
+static Long Intvcg(UWord);
+static Long Intvcs(UWord, Long);
 static Long Assign(short, Long);
 static Long Getfcb(short);
 static Long Exec01(Long, Long, Long, int);
@@ -222,7 +223,7 @@ static bool Exit2(const char *name, Long exit_code) {
   if (nest_cnt == 0) {
     return true;
   }
-  sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
+  sr = mem_get(psp[nest_cnt] + 0x44, S_WORD);
   Mfree(psp[nest_cnt] + MB_SIZE);
   nest_cnt--;
   pc = nest_pc[nest_cnt];
@@ -236,7 +237,7 @@ static void print_doscall_name(const char *name) { printf("%-10s ", name); }
 
 // DOSコールの引数のドライブ名を表示する
 //   function call trace用
-static void print_drive_param(const char *prefix, UShort drive,
+static void print_drive_param(const char *prefix, UWord drive,
                               const char *suffix) {
   printf("%s", prefix);
   if (drive == 0) {
@@ -255,7 +256,7 @@ static void print_drive_param(const char *prefix, UShort drive,
  戻り値： true = 実行終了
          false = 実行継続
  */
-bool dos_call(UChar code) {
+bool dos_call(UByte code) {
   char *data_ptr = 0;
   Long stack_adr;
   Long data;
@@ -1068,8 +1069,9 @@ bool dos_call(UChar code) {
       break;
 
     case 0x31: /* KEEPPR */
+    {
       len = mem_get(stack_adr, S_LONG);
-      srt = (short)mem_get(stack_adr + 4, S_WORD);
+      UWord exit_code = mem_get(stack_adr + 4, S_WORD);
       if (func_trace_f) {
         printf("%-10s\n", "KEEPPR");
       }
@@ -1083,8 +1085,8 @@ bool dos_call(UChar code) {
       nest_cnt--;
       pc = nest_pc[nest_cnt];
       ra[7] = nest_sp[nest_cnt];
-      rd[0] = (UShort)srt;
-      break;
+      rd[0] = exit_code;
+    } break;
 
     case 0xf7:  // BUS_ERR
     {
@@ -1116,14 +1118,11 @@ bool dos_call(UChar code) {
  */
 static Long Gets(Long buf) {
   char str[256];
-  char *buf_ptr;
-  UChar max;
-  Long len;
 
-  buf_ptr = prog_ptr + buf;
-  max = (UChar)(buf_ptr[0]);
-  len = gets2(str, max);
-  buf_ptr[1] = (char)len;
+  char *buf_ptr = prog_ptr + buf;
+  UByte max = buf_ptr[0];
+  Long len = gets2(str, max);
+  buf_ptr[1] = len;
   strcpy(&(buf_ptr[2]), str);
   return (len);
 }
@@ -1137,7 +1136,7 @@ static Long Gets(Long buf) {
      Long  キーコード等
  */
 static Long Kflush(short mode) {
-  UChar c;
+  UByte c;
 
   switch (mode) {
     case 0x01:
@@ -1655,12 +1654,11 @@ static Long Fgets(Long adr, short hdl) {
   char buf[257];
   char *p;
   size_t len;
-  UChar max;
 
   if (!HOST_ISOPENDFILE(&finfo[hdl])) return -6;  // オープンされていない
   if (finfo[hdl].mode == 1) return (-1);
 
-  max = (unsigned char)mem_get(adr, S_BYTE);
+  UByte max = (unsigned char)mem_get(adr, S_BYTE);
 #ifdef _WIN32
   {
     BOOL b = FALSE;
@@ -2473,8 +2471,6 @@ Long Getenv_common(const char *name_p, char *buf_p) {
       while (*mem_ptr == '=' || *mem_ptr == ' ') {
         mem_ptr++;
       }
-      /* 空文字列の場合もある。*/
-      /*            *buf_p = (Long)((char*)mem_ptr - prog_ptr);*/
       strcpy(buf_p, mem_ptr);
       return 0;
     }
@@ -2498,7 +2494,6 @@ static Long Namests(Long name, Long buf) {
   char cud[67];
   char *name_ptr;
   char *buf_ptr;
-  UChar drv;
   int wild = 0;
   int len;
   int i;
@@ -2564,7 +2559,7 @@ static Long Namests(Long name, Long buf) {
     mem_set(buf + 1, path[0] - 'A', S_BYTE);
 #endif
   } else {
-    drv = toupper(nbuf[0]) - 'A';
+    UByte drv = toupper(nbuf[0]) - 'A';
     if (drv >= 26) return (-13);
     mem_set(buf + 1, drv, S_BYTE);
   }
@@ -2673,21 +2668,20 @@ static Long Nameck(Long name, Long buf) {
 static Long Conctrl(short mode, Long adr) {
   char *p;
   Long mes;
-  UShort usrt;
   short srt;
   short x, y;
 
   switch (mode) {
-    case 0:
-      usrt = (unsigned short)mem_get(adr, S_WORD);
-      if (usrt >= 0x0100) putchar(usrt >> 8);
-      putchar(usrt);
+    case 0: {
+      UWord code = mem_get(adr, S_WORD);
+      if (code >= 0x0100) putchar(code >> 8);
+      putchar(code & 0xff);
 #ifdef _WIN32
       FlushFileBuffers(finfo[1].handle);
 #else
       fflush(stdout);
 #endif
-      break;
+    } break;
     case 1:
       mes = mem_get(adr, S_LONG);
       p = prog_ptr + mes;
@@ -2779,7 +2773,7 @@ static Long Conctrl(short mode, Long adr) {
  戻り値：キーコード等(modeによって異なる)
  */
 static Long Keyctrl(short mode, Long stack_adr) {
-  UChar c;
+  UByte c;
 
   switch (mode) {
     case 0:
@@ -2830,7 +2824,7 @@ static void Fnckey(short mode, Long buf) {
  　機能：DOSCALL INTVCGを実行する
  戻り値：ベクタの値
  */
-static Long Intvcg(UShort intno) {
+static Long Intvcg(UWord intno) {
   Long adr2;
   Long mae;
   short save_s;
@@ -2858,7 +2852,7 @@ static Long Intvcg(UShort intno) {
  　機能：DOSCALL INTVCSを実行する
  戻り値：設定前のベクタ
  */
-static Long Intvcs(UShort intno, Long adr) {
+static Long Intvcs(UWord intno, Long adr) {
   Long adr2;
   Long mae;
   short save_s;
@@ -3054,7 +3048,7 @@ static Long Exec2(Long nm, Long cmd, Long env) {
     *p = '\0';
     p++;
     len = strlen(p);
-    *((UChar *)cmd_ptr) = (UChar)len;
+    *cmd_ptr = len;
     strcpy(cmd_ptr + 1, p);
   }
 

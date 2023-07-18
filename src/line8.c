@@ -28,10 +28,8 @@
 static bool Divu(char code1, char code2) {
   char mode;
   char src_reg;
-  UShort waru;
   ULong data;
   ULong ans;
-  UShort mod;
   Long waru_l;
 
   mode = ((code2 & 0x38) >> 3);
@@ -43,7 +41,7 @@ static bool Divu(char code1, char code2) {
   if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &waru_l)) {
     return true;
   }
-  waru = (UShort)waru_l;
+  UWord waru = (UWord)waru_l;
 
   if (waru == 0) {
     err68a("０で除算しました", __FILE__, __LINE__);
@@ -51,7 +49,7 @@ static bool Divu(char code1, char code2) {
 
   CCR_C_OFF();
   ans = data / waru;
-  mod = (unsigned char)(data % waru);
+  UWord mod = data % waru;
   if (ans > 0xFFFF) {
     CCR_V_ON();
     return false;
@@ -80,10 +78,8 @@ static bool Divu(char code1, char code2) {
 static bool Divs(char code1, char code2) {
   char mode;
   char src_reg;
-  short waru;
   Long data;
   Long ans;
-  short mod;
   Long waru_l;
 
   mode = ((code2 & 0x38) >> 3);
@@ -95,8 +91,7 @@ static bool Divs(char code1, char code2) {
   if (get_data_at_ea(EA_Data, mode, src_reg, S_WORD, &waru_l)) {
     return true;
   }
-
-  waru = (UShort)waru_l;
+  Word waru = (Word)waru_l;
 
   if (waru == 0) {
     err68a("０で除算しました", __FILE__, __LINE__);
@@ -104,7 +99,7 @@ static bool Divs(char code1, char code2) {
 
   CCR_C_OFF();
   ans = data / waru;
-  mod = data % waru;
+  Word mod = data % waru;
   if (ans > 32767 || ans < -32768) {
     CCR_V_ON();
     return false;

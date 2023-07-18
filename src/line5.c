@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "mem.h"
 #include "run68.h"
 
 /*
@@ -26,23 +27,21 @@
          false = 実行継続
 */
 static int Dbcc(char code1, char code2) {
-  short disp;
-  UShort src_data;
-
   int reg = (code2 & 0x07);
-  disp = (short)imi_get(S_WORD);
-  src_data = (rd[reg] & 0xFFFF);
+  Word disp16 = imi_get_word();
+  UWord counter = (rd[reg] & 0xFFFF);
 
 #ifdef TRACE
-  printf("trace: dbcc     src=%d PC=%06lX\n", (short)src_data, pc - 2);
+  printf("trace: dbcc     src=%d PC=%06lX\n", counter, pc - 2);
 #endif
 
-  if (get_cond((char)(code1 & 0x0F))) return false;
+  if (get_cond(code1 & 0x0F)) return false;
 
-  src_data--;
-  rd[reg] = ((rd[reg] & 0xFFFF0000) | src_data);
-  if (src_data != 0xFFFF) pc += (disp - 2);
-
+  counter--;
+  rd[reg] = ((rd[reg] & 0xFFFF0000) | counter);
+  if (counter != 0xFFFF) {
+    pc += extl(disp16) - 2;
+  }
   return false;
 }
 

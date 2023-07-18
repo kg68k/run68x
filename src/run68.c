@@ -23,11 +23,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mem.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
-
-#define prog_ptr_u ((unsigned char *)prog_ptr)
 
 EXEC_INSTRUCTION_INFO OP_info;
 FILEINFO finfo[FILE_MAX];
@@ -37,7 +37,7 @@ Long ra[8];
 Long rd[8 + 1];
 Long usp;
 Long pc;
-short sr;
+UWord sr;
 char *prog_ptr;
 int trap_count;
 Long superjsr_ret;
@@ -49,7 +49,7 @@ jmp_buf jmp_when_abort;
 Long mem_aloc;
 bool func_trace_f = false;
 Long trap_pc;
-unsigned short cwatchpoint = 0x4afc;
+UWord cwatchpoint = 0x4afc;
 
 static bool trace_f = false;
 static bool debug_on = false;
@@ -139,15 +139,13 @@ static void trap_table_make(void) {
  戻り値：なし
 */
 static int exec_trap(bool *restart) {
-  UChar *trap_mem1;
-  UChar *trap_mem2;
   Long trap_adr;
   static bool cont_flag = true;
   static bool running = true;
 
   trap_count = 1;
-  trap_mem1 = (UChar *)prog_ptr + 0x118;
-  trap_mem2 = (UChar *)prog_ptr + 0x138;
+  UByte *const trap_mem1 = (UByte *)prog_ptr + 0x118;
+  UByte *const trap_mem2 = (UByte *)prog_ptr + 0x138;
   OPBuf_clear();
   do {
     /* 実行した命令の情報を保存しておく */
@@ -200,7 +198,7 @@ static int exec_trap(bool *restart) {
         stepcount = 0;
       }
     } else if (cwatchpoint != 0x4afc &&
-               cwatchpoint == *((unsigned short *)(prog_ptr + pc))) {
+               cwatchpoint == ((prog_ptr[pc] << 8) + prog_ptr[pc + 1])) {
       fprintf(stderr, "(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
               cwatchpoint);
       if (stepcount != 0) {
@@ -296,8 +294,7 @@ static int exec_notrap(bool *restart) {
         stepcount = 0;
       }
     } else if (cwatchpoint != 0x4afc &&
-               cwatchpoint == ((unsigned short)prog_ptr_u[pc] << 8) +
-                                  (unsigned short)prog_ptr_u[pc + 1]) {
+               cwatchpoint == ((prog_ptr[pc] << 8) + prog_ptr[pc + 1])) {
       fprintf(stderr, "(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
               cwatchpoint);
       debug_on = true;

@@ -61,7 +61,8 @@ bool line2(char *pc_ptr) {
   if (src_mode == EA_AD && size == S_BYTE) {
     err68a("不正な命令: move[a].b An, <ea> を実行しようとしました。", __FILE__,
            __LINE__);
-  } else if (get_data_at_ea(EA_All, src_mode, src_reg, size, &src_data)) {
+  }
+  if (get_data_at_ea(EA_All, src_mode, src_reg, size, &src_data)) {
     return true;
   }
 
@@ -70,7 +71,8 @@ bool line2(char *pc_ptr) {
     if (size == S_BYTE) {
       err68a("不正な命令: movea.b <ea>, An を実行しようとしました。", __FILE__,
              __LINE__);
-    } else if (size == S_WORD) {
+    }
+    if (size == S_WORD) {
       if (src_data & 0x8000) {
         src_data |= 0xffff0000;
       } else {
