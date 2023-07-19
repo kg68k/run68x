@@ -152,15 +152,25 @@ ErrorReturn:
 */
 static bool xrelocate(Long reloc_adr, Long reloc_size, Long read_top) {
   Long prog_adr;
-  Long data;
 
   prog_adr = read_top;
-  for (; reloc_size > 0; reloc_size -= 2, reloc_adr += 2) {
-    UWord disp = mem_get(read_top + reloc_adr, S_WORD);
-    if (disp == 1) return false;
-    prog_adr += disp;
-    data = mem_get(prog_adr, S_LONG) + read_top;
-    mem_set(prog_adr, data, S_LONG);
+  while (reloc_size > 0) {
+    ULong disp = mem_get(read_top + reloc_adr, S_WORD);
+    reloc_size -= 2;
+    reloc_adr += 2;
+
+    if (disp == 1) {
+      disp = mem_get(read_top + reloc_adr, S_LONG);
+      reloc_size -= 4;
+      reloc_adr += 4;
+    }
+    if (disp & 1) {
+      prog_adr += (disp & ~1);
+      mem_set(prog_adr, mem_get(prog_adr, S_WORD) + read_top, S_WORD);
+    } else {
+      prog_adr += disp;
+      mem_set(prog_adr, mem_get(prog_adr, S_LONG) + read_top, S_LONG);
+    }
   }
 
   return true;
