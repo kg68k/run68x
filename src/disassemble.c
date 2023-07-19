@@ -21,102 +21,6 @@
 #include "mem.h"
 #include "run68.h"
 
-static char *disa0(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr,
-                       char *mnemonic);
-static char *disa4(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-static char *disa5(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-static char *disa6(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-static char *disa7(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-static char *disa8(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
-                     char *mnemonic);
-static char *disab(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-static char *disac(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-static char *disae(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic);
-
-/*
-   機能：
-     指定したアドレスから始まるMPU命令を文字列に変換する。
-   パラメータ：
-     Long  addr      <in>  命令のアドレス
-     Long *next_addr <out> 次の命令のアドレス
-   戻り値：
-*/
-
-char *disassemble(Long addr, Long *next_addr) {
-  static char mnemonic[64], *ptr;
-  unsigned short code;
-
-  ptr = NULL;
-  *next_addr = addr;
-  mnemonic[0] = '\0';
-  code = ((prog_ptr[addr]) << 8) + prog_ptr[addr + 1];
-  switch ((code & 0xf000) >> 12) {
-    case 0x0:
-      ptr = disa0(addr, code, next_addr, mnemonic);
-      break;
-    case 0x1:
-    case 0x2:
-    case 0x3:
-      ptr = disa1_2_3(addr, code, next_addr, mnemonic);
-      break;
-    case 0x4:
-      ptr = disa4(addr, code, next_addr, mnemonic);
-      break;
-    case 0x5:
-      ptr = disa5(addr, code, next_addr, mnemonic);
-      break;
-    case 0x6:
-      ptr = disa6(addr, code, next_addr, mnemonic);
-      break;
-    case 0x7:
-      ptr = disa7(addr, code, next_addr, mnemonic);
-      break;
-    case 0x8:
-      ptr = disa8(addr, code, next_addr, mnemonic);
-      break;
-    case 0x9:
-    case 0xd:
-      ptr = disa9_d(addr, code, next_addr, mnemonic);
-      break;
-    case 0xb:
-      ptr = disab(addr, code, next_addr, mnemonic);
-      break;
-    case 0xc:
-      ptr = disac(addr, code, next_addr, mnemonic);
-      break;
-    case 0xe:
-      ptr = disae(addr, code, next_addr, mnemonic);
-      break;
-    case 0xf:
-      switch (code & 0x0f00) {
-        case 0x0f00:
-          sprintf(mnemonic, "FCALL $%02X", code & 0xff);
-          ptr = mnemonic;
-          break;
-        case 0x0e00:
-          sprintf(mnemonic, "FLOAT $%02X", code & 0xff);
-          ptr = mnemonic;
-          break;
-      }
-      *next_addr = addr + 2;
-  }
-  if (ptr == NULL) {
-    return NULL;
-  }
-  return ptr;
-}
-
 static void fill_space(char *str, unsigned int n) {
   unsigned int i;
   if (strlen(str) >= n) return;
@@ -237,8 +141,47 @@ ErrorReturn:
   return false;
 }
 
-static char *disa0(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+/* MOVEP命令 */
+static bool disa0_movep(Long addr, UWord code, Long *next_addr,
+                        char *mnemonic) {
+  Word disp16;
+
+  strcat(mnemonic, "movep");
+  switch ((code & 0x1c0) >> 6) {
+    default:
+      break;
+
+    case 0x04:
+      strcat(mnemonic, ".w");
+      goto L4;
+    case 0x05:
+      strcat(mnemonic, ".l");
+    L4:
+      fill_space(mnemonic, 8);
+      char *p = mnemonic + strlen(mnemonic);
+      disp16 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
+      sprintf(p, "%d(a%1d),d%1d", extl(disp16), code & 0x07,
+              (code & 0x0e00) >> 9);
+      *next_addr = addr + 4;
+      return true;
+    case 0x06:
+      strcat(mnemonic, ".w");
+      goto L5;
+    case 0x07:
+      strcat(mnemonic, ".l");
+    L5:
+      fill_space(mnemonic, 8);
+      p = mnemonic + strlen(mnemonic);
+      disp16 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
+      sprintf(p, "d%1d,%d(a%1d)", (code & 0x0e00) >> 9, extl(disp16),
+              code & 0x07);
+      *next_addr = addr + 4;
+      return true;
+  }
+  return false;
+}
+
+static char *disa0(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   char *p;
   ULong d1;
   char size = '?';
@@ -360,7 +303,12 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
       }
       goto AddEA;
   }
-  /* 残った命令を拾う(二つある) */
+  // MOVEP命令はビット演算命令より先に調べる
+  if ((code & 0xf138) == 0x0108) {
+    if (disa0_movep(addr, code, next_addr, mnemonic)) goto EndOfFunc;
+    goto ErrorReturn;
+  }
+  /* 残った命令を拾う */
   if (code & 0x0100) {
     /* Dynamic Bit Operation */
     switch (code & 0x00c0) {
@@ -382,41 +330,9 @@ static char *disa0(Long addr, unsigned short code, Long *next_addr,
     *next_addr = addr + 2;
     size = ' '; /* Data registers are Long only. Others are byte only. */
     goto AddEA;
-  } else if ((code & 0x0038) == 0x0008) {
-    /* MOVEP命令 */
-    strcat(mnemonic, "movep");
-    switch ((code & 0x1c0) >> 6) {
-      case 0x04:
-        strcat(mnemonic, ".w");
-        goto L4;
-      case 0x05:
-        strcat(mnemonic, ".l");
-      L4:
-        fill_space(mnemonic, 8);
-        p = mnemonic + strlen(mnemonic);
-        d1 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
-        sprintf(p, "%d(a%1d),d%1d", d1, code & 0x07, (code & 0x0e00) >> 9);
-        *next_addr = addr + 4;
-        goto EndOfFunc;
-      case 0x06:
-        strcat(mnemonic, ".w");
-        goto L5;
-      case 0x07:
-        strcat(mnemonic, ".l");
-      L5:
-        fill_space(mnemonic, 8);
-        p = mnemonic + strlen(mnemonic);
-        d1 = (prog_ptr[addr + 2] << 8) + prog_ptr[addr + 3];
-        sprintf(p, "d%1d,%d(a%1d)", (code & 0x0e00) >> 9, d1, code & 0x07);
-        *next_addr = addr + 4;
-        goto EndOfFunc;
-      default:
-        goto ErrorReturn;
-    }
-    goto EndOfFunc;
-  } else {
-    goto ErrorReturn;
   }
+  goto ErrorReturn;
+
 AddEA:
   p = &mnemonic[strlen(mnemonic)];
   /* 即値は有り得ないのでデータサイズには' 'を与える。*/
@@ -428,8 +344,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disa1_2_3(Long addr, unsigned short code, Long *next_addr,
-                       char *mnemonic) {
+static char *disa1_2_3(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   char dstr[64], sstr[64];
   bool b;
   char size = ' ';
@@ -477,8 +392,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disa4(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+static char *disa4(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   signed short disp;
   char reg[10], *p, size;
   bool b;
@@ -825,8 +739,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disa5(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+static char *disa5(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   char size = ' ';
   char *p;
   bool b;
@@ -936,8 +849,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disa6(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+static char *disa6(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   Long jaddr;
   char *p;
 
@@ -1010,8 +922,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disa7(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+static char *disa7(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   if (code & 0x0100) {
     *next_addr = addr;
     return NULL;
@@ -1023,10 +934,10 @@ static char *disa7(Long addr, unsigned short code, Long *next_addr,
   return mnemonic;
 }
 
-static char *disa8(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+static char *disa8(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   bool b;
   char *p, size = ' ';
+  char ea[64];
 
   if ((code & 0x1f0) == 0x100) {
     /* SBCD */
@@ -1041,19 +952,19 @@ static char *disa8(Long addr, unsigned short code, Long *next_addr,
     goto EndOfFunc;
   } else if ((code & 0x1c0) == 0x1c0) {
     /* DIVS */
-    sprintf(mnemonic, "divs    d%1d,", (code & 0x0e00) >> 9);
-    size = 'w';
+    strcat(mnemonic, "divs");
     goto L0;
   } else if ((code & 0x1c0) == 0x0c0) {
     /* DIVU */
-    sprintf(mnemonic, "divu    d%1d,", (code & 0x0e00) >> 9);
-    size = 'w';
+    strcat(mnemonic, "divu");
   L0:
-    fill_space(mnemonic, 8);
-    p = mnemonic + strlen(mnemonic);
-    b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, p,
+    size = 'w';
+    b = effective_address(addr + 2, (code & 0x38) >> 3, code & 0x7, size, ea,
                           &addr);
     if (!b) goto ErrorReturn;
+    fill_space(mnemonic, 8);
+    p = mnemonic + strlen(mnemonic);
+    sprintf(p, "%s,d%1d", ea, (code & 0xe00) >> 9);
     goto EndOfFunc;
   } else {
     char size;
@@ -1109,8 +1020,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disa9_d(Long addr, unsigned short code, Long *next_addr,
-                     char *mnemonic) {
+static char *disa9_d(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   bool b;
   char *p, size, reg = 'd';
 
@@ -1210,8 +1120,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disab(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+static char *disab(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   char size, reg = 'd';
   char *p;
   bool b;
@@ -1289,8 +1198,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disac(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+static char *disac(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   char size;
   char *p;
   bool b;
@@ -1375,8 +1283,7 @@ ErrorReturn:
   return NULL;
 }
 
-static char *disae(Long addr, unsigned short code, Long *next_addr,
-                   char *mnemonic) {
+static char *disae(Long addr, UWord code, Long *next_addr, char *mnemonic) {
   char size, dir, count[10];
   char *p;
   bool b;
@@ -1463,6 +1370,79 @@ static char *disae(Long addr, unsigned short code, Long *next_addr,
   return mnemonic;
 ErrorReturn:
   return NULL;
+}
+
+/*
+   機能：
+     指定したアドレスから始まるMPU命令を文字列に変換する。
+   パラメータ：
+     Long  addr      <in>  命令のアドレス
+     Long *next_addr <out> 次の命令のアドレス
+   戻り値：
+*/
+
+char *disassemble(Long addr, Long *next_addr) {
+  static char mnemonic[64], *ptr;
+  UWord code;
+
+  ptr = NULL;
+  *next_addr = addr;
+  mnemonic[0] = '\0';
+  code = (prog_ptr[addr] << 8) + prog_ptr[addr + 1];
+  switch ((code & 0xf000) >> 12) {
+    case 0x0:
+      ptr = disa0(addr, code, next_addr, mnemonic);
+      break;
+    case 0x1:
+    case 0x2:
+    case 0x3:
+      ptr = disa1_2_3(addr, code, next_addr, mnemonic);
+      break;
+    case 0x4:
+      ptr = disa4(addr, code, next_addr, mnemonic);
+      break;
+    case 0x5:
+      ptr = disa5(addr, code, next_addr, mnemonic);
+      break;
+    case 0x6:
+      ptr = disa6(addr, code, next_addr, mnemonic);
+      break;
+    case 0x7:
+      ptr = disa7(addr, code, next_addr, mnemonic);
+      break;
+    case 0x8:
+      ptr = disa8(addr, code, next_addr, mnemonic);
+      break;
+    case 0x9:
+    case 0xd:
+      ptr = disa9_d(addr, code, next_addr, mnemonic);
+      break;
+    case 0xb:
+      ptr = disab(addr, code, next_addr, mnemonic);
+      break;
+    case 0xc:
+      ptr = disac(addr, code, next_addr, mnemonic);
+      break;
+    case 0xe:
+      ptr = disae(addr, code, next_addr, mnemonic);
+      break;
+    case 0xf:
+      switch (code & 0x0f00) {
+        case 0x0f00:
+          sprintf(mnemonic, "FCALL $%02X", code & 0xff);
+          ptr = mnemonic;
+          break;
+        case 0x0e00:
+          sprintf(mnemonic, "FLOAT $%02X", code & 0xff);
+          ptr = mnemonic;
+          break;
+      }
+      *next_addr = addr + 2;
+  }
+  if (ptr == NULL) {
+    return NULL;
+  }
+  return ptr;
 }
 
 /* $Id: disassemble.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
