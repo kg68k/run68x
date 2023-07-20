@@ -77,7 +77,7 @@ void read_ini(char *path, char *prog) {
   ini_info.trap_emulate = false;
   ini_info.pc98_key = false;
   ini_info.io_through = false;
-  mem_aloc = 0x100000;
+  mem_aloc = DEFAULT_MAIN_MEMORY_SIZE;
 
   /* INIファイルのフルパス名を得る。*/
   /* まずはファイル名を取得する。*/

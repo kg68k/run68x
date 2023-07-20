@@ -55,6 +55,8 @@ typedef uint32_t ULong;
 #define _stricmp strcasecmp
 #endif
 
+#define DEFAULT_MAIN_MEMORY_SIZE 12*1024*1024
+
 #define XHEAD_SIZE 0x40       /* Xファイルのヘッダサイズ */
 #define HUMAN_HEAD 0x6800     /* Humanのメモリ管理ブロック位置 */
 #define FCB_WORK 0x20F00      /* DOSCALL GETFCB用ワーク領域 */
