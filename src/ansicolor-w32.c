@@ -6,7 +6,6 @@
 // license  : MIT
 //
 
-#ifdef _WIN32
 #include <io.h>
 #include <mbstring.h>
 #include <stdio.h>
@@ -337,5 +336,3 @@ int WriteW32(short _type, HANDLE handle, const char *_buf, size_t _len) {
   }
   return len;
 }
-
-#endif

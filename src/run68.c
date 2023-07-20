@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "host_generic.h"
+#include "host_win32.h"
+#include "human68k.h"
 #include "mem.h"
 
 #ifdef _WIN32
@@ -356,6 +359,30 @@ EndOfFunc:
   return rd[0];
 }
 
+static void init_fileinfo(int fileno, bool is_opened, short mode) {
+  FILEINFO *finfop = &finfo[fileno];
+
+  HOST_INIT_FILEINFO(finfop, fileno);
+  finfop->is_opened = is_opened;
+  finfop->date = 0;
+  finfop->time = 0;
+  finfop->mode = mode;
+  finfop->nest = 0;
+  finfop->name[0] = '\0';
+}
+
+// ファイル管理テーブルの初期化
+static void init_all_fileinfo(void) {
+  init_fileinfo(HUMAN68K_STDIN, true, 0);
+  init_fileinfo(HUMAN68K_STDOUT, true, 1);
+  init_fileinfo(HUMAN68K_STDERR, true, 1);
+
+  int i;
+  for (i = HUMAN68K_STDERR + 1; i < FILE_MAX; i++) {
+    init_fileinfo(i, false, 0);
+  }
+}
+
 int main(int argc, char *argv[], char *envp[]) {
   char fname[89];  /* 実行ファイル名 */
   FILE *fp;        /* 実行ファイルのファイルポインタ */
@@ -516,31 +543,8 @@ Restart:
     return EXIT_FAILURE;
   }
 
-  /* ファイル管理テーブルの初期化 */
-  for (i = 0; i < FILE_MAX; i++) {
-#ifdef _WIN32
-    finfo[i].handle = NULL;
-#else
-    finfo[i].fp = NULL;
-#endif
-    finfo[i].date = 0;
-    finfo[i].time = 0;
-    finfo[i].mode = 0;
-    finfo[i].nest = 0;
-    finfo[i].name[0] = '\0';
-  }
-#ifdef _WIN32
-  finfo[0].handle = GetStdHandle(STD_INPUT_HANDLE);
-  finfo[1].handle = GetStdHandle(STD_OUTPUT_HANDLE);
-  finfo[2].handle = GetStdHandle(STD_ERROR_HANDLE);
-#else
-  finfo[0].fp = stdin;
-  finfo[1].fp = stdout;
-  finfo[2].fp = stderr;
-#endif
-  finfo[0].mode = 0;
-  finfo[1].mode = 1;
-  finfo[2].mode = 1;
+  init_all_fileinfo();
+
   trap_table_make();
 
   /* 実行 */

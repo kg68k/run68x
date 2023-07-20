@@ -36,6 +36,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #if CHAR_MIN != 0
 #error "plain 'char' type must be unsigned."
@@ -55,7 +60,7 @@ typedef uint32_t ULong;
 #define _stricmp strcasecmp
 #endif
 
-#define DEFAULT_MAIN_MEMORY_SIZE 12*1024*1024
+#define DEFAULT_MAIN_MEMORY_SIZE (12 * 1024 * 1024)
 
 #define XHEAD_SIZE 0x40       /* Xファイルのヘッダサイズ */
 #define HUMAN_HEAD 0x6800     /* Humanのメモリ管理ブロック位置 */
@@ -146,14 +151,19 @@ typedef uint32_t ULong;
 #define SR_T_REF() (sr & 0x8000)
 
 #ifdef _WIN32
-#include <windows.h>  // HANDLE
-#endif
 typedef struct {
-#ifdef _WIN32
   HANDLE handle;
+} HostFileInfoMember;
 #else
+typedef struct {
   FILE *fp;
+} HostFileInfoMember;
 #endif
+
+// 全てのメンバーが代入でコピー可能なこと
+typedef struct {
+  HostFileInfoMember host;
+  bool is_opened;
   unsigned date;
   unsigned time;
   short mode;

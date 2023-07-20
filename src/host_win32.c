@@ -15,8 +15,6 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-#ifdef _WIN32
-
 #include <direct.h>
 #include <string.h>
 #include <windows.h>
@@ -24,25 +22,29 @@
 #include "human68k.h"
 #include "run68.h"
 
-#define DRV_CLN_LEN 2     // "A:"
-#define DRV_CLN_BS_LEN 3  // "A:\\"
+static HANDLE fileno_to_handle(int fileno) {
+  if (fileno == HUMAN68K_STDIN) return GetStdHandle(STD_INPUT_HANDLE);
+  if (fileno == HUMAN68K_STDOUT) return GetStdHandle(STD_OUTPUT_HANDLE);
+  if (fileno == HUMAN68K_STDERR) return GetStdHandle(STD_ERROR_HANDLE);
+  return NULL;
+}
 
-// オープン中のファイルハンドルか
-bool IsOpendFile_win32(FILEINFO* finfop) {
-  return (finfop->handle == NULL) ? true : false;
+// FINFO構造体の環境依存メンバーを初期化する
+void InitFileInfo_win32(FILEINFO* finfop, int fileno) {
+  finfop->host.handle = fileno_to_handle(fileno);
 }
 
 // ファイルを閉じる
 bool CloseFile_win32(FILEINFO* finfop) {
-  HANDLE handle = finfop->handle;
+  HANDLE handle = finfop->host.handle;
   if (handle == NULL) return false;
 
-  finfop->handle = NULL;
+  finfop->host.handle = NULL;
   return (CloseHandle(handle) == FALSE) ? false : true;
 }
 
 // DOS _MKDIR (0xff39)
-Long Mkdir_win32(Long name) {
+Long DosMkdir_win32(Long name) {
   char* name_ptr = prog_ptr + name;
 
   if (CreateDirectoryA(name_ptr, NULL) == FALSE) {
@@ -52,8 +54,8 @@ Long Mkdir_win32(Long name) {
   return DOSE_SUCCESS;
 }
 
-// DOS _RMDRV (0xff3a)
-Long Rmdir_win32(Long name) {
+// DOS _RMDIR (0xff3a)
+Long DosRmdir_win32(Long name) {
   char* name_ptr = prog_ptr + name;
 
   errno = 0;
@@ -66,7 +68,7 @@ Long Rmdir_win32(Long name) {
 }
 
 // DOS _CHDIR (0xff3b)
-Long Chdir_win32(Long name) {
+Long DosChdir_win32(Long name) {
   char* name_ptr = prog_ptr + name;
 
   if (SetCurrentDirectoryA(name_ptr) == FALSE)
@@ -75,7 +77,7 @@ Long Chdir_win32(Long name) {
 }
 
 // DOS _CURDIR (0xff47)
-Long Curdir_win32(short drv, char* buf_ptr) {
+Long DosCurdir_win32(short drv, char* buf_ptr) {
   char buf[DRV_CLN_LEN + HUMAN68K_PATH_MAX] = {0};
   const char* p = _getdcwd(drv, buf, sizeof(buf));
 
@@ -89,14 +91,13 @@ Long Curdir_win32(short drv, char* buf_ptr) {
 }
 
 // DOS _FILEDATE (0xff87)
-Long Filedate_win32(short hdl, Long dt) {
+Long DosFiledate_win32(short hdl, Long dt) {
   FILETIME ctime, atime, wtime;
   int64_t ll_wtime;
 
-  if (!IsOpendFile_win32(&finfo[hdl]))
-    return DOSE_BADF;  // オープンされていない
+  if (!finfo[hdl].is_opened) return DOSE_BADF;  // オープンされていない
 
-  HANDLE hFile = finfo[hdl].handle;
+  HANDLE hFile = finfo[hdl].host.handle;
 
   if (dt != 0) { /* 設定 */
     GetFileTime(hFile, &ctime, &atime, &wtime);
@@ -119,5 +120,3 @@ Long Filedate_win32(short hdl, Long dt) {
   return (Long)(((ll_wtime / 86400 / 10000000) << 16) +
                 (ll_wtime / 10000000) % 86400);
 }
-
-#endif

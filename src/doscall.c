@@ -45,6 +45,7 @@
 #endif
 
 #include "ansicolor-w32.h"
+#include "host_generic.h"
 #include "host_win32.h"
 #include "human68k.h"
 #include "mem.h"
@@ -76,13 +77,8 @@ static Long Delete(char *);
 static Long Seek(short, Long, short);
 static Long Rename(Long, Long);
 static Long Chmod(Long, short);
-static Long Mkdir(Long);
-static Long Rmdir(Long);
-static Long Chdir(Long);
-static Long Curdir(short, char *);
 static Long Files(Long, Long, short);
 static Long Nfiles(Long);
-static Long Filedate(short, Long);
 static Long Getdate(void);
 static Long Setdate(short);
 static Long Gettime(int);
@@ -102,10 +98,6 @@ static Long Exec2(Long, Long, Long);
 static Long Exec3(Long, Long, Long);
 static void Exec4(Long);
 static Long gets2(char *, int);
-
-static void not_implemented(const char *name) {
-  fprintf(stderr, "run68: %s()は未実装です。\n", name);
-}
 
 #ifndef _WIN32
 void CloseHandle(FILE *fp) { fclose(fp); }
@@ -167,34 +159,43 @@ char ungetch(char c) {
 }
 #endif
 
-#ifndef HOST_ISOPENDFILE
-#define HOST_ISOPENDFILE IsOpendFile_generic
-
-// オープン中のファイルハンドルか
-bool IsOpendFile_generic(FILEINFO *finfop) {
-  return (finfop->fp == NULL) ? true : false;
+// DOS _MKDIR (0xff39)
+static Long Mkdir(Long name) {  //
+  return HOST_DOS_MKDIR(name);
 }
-#endif
 
-#ifndef HOST_CLOSEFILE
-#define HOST_CLOSEFILE CloseFile_generic
-
-// ファイルを閉じる
-static bool CloseFile_generic(FILEINFO *finfop) {
-  FILE *fp = finfop->fp;
-  if (fp == NULL) return false;
-
-  finfop->fp = NULL;
-  return fclose(fp) == EOF ? false : true;
+// DOS _RMDIR (0xff3a)
+static Long Rmdir(Long name) {  //
+  return HOST_DOS_RMDIR(name);
 }
-#endif
+
+// DOS _CHDIR (0xff3b)
+static Long Chdir(Long name) {  //
+  return HOST_DOS_CHDIR(name);
+}
+
+// DOS _CURDIR (0xff47)
+static Long Curdir(short drv, char *buf_ptr) {
+  return HOST_DOS_CURDIR(drv, buf_ptr);
+}
+
+// DOS _FILEDATE (0xff87)
+static Long Filedate(short hdl, Long dt) {  //
+  return HOST_DOS_FILEDATE(hdl, dt);
+}
+
+// ファイルを閉じてFILEINFOを未使用状態に戻す
+static bool CloseFile(FILEINFO *finfop) {
+  finfop->is_opened = false;
+  return HOST_CLOSE_FILE(finfop);
+}
 
 // 開いている(オープン中でない)ファイル番号を探す
 static Long find_free_file(void) {
   int i;
 
-  for (i = 5; i < FILE_MAX; i++) {
-    if (!HOST_ISOPENDFILE(&finfo[i])) {
+  for (i = HUMAN68K_USER_FILENO_MIN; i < FILE_MAX; i++) {
+    if (!&finfo[i].is_opened) {
       return (Long)i;
     }
   }
@@ -205,9 +206,9 @@ static Long find_free_file(void) {
 void close_all_files(void) {
   int i;
 
-  for (i = 5; i < FILE_MAX; i++) {
+  for (i = HUMAN68K_USER_FILENO_MIN; i < FILE_MAX; i++) {
     if (finfo[i].nest == nest_cnt) {
-      HOST_CLOSEFILE(&finfo[i]);
+      CloseFile(&finfo[i]);
     }
   }
 }
@@ -286,7 +287,7 @@ bool dos_call(UByte code) {
         printf("%-10s\n", "GETCHAR");
       }
 #ifdef _WIN32
-      FlushFileBuffers(finfo[1].handle);
+      FlushFileBuffers(finfo[1].host.handle);
 #endif
       rd[0] = (_getche() & 0xFF);
       break;
@@ -298,13 +299,13 @@ bool dos_call(UByte code) {
 #ifdef _WIN32
       {
         FILEINFO *finfop = &finfo[1];
-        if (GetConsoleMode(finfop->handle, &st) != 0) {
+        if (GetConsoleMode(finfop->host.handle, &st) != 0) {
           // 非リダイレクト
-          WriteW32(1, finfop->handle, data_ptr, 1);
+          WriteW32(1, finfop->host.handle, data_ptr, 1);
         } else {
           Long nwritten;
           /* Win32API */
-          WriteFile(finfop->handle, data_ptr, 1, (LPDWORD)&nwritten, NULL);
+          WriteFile(finfop->host.handle, data_ptr, 1, (LPDWORD)&nwritten, NULL);
         }
       }
 #else
@@ -324,15 +325,15 @@ bool dos_call(UByte code) {
         INPUT_RECORD ir;
         DWORD read_len = 0;
         rd[0] = 0;
-        PeekConsoleInput(finfop->handle, &ir, 1, (LPDWORD)&read_len);
+        PeekConsoleInput(finfop->host.handle, &ir, 1, (LPDWORD)&read_len);
         if (read_len == 0) {
           /* Do nothing. */
         } else if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown ||
                    c == 0x0) {
           /* 不要なイベントは読み捨てる */
-          ReadConsoleInput(finfop->handle, &ir, 1, (LPDWORD)&read_len);
+          ReadConsoleInput(finfop->host.handle, &ir, 1, (LPDWORD)&read_len);
         } else if (srt != 0xFE) {
-          ReadConsoleInput(finfop->handle, &ir, 1, (LPDWORD)&read_len);
+          ReadConsoleInput(finfop->host.handle, &ir, 1, (LPDWORD)&read_len);
           c = ir.Event.KeyEvent.uChar.AsciiChar;
           if (ini_info.pc98_key) c = cnv_key98(c);
           rd[0] = c;
@@ -361,7 +362,7 @@ bool dos_call(UByte code) {
         printf("%-10s\n", code == 0x07 ? "INKEY" : "GETC");
       }
 #ifdef _WIN32
-      FlushFileBuffers(finfo[1].handle);
+      FlushFileBuffers(finfo[1].host.handle);
 #endif
       c = _getch();
       if (c == 0x00) {
@@ -380,12 +381,13 @@ bool dos_call(UByte code) {
 #ifdef _WIN32
       {
         FILEINFO *finfop = &finfo[1];
-        if (GetConsoleMode(finfop->handle, &st) != 0) {
-          WriteW32(1, finfop->handle, data_ptr, len);
+        if (GetConsoleMode(finfop->host.handle, &st) != 0) {
+          WriteW32(1, finfop->host.handle, data_ptr, len);
         } else {
           Long nwritten;
           /* Win32API */
-          WriteFile(finfop->handle, data_ptr, len, (LPDWORD)&nwritten, NULL);
+          WriteFile(finfop->host.handle, data_ptr, len, (LPDWORD)&nwritten,
+                    NULL);
         }
       }
 #else
@@ -424,7 +426,7 @@ bool dos_call(UByte code) {
 #ifdef _WIN32
       /* オープン中の全てのファイルをフラッシュする。*/
       for (i = 5; i < FILE_MAX; i++) {
-        if (HOST_ISOPENDFILE(&finfo[i])) FlushFileBuffers(finfo[i].handle);
+        if (finfo[i].is_opened) FlushFileBuffers(finfo[i].host.handle);
       }
 #else
       _flushall();
@@ -528,14 +530,14 @@ bool dos_call(UByte code) {
         DWORD read_len = 0;
         INPUT_RECORD ir;
         FILEINFO *finfop = &finfo[fhdl];
-        if (GetFileType(finfop->handle) == FILE_TYPE_CHAR) {
+        if (GetFileType(finfop->host.handle) == FILE_TYPE_CHAR) {
           /* 標準入力のハンドルがキャラクタタイプだったら、ReadConsoleを試してみる。*/
           while (true) {
-            BOOL b =
-                ReadConsoleInput(finfop->handle, &ir, 1, (LPDWORD)&read_len);
+            BOOL b = ReadConsoleInput(finfop->host.handle, &ir, 1,
+                                      (LPDWORD)&read_len);
             if (b == FALSE) {
               /* コンソールではなかった。*/
-              ReadFile(finfop->handle, &c, 1, (LPDWORD)&read_len, NULL);
+              ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL);
               break;
             }
             if (read_len == 1 && ir.EventType == KEY_EVENT &&
@@ -545,12 +547,12 @@ bool dos_call(UByte code) {
             }
           }
         } else {
-          ReadFile(finfop->handle, &c, 1, (LPDWORD)&read_len, NULL);
+          ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL);
         }
         if (read_len == 0) c = EOF;
         rd[0] = c;
 #else
-        rd[0] = fgetc(finfo[fhdl].fp);
+        rd[0] = fgetc(finfo[fhdl].host.fp);
 #endif
       }
       break;
@@ -572,14 +574,14 @@ bool dos_call(UByte code) {
 #ifdef _WIN32
       {
         FILEINFO *finfop = &finfo[fhdl];
-        if (GetConsoleMode(finfop->handle, &st) != 0 &&
+        if (GetConsoleMode(finfop->host.handle, &st) != 0 &&
             (fhdl == 1 || fhdl == 2)) {
           // 非リダイレクトで標準出力か標準エラー出力
-          WriteW32(fhdl, finfop->handle, data_ptr, 1);
+          WriteW32(fhdl, finfop->host.handle, data_ptr, 1);
           rd[0] = 0;
         } else {
-          if (WriteFile(finfop->handle, data_ptr, 1, (LPDWORD)&len, NULL) ==
-              FALSE)
+          if (WriteFile(finfop->host.handle, data_ptr, 1, (LPDWORD)&len,
+                        NULL) == FALSE)
             rd[0] = 0;
           else
             rd[0] = 1;
@@ -601,12 +603,13 @@ bool dos_call(UByte code) {
       }
 #ifdef _WIN32
       if ((fhdl == 1 || fhdl == 2) &&
-          GetConsoleMode(finfo[1].handle, &st) != FALSE) {
+          GetConsoleMode(finfo[1].host.handle, &st) != FALSE) {
         // 非リダイレクトで標準出力か標準エラー出力
-        len = WriteW32(fhdl, finfo[fhdl].handle, data_ptr, strlen(data_ptr));
+        len =
+            WriteW32(fhdl, finfo[fhdl].host.handle, data_ptr, strlen(data_ptr));
       } else {
-        WriteFile(finfo[fhdl].handle, data_ptr, strlen(data_ptr), (LPDWORD)&len,
-                  NULL);
+        WriteFile(finfo[fhdl].host.handle, data_ptr, strlen(data_ptr),
+                  (LPDWORD)&len, NULL);
       }
       rd[0] = len;
 #else
@@ -1180,35 +1183,19 @@ static Long Ioctrl(short mode, Long stack_adr) {
       fno = (short)mem_get(stack_adr, S_WORD);
       if (fno == 0) return (0xFF); /* 入力可 */
       if (fno < 5) return (0);
-      if (!HOST_ISOPENDFILE(&finfo[fno])) return 0;
+      if (!finfo[fno].is_opened) return 0;
       if (finfo[fno].mode == 0 || finfo[fno].mode == 2) return (0xFF);
       return (0);
     case 7:
       fno = (short)mem_get(stack_adr, S_WORD);
       if (fno == 1 || fno == 2) return (0xFF); /* 出力可 */
       if (fno < 5) return (0);
-      if (!HOST_ISOPENDFILE(&finfo[fno])) return 0;
+      if (!finfo[fno].is_opened) return 0;
       if (finfo[fno].mode == 1 || finfo[fno].mode == 2) return (0xFF);
       return (0);
     default:
       return (0);
   }
-}
-
-static void copy_fileinfo(int from_index, int to_index) {
-  FILEINFO *from = &finfo[from_index];
-  FILEINFO *to = &finfo[to_index];
-
-#ifdef _WIN32
-  to->handle = from->handle;
-#else
-  to->fp = from->fp;
-#endif
-  to->date = from->date;
-  to->time = from->time;
-  to->mode = from->mode;
-  to->nest = from->nest;
-  strcpy(to->name, from->name);
 }
 
 /*
@@ -1225,7 +1212,7 @@ static Long Dup(short org) {
   Long ret = find_free_file();
   if (ret < 0) return -4;  // オープンしているファイルが多すぎる
 
-  copy_fileinfo(org, ret);
+  finfo[ret] = finfo[org];
   return ret;
 }
 
@@ -1238,11 +1225,11 @@ static Long Dup2(short org, short new) {
 
   if (new >= FILE_MAX) return (-14); /* 無効なパラメータ */
 
-  if (HOST_ISOPENDFILE(&finfo[new])) {
+  if (finfo[new].is_opened) {
     if (Close(new) < 0) return -14;
   }
 
-  copy_fileinfo(org, new);
+  finfo[new] = finfo[org];
   return 0;
 }
 
@@ -1465,13 +1452,14 @@ static Long Create(char *p, short atr) {
   HANDLE handle = CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL,
                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
   if (handle == INVALID_HANDLE_VALUE) return -23;  // ディスクがいっぱい
-  finfo[ret].handle = handle;
+  finfo[ret].host.handle = handle;
 #else
   FILE *fp = fopen(p, "w+b");
   if (fp == NULL) return -23;  // ディスクがいっぱい
-  finfo[ret].fp = fp;
+  finfo[ret].host.fp = fp;
 #endif
 
+  finfo[ret].is_opened = true;
   finfo[ret].mode = 2;
   finfo[ret].nest = nest_cnt;
   strcpy(finfo[ret].name, p);
@@ -1505,7 +1493,7 @@ static Long Newfile(char *p, short atr) {
   HANDLE handle = CreateFile(p, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
   if (handle == INVALID_HANDLE_VALUE) return -23;  // ディスクがいっぱい
-  finfo[ret].handle = handle;
+  finfo[ret].host.handle = handle;
 #else
   FILE *fp = fopen(p, "rb");
   if (fp != NULL) {
@@ -1514,9 +1502,10 @@ static Long Newfile(char *p, short atr) {
   }
   fp = fopen(p, "w+b");
   if (fp == NULL) return -23;  // ディスクがいっぱい
-  finfo[ret].fp = fp;
+  finfo[ret].host.fp = fp;
 #endif
 
+  finfo[ret].is_opened = true;
   finfo[ret].mode = 2;
   finfo[ret].nest = nest_cnt;
   strcpy(finfo[ret].name, p);
@@ -1599,7 +1588,7 @@ static Long Open(char *p, short mode) {
   HANDLE handle =
       CreateFile(p, md, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (handle == INVALID_HANDLE_VALUE) return (mode == 1) ? -23 : -2;
-  finfo[ret].handle = handle;
+  finfo[ret].host.handle = handle;
 #else
   FILE *fp = fopen(p, mdstr);
   if (fp == NULL) {
@@ -1608,9 +1597,10 @@ static Long Open(char *p, short mode) {
     else
       return -2;  // ファイルは見つからない
   }
-  finfo[ret].fp = fp;
+  finfo[ret].host.fp = fp;
 #endif
 
+  finfo[ret].is_opened = true;
   finfo[ret].mode = mode;
   finfo[ret].nest = nest_cnt;
   strcpy(finfo[ret].name, p);
@@ -1622,9 +1612,9 @@ static Long Open(char *p, short mode) {
  戻り値：エラーコード
  */
 static Long Close(short hdl) {
-  if (!HOST_ISOPENDFILE(&finfo[hdl])) return (-6);  // オープンされていない
-  if (hdl <= 4) return (0);
-  if (!HOST_CLOSEFILE(&finfo[hdl])) return -14;  // 無効なパラメータでコールした
+  if (hdl <= HUMAN68K_SYSTEM_FILENO_MAX) return DOSE_SUCCESS;
+  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
+  if (!CloseFile(&finfo[hdl])) return -14;  // 無効なパラメータでコールした
 
     /* タイムスタンプ変更 */
 #ifdef _WIN32
@@ -1657,7 +1647,7 @@ static Long Fgets(Long adr, short hdl) {
   char *p;
   size_t len;
 
-  if (!HOST_ISOPENDFILE(&finfo[hdl])) return -6;  // オープンされていない
+  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
   if (finfo[hdl].mode == 1) return (-1);
 
   UByte max = (unsigned char)mem_get(adr, S_BYTE);
@@ -1668,9 +1658,9 @@ static Long Fgets(Long adr, short hdl) {
     char c;
     int i;
     for (i = 0; i < max; i++) {
-      b = ReadFile(finfo[hdl].handle, &c, 1, (LPDWORD)&read_len, NULL);
+      b = ReadFile(finfo[hdl].host.handle, &c, 1, (LPDWORD)&read_len, NULL);
       if (c == '\r') {
-        b = ReadFile(finfo[hdl].handle, &c, 1, (LPDWORD)&read_len, NULL);
+        b = ReadFile(finfo[hdl].host.handle, &c, 1, (LPDWORD)&read_len, NULL);
         if (c == 'n') {
           buf[i] = '\0';
           break;
@@ -1682,7 +1672,7 @@ static Long Fgets(Long adr, short hdl) {
     if (b == FALSE) return -1;
   }
 #else
-  if (fgets(buf, max, finfo[hdl].fp) == NULL) return -1;
+  if (fgets(buf, max, finfo[hdl].host.fp) == NULL) return -1;
 #endif
   len = strlen(buf);
   if (len < 2) return (-1);
@@ -1704,18 +1694,18 @@ static Long Read(short hdl, Long buf, Long len) {
   char *read_buf;
   Long read_len;
 
-  if (!HOST_ISOPENDFILE(&finfo[hdl])) return -6;  // オープンされていない
+  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
   if (finfo[hdl].mode == 1) return (-1); /* 無効なファンクションコール */
 
   if (len == 0) return (0);
 
   read_buf = prog_ptr + buf;
 #ifdef _WIN32
-  ReadFile(finfo[hdl].handle, read_buf, len, (LPDWORD)&read_len, NULL);
+  ReadFile(finfo[hdl].host.handle, read_buf, len, (LPDWORD)&read_len, NULL);
 #elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
   read_len = Read_conv(hdl, read_buf, len);
 #else
-  read_len = fread(read_buf, 1, len, finfo[hdl].fp);
+  read_len = fread(read_buf, 1, len, finfo[hdl].host.fp);
 #endif
 
   return (read_len);
@@ -1724,7 +1714,7 @@ static Long Read(short hdl, Long buf, Long len) {
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 static Long Read_conv(short hdl, void *buf, size_t size) {
   Long read_len;
-  FILE *fp = finfo[hdl].fp;
+  FILE *fp = finfo[hdl].host.fp;
 
   if (fp == NULL) return (-6);
 
@@ -1751,17 +1741,17 @@ static Long Write(short hdl, Long buf, Long len) {
   char *write_buf;
   Long write_len = 0;
 
-  if (!HOST_ISOPENDFILE(&finfo[hdl])) return -6;  // オープンされていない
+  if (!&finfo[hdl].is_opened) return -6;  // オープンされていない
 
   if (len == 0) return (0);
 
   write_buf = prog_ptr + buf;
 #ifdef _WIN32
   unsigned len2;
-  WriteFile(finfo[hdl].handle, (LPCVOID)write_buf, len, &len2, NULL);
+  WriteFile(finfo[hdl].host.handle, (LPCVOID)write_buf, len, &len2, NULL);
   write_len = len2;
-  if (finfo[hdl].handle == GetStdHandle(STD_OUTPUT_HANDLE))
-    FlushFileBuffers(finfo[hdl].handle);
+  if (finfo[hdl].host.handle == GetStdHandle(STD_OUTPUT_HANDLE))
+    FlushFileBuffers(finfo[hdl].host.handle);
 #else
   write_len = Write_conv(hdl, write_buf, len);
 #endif
@@ -1772,7 +1762,7 @@ static Long Write(short hdl, Long buf, Long len) {
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 static Long Write_conv(short hdl, void *buf, size_t size) {
   Long write_len;
-  FILE *fp = finfo[hdl].fp;
+  FILE *fp = finfo[hdl].host.fp;
 
   if (fp == NULL) return (-6);
 
@@ -1848,7 +1838,7 @@ static Long Delete(char *p) {
     len = strlen(p);
     hdl = 0;
     for (i = 5; i < FILE_MAX; i++) {
-      if (!HOST_ISOPENDFILE(&finfo[i]) || nest_cnt != finfo[i].nest) continue;
+      if (!finfo[i].is_opened || nest_cnt != finfo[i].nest) continue;
       if (len == strlen(finfo[i].name)) {
         if (memcmp(p, finfo[i].name, len) == 0) {
           hdl = i;
@@ -1856,8 +1846,8 @@ static Long Delete(char *p) {
         }
       }
     }
-    if (len > 0 && hdl > 0) {
-      HOST_CLOSEFILE(&finfo[hdl]);
+    if (len > 0 && hdl >= HUMAN68K_USER_FILENO_MIN) {
+      CloseFile(&finfo[hdl]);
       errno = 0;
       if (remove(p) != 0) {
         if (errno == ENOENT)
@@ -1882,7 +1872,7 @@ static Long Delete(char *p) {
 static Long Seek(short hdl, Long offset, short mode) {
   int sk;
 
-  if (!HOST_ISOPENDFILE(&finfo[hdl])) return -6;  // オープンされていない
+  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
 
 #ifdef _WIN32
   switch (mode) {
@@ -1898,7 +1888,7 @@ static Long Seek(short hdl, Long offset, short mode) {
     default:
       return (-14); /* 無効なパラメータ */
   }
-  DWORD ret = SetFilePointer(finfo[hdl].handle, offset, NULL, sk);
+  DWORD ret = SetFilePointer(finfo[hdl].host.handle, offset, NULL, sk);
   if (ret < 0) return -25;  // 指定の位置にシークできない
   return (Long)ret;
 #else
@@ -1915,9 +1905,9 @@ static Long Seek(short hdl, Long offset, short mode) {
     default:
       return (-14); /* 無効なパラメータ */
   }
-  if (fseek(finfo[hdl].fp, offset, sk) != 0)
+  if (fseek(finfo[hdl].host.fp, offset, sk) != 0)
     return (-25); /* 指定の位置にシークできない */
-  return ftell(finfo[hdl].fp);
+  return ftell(finfo[hdl].host.fp);
 #endif
 }
 
@@ -1974,115 +1964,6 @@ static Long Chmod(Long adr, short atr) {
     }
     return (atr);
   }
-}
-
-// DOS _MKDIR 汎用環境用(未実装)
-#ifndef HOST_MKDIR
-#define HOST_MKDIR Mkdir_generic
-
-static Long Mkdir_generic(Long name) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
-}
-#endif
-
-/*
- 　機能：DOSCALL MKDIRを実行する
- 戻り値：エラーコード
- */
-static Long Mkdir(Long name) {  //
-  return HOST_MKDIR(name);
-}
-
-// DOS _RMDIR 汎用環境用(未実装)
-#ifndef HOST_RMDIR
-#define HOST_RMDIR Rmdir_generic
-
-static Long Rmdir_generic(Long name) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
-}
-#endif
-
-/*
- 　機能：DOSCALL RMDIRを実行する
- 戻り値：エラーコード
-         */
-static Long Rmdir(Long name) {  //
-  return HOST_RMDIR(name);
-}
-
-// DOS _CHDIR 汎用環境用(未実装)
-#ifndef HOST_CHDIR
-#define HOST_CHDIR Chdir_generic
-
-static Long Chdir_generic(Long name) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
-}
-#endif
-
-/*
- 　機能：DOSCALL CHDIRを実行する
- 戻り値：エラーコード
- */
-static Long Chdir(Long name) {  //
-  return HOST_CHDIR(name);
-}
-
-#ifdef USE_ICONV
-// UTF-8文字列からShift_JIS文字列への変換
-static size_t utf8_to_sjis(char *inbuf, char *outbuf, size_t outbuf_size) {
-  iconv_t icd = iconv_open("Shift_JIS", "UTF-8");
-  size_t inbytes = strlen(inbuf);
-  size_t outbytes = outbuf_size - 1;
-  size_t result = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
-  iconv_close(icd);
-  *outbuf = '\0';
-  return result;
-}
-#endif
-
-// Shift_JIS文字列中のスラッシュをバックスラッシュに書き換える
-static void to_backslash(char *buf) {
-  for (; *buf; buf += 1) {
-    if (*buf == '/') {
-      *buf = '\\';
-    }
-  }
-}
-
-// DOS _CURDIR 汎用環境用
-#ifndef HOST_CURDIR
-#define HOST_CURDIR Curdir_generic
-
-#define ROOT_SLASH_LEN 1  // "/"
-
-static Long Curdir_generic(short drv, char *buf_ptr) {
-  char buf[PATH_MAX];
-  const char *p = getcwd(buf, sizeof(buf));
-  if (p == NULL) {
-    // Human68kのDOS _CURDIRはエラーコードとして-15しか返さないので
-    // getdcwd()が失敗する理由は考慮しなくてよい。
-    return DOSE_ILGDRV;
-  }
-  if (utf8_to_sjis(buf + ROOT_SLASH_LEN, buf_ptr, HUMAN68K_PATH_MAX) ==
-      (size_t)-1) {
-    return DOSE_ILGDRV;
-  }
-  to_backslash(buf_ptr);
-  return 0;
-}
-#endif
-
-/*
-         機能：
-                 DOSCALL CURDIRを実行する
-         戻り値：
-                 エラーコード(0:成功 -15:失敗)
- */
-static Long Curdir(short drv, char *buf_ptr) {
-  return HOST_CURDIR(drv, buf_ptr);
 }
 
 /*
@@ -2314,24 +2195,6 @@ static Long Nfiles(Long buf) {
   printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__);
 #endif
   return (0);
-}
-
-// DOS _FILEDATE 汎用環境用(未実装)
-#ifndef HOST_FILEDATE
-#define HOST_FILEDATE Filedate_generic
-
-static Long Filedate_generic(short hdl, Long dt) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
-}
-#endif
-
-/*
- 　機能：DOSCALL FILEDATEを実行する
- 戻り値：エラーコード
- */
-static Long Filedate(short hdl, Long dt) {  //
-  return HOST_FILEDATE(hdl, dt);
 }
 
 /*
@@ -2679,7 +2542,7 @@ static Long Conctrl(short mode, Long adr) {
       if (code >= 0x0100) putchar(code >> 8);
       putchar(code & 0xff);
 #ifdef _WIN32
-      FlushFileBuffers(finfo[1].handle);
+      FlushFileBuffers(finfo[1].host.handle);
 #else
       fflush(stdout);
 #endif

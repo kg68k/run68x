@@ -15,32 +15,33 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-#ifndef HUMAN68K_H
-#define HUMAN68K_H
+#ifndef HOST_GENERIC_H
+#define HOST_GENERIC_H
 
-// DOSコールエラー番号
-#define DOSE_SUCCESS 0
-#define DOSE_ILGFNC -1
-#define DOSE_NODIR -3
-#define DOSE_BADF -6
-#define DOSE_ILGFNAME -13
-#define DOSE_ILGDRV -15
-#define DOSE_RDONLY -19
-#define DOSE_EXISTDIR -20
-#define DOSE_NOTEMPTY -21
+#ifndef _WIN32
 
-// パス名関係の定数
-#define DRV_CLN_LEN 2     // "A:"
-#define DRV_CLN_BS_LEN 3  // "A:\\"
-#define HUMAN68K_PATH_MAX 65
+#include "run68.h"
 
-// 標準ファイルハンドル
-#define HUMAN68K_STDIN 0
-#define HUMAN68K_STDOUT 1
-#define HUMAN68K_STDERR 2
-#define HUMAN68K_STDAUX 3
-#define HUMAN68K_STDPRN 4
-#define HUMAN68K_SYSTEM_FILENO_MAX 4
-#define HUMAN68K_USER_FILENO_MIN 5
+void InitFileInfo_generic(FILEINFO* finfop, int fileno);
+#define HOST_INIT_FILEINFO InitFileInfo_generic
 
+bool CloseFile_generic(FILEINFO* finfop);
+#define HOST_CLOSE_FILE CloseFile_generic
+
+Long DosMkdir_generic(Long name);
+#define HOST_DOS_MKDIR DosMkdir_generic
+
+Long DosRmdir_generic(Long name);
+#define HOST_DOS_RMDIR DosRmdir_generic
+
+Long DosChdir_generic(Long name);
+#define HOST_DOS_CHDIR DosChdir_generic
+
+Long DosCurdir_generic(short drv, char* buf_ptr);
+#define HOST_DOS_CURDIR DosCurdir_generic
+
+Long DosFiledate_generic(short hdl, Long dt);
+#define HOST_DOS_FILEDATE DosFiledate_generic
+
+#endif
 #endif

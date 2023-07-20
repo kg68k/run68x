@@ -18,30 +18,30 @@
 #ifndef HOST_WIN32_H
 #define HOST_WIN32_H
 
-#include "run68.h"
-
 #ifdef _WIN32
 
-bool IsOpendFile_win32(FILEINFO* finfop);
-#define HOST_ISOPENDFILE IsOpendFile_win32
+#include "run68.h"
+
+void InitFileInfo_win32(FILEINFO* finfop, int fileno);
+#define HOST_INIT_FILEINFO InitFileInfo_win32
 
 bool CloseFile_win32(FILEINFO* finfop);
-#define HOST_CLOSEFILE CloseFile_win32
+#define HOST_CLOSE_FILE CloseFile_win32
 
-Long Mkdir_win32(Long name);
-#define HOST_MKDIR Mkdir_win32
+Long DosMkdir_win32(Long name);
+#define HOST_DOS_MKDIR DosMkdir_win32
 
-Long Rmdir_win32(Long name);
-#define HOST_RMDIR Rmdir_win32
+Long DosRmdir_win32(Long name);
+#define HOST_DOS_RMDIR DosRmdir_win32
 
-Long Chdir_win32(Long name);
-#define HOST_CHDIR Chdir_win32
+Long DosChdir_win32(Long name);
+#define HOST_DOS_CHDIR DosChdir_win32
 
-Long Curdir_win32(short drv, char* buf_ptr);
-#define HOST_CURDIR Curdir_win32
+Long DosCurdir_win32(short drv, char* buf_ptr);
+#define HOST_DOS_CURDIR DosCurdir_win32
 
-Long Filedate_win32(short hdl, Long dt);
-#define HOST_FILEDATE Filedate_win32
+Long DosFiledate_win32(short hdl, Long dt);
+#define HOST_DOS_FILEDATE DosFiledate_win32
 
 #endif
 #endif
