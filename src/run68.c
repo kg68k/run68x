@@ -357,15 +357,9 @@ EndOfFunc:
 }
 
 int main(int argc, char *argv[], char *envp[]) {
-  char fname[89]; /* 実行ファイル名 */
-  FILE *fp;       /* 実行ファイルのファイルポインタ */
-  char *arg_ptr;  /* コマンドライン文字列格納領域 */
-#if !defined(ENV_FROM_INI)
-  char buf[ENV_SIZE];
-  char *mem_ptr; /* メモリ管理ブロック */
-  char *read_ptr;
-  int env_len = 0; /* 環境の長さ */
-#endif
+  char fname[89];  /* 実行ファイル名 */
+  FILE *fp;        /* 実行ファイルのファイルポインタ */
+  char *arg_ptr;   /* コマンドライン文字列格納領域 */
   Long prog_size;  /* プログラムサイズ(bss含む) */
   Long prog_size2; /* プログラムサイズ(bss除く) */
   int arg_len = 0; /* コマンドラインの長さ */
@@ -459,31 +453,9 @@ Restart:
   /* 環境の設定 */
   mem_set(ra[3], ENV_SIZE, S_LONG);
   mem_set(ra[3] + 4, 0, S_BYTE);
-#if defined(ENV_FROM_INI)
   /* 環境変数はiniファイルに記述する。(getini.c参照) */
   readenv_from_ini(ini_file_name);
-#else
-  /* Windowsの環境変数を複製する。*/
-  for (i = 0; envp[i] != NULL; i++) {
-    if (env_len + strlen(envp[i]) < ENV_SIZE - 5) {
-      mem_ptr = prog_ptr + ra[3] + 4 + env_len;
-      strcpy(mem_ptr, envp[i]);
-      if (ini_info.env_lower) {
-        strcpy(buf, envp[i]);
-        strlwr(buf);
-        read_ptr = buf;
-        while (*mem_ptr != '\0' && *mem_ptr != '=')
-          *(mem_ptr++) = *(read_ptr++);
-      }
-#ifdef TRACE
-      mem_ptr = prog_ptr + ra[3] + 4 + env_len;
-      printf("env: %s\n", mem_ptr);
-#endif
-      env_len += strlen(envp[i]) + 1;
-    }
-  }
-  mem_set(ra[3] + 4 + env_len, 0, S_BYTE);
-#endif
+
   /* 実行ファイルのオープン */
   if (strlen(argv[argbase]) >= sizeof(fname)) {
     fprintf(stderr, "ファイルのパス名が長すぎます\n");

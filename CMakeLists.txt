@@ -49,8 +49,6 @@ endif()
 
 target_compile_features(${PROJECT_NAME} PRIVATE c_std_11)
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE ENV_FROM_INI)
-
 if(MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE /source-charset:utf-8 /J)
 else()
