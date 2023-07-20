@@ -1099,10 +1099,12 @@ bool dos_call(UByte code) {
       }
       rd[0] = 1;  // BusErr( buf, data, srt );
     } break;
+
     default:
       if (func_trace_f) {
         printf("%-10s code=0xFF%02X\n", "????????", code);
       }
+      rd[0] = DOSE_ILGFNC;
       break;
   }
   return false;
