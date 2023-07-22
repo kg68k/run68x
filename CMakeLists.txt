@@ -12,6 +12,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/conditions.c
   src/debugger.c
   src/disassemble.c
+  src/dos_memory.c
+  src/dos_memory.h
   src/doscall.c
   src/eaaccess.c
   src/exec.c

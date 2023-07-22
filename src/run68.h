@@ -79,9 +79,6 @@ typedef uint32_t ULong;
 #define ENV_SIZE 0x2000
 #define STACK_TOP ENV_TOP + ENV_SIZE
 #define STACK_SIZE 0x10000 /* 64KB */
-#define MB_SIZE 16
-#define PSP_SIZE MB_SIZE + 240
-#define PROG_TOP (STACK_TOP + STACK_SIZE + PSP_SIZE)
 #define NEST_MAX 20
 #define FILE_MAX 20
 
@@ -150,6 +147,8 @@ typedef uint32_t ULong;
 #define SR_S_REF() (sr & 0x2000)
 #define SR_T_REF() (sr & 0x8000)
 
+#define ADDRESS_MASK 0x00ffffff
+
 #ifdef _WIN32
 typedef struct {
   HANDLE handle;
@@ -215,7 +214,7 @@ extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保
 extern Long nest_sp[NEST_MAX];  // 親プロセスのスタックポインタを保存
 extern unsigned int nest_cnt;  // 子プロセスを起動するたびに+1
 extern jmp_buf jmp_when_abort;  // アボート処理のためのジャンプバッファ
-extern Long mem_aloc;           // メインメモリの大きさ
+extern ULong mem_aloc;     // メインメモリの大きさ(1～12MB)
 extern bool func_trace_f;  // -f ファンクションコールトレース
 extern Long trap_pc;       // -tr MPU命令トレースを行うアドレス
 extern UWord cwatchpoint;  // 命令ウォッチ

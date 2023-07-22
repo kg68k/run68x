@@ -25,6 +25,7 @@
 #include <unistd.h>
 #endif
 
+#include "human68k.h"
 #include "mem.h"
 #include "run68.h"
 
@@ -332,10 +333,10 @@ static bool set_fname(char *p, Long psp_adr) {
   }
   i++;
   if (strlen(&(p[i])) > 22) return false;
-  mem_ptr = prog_ptr + psp_adr + 0xC4;
+  mem_ptr = prog_ptr + psp_adr + PSP_EXEFILE_NAME;
   strcpy(mem_ptr, &(p[i]));
 
-  mem_ptr = prog_ptr + psp_adr + 0x82;
+  mem_ptr = prog_ptr + psp_adr + PSP_EXEFILE_PATH;
   if (i == 0) {
     /* カレントディレクトリをセット */
 #ifdef _WIN32
@@ -364,7 +365,7 @@ static bool set_fname(char *p, Long psp_adr) {
     strcpy(mem_ptr, &(p[i]));
   }
 
-  mem_ptr = prog_ptr + psp_adr + 0x80;
+  mem_ptr = prog_ptr + psp_adr + PSP_EXEFILE_DRIVE;
   if (i == 0) {
     /* カレントドライブをセット */
 #ifdef _WIN32
@@ -394,19 +395,19 @@ bool make_psp(char *fname, Long prev_adr, Long end_adr, Long process_id,
   char *mem_ptr;
 
   mem_ptr = prog_ptr + ra[0];
-  memset(mem_ptr, 0, PSP_SIZE);
-  mem_set(ra[0], prev_adr, S_LONG);          /* 前 */
-  mem_set(ra[0] + 0x04, process_id, S_LONG); /* 確保プロセス */
-  mem_set(ra[0] + 0x08, end_adr, S_LONG);    /* 終わり+1 */
-  mem_set(ra[0] + 0x0c, 0, S_LONG);          /* 次 */
+  memset(mem_ptr, 0, SIZEOF_PSP);
+  mem_set(ra[0] + MEMBLK_PREV, prev_adr, S_LONG);     /* 前 */
+  mem_set(ra[0] + MEMBLK_PARENT, process_id, S_LONG); /* 確保プロセス */
+  mem_set(ra[0] + MEMBLK_END, end_adr, S_LONG);       /* 終わり+1 */
+  mem_set(ra[0] + MEMBLK_NEXT, 0, S_LONG);            /* 次 */
 
-  mem_set(ra[0] + 0x10, ra[3], S_LONG);
-  mem_set(ra[0] + 0x20, ra[2], S_LONG);
-  mem_set(ra[0] + 0x30, ra[0] + PSP_SIZE + prog_size2, S_LONG);
-  mem_set(ra[0] + 0x34, ra[0] + PSP_SIZE + prog_size2, S_LONG);
-  mem_set(ra[0] + 0x38, ra[1], S_LONG);
-  mem_set(ra[0] + 0x44, sr, S_WORD); /* 親のSRの値 */
-  mem_set(ra[0] + 0x60, 0, S_LONG);  /* 親あり */
+  mem_set(ra[0] + PSP_ENV_PTR, ra[3], S_LONG);
+  mem_set(ra[0] + PSP_CMDLINE, ra[2], S_LONG);
+  mem_set(ra[0] + PSP_BSS_PTR, ra[0] + SIZEOF_PSP + prog_size2, S_LONG);
+  mem_set(ra[0] + PSP_HEAP_PTR, ra[0] + SIZEOF_PSP + prog_size2, S_LONG);
+  mem_set(ra[0] + PSP_STACK_PTR, ra[1], S_LONG);
+  mem_set(ra[0] + PSP_PARENT_SR, sr, S_WORD); /* 親のSRの値 */
+  mem_set(ra[0] + PSP_SHELL_FLAG, 0, S_LONG); /* 親あり */
   if (!set_fname(fname, ra[0])) return false;
 
   psp[nest_cnt] = ra[0];

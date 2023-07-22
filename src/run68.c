@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dos_memory.h"
 #include "host_generic.h"
 #include "host_win32.h"
 #include "human68k.h"
@@ -31,6 +32,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+// TODO: ロードアドレスを動的に割り当てる
+#define PROG_PSP (STACK_TOP + STACK_SIZE)
 
 EXEC_INSTRUCTION_INFO OP_info;
 FILEINFO finfo[FILE_MAX];
@@ -49,7 +53,7 @@ Long nest_pc[NEST_MAX];
 Long nest_sp[NEST_MAX];
 unsigned int nest_cnt;
 jmp_buf jmp_when_abort;
-Long mem_aloc;
+ULong mem_aloc;
 bool func_trace_f = false;
 Long trap_pc;
 UWord cwatchpoint = 0x4afc;
@@ -383,6 +387,31 @@ static void init_all_fileinfo(void) {
   }
 }
 
+// Human68kのPSPを作成する
+static void build_human_psp(ULong adr, ULong end) {
+  memset(&prog_ptr[adr], 0, SIZEOF_PSP);
+  build_memory_block(adr, 0, 0, end, 0);
+  WriteSuperULong(OSWORK_ROOT_PSP, adr);
+
+  WriteSuperULong(adr + PSP_ENV_PTR, -1);
+  WriteSuperULong(adr + PSP_PARENT_SR, 0x2000);
+  WriteSuperULong(adr + PSP_PARENT_SSP, 0x00006800);
+  // trap #10～14のベクタ保存は省略
+  strcpy(&prog_ptr[adr + PSP_EXEFILE_PATH], "A:\\");  // ドライブ名の変更は省略
+  strcpy(&prog_ptr[adr + PSP_EXEFILE_NAME], "HUMAN.SYS");
+}
+
+static ULong malloc_for_child(void) {
+  ULong parent = ReadSuperULong(OSWORK_ROOT_PSP);
+  ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & 0x00ffffff;
+  if (size < 256 * 1024) {
+    return 0;
+  }
+
+  ULong adr = Malloc(MALLOC_FROM_LOWER, size, parent) - SIZEOF_MEMBLK;
+  return (adr == PROG_PSP) ? adr : 0;
+}
+
 int main(int argc, char *argv[], char *envp[]) {
   char fname[89];  /* 実行ファイル名 */
   FILE *fp;        /* 実行ファイルのファイルポインタ */
@@ -467,21 +496,31 @@ Restart:
   /* iniファイルのフルパス名が得られる。*/
   read_ini(ini_file_name, fname);
 
-  /* メモリを確保する */
+  /* メインメモリ(1～12MB)を確保する */
   if ((prog_ptr = malloc(mem_aloc)) == NULL) {
     fprintf(stderr, "メモリが確保できません\n");
     return EXIT_FAILURE;
   }
+  memset(&prog_ptr[OSWORK_TOP], 0, SIZEOF_OSWORK);
+  WriteSuperULong(OSWORK_MEMORY_END, mem_aloc);
+  build_human_psp(HUMAN_HEAD, PROG_PSP);
+
   /* A0,A2,A3レジスタに値を設定 */
-  ra[0] = STACK_TOP + STACK_SIZE; /* メモリ管理ブロックのアドレス */
-  ra[2] = STACK_TOP;              /* コマンドラインのアドレス */
-  ra[3] = ENV_TOP;                /* 環境のアドレス */
+  ra[0] = PROG_PSP;  /* メモリ管理ブロックのアドレス */
+  ra[2] = STACK_TOP; /* コマンドラインのアドレス */
+  ra[3] = ENV_TOP;   /* 環境のアドレス */
 
   /* 環境の設定 */
   mem_set(ra[3], ENV_SIZE, S_LONG);
   mem_set(ra[3] + 4, 0, S_BYTE);
   /* 環境変数はiniファイルに記述する。(getini.c参照) */
   readenv_from_ini(ini_file_name);
+
+  ra[0] = malloc_for_child();
+  if (ra[0] == 0) {
+    fprintf(stderr, "実行ファイルのロード用メモリを確保できません\n");
+    return EXIT_FAILURE;
+  }
 
   /* 実行ファイルのオープン */
   if (strlen(argv[argbase]) >= sizeof(fname)) {
@@ -500,15 +539,16 @@ Restart:
 
   /* プログラムをメモリに読み込む */
   prog_size2 = mem_aloc;
-  pc = prog_read(fp, fname, PROG_TOP, &prog_size, &prog_size2, true);
+  pc = prog_read(fp, fname, PROG_PSP + SIZEOF_PSP, &prog_size, &prog_size2,
+                 true);
   if (pc < 0) {
     free((void *)prog_ptr);
     return EXIT_FAILURE;
   }
 
   /* A1,A4レジスタに値を設定 */
-  ra[1] = PROG_TOP + prog_size; /* プログラムの終わり+1のアドレス */
-  ra[4] = pc;                   /* 実行開始アドレス */
+  ra[1] = PROG_PSP + SIZEOF_PSP + prog_size;  // プログラムの終わり+1のアドレス
+  ra[4] = pc;                                 // 実行開始アドレス
   nest_cnt = 0;
 
   /* コマンドライン文字列設定 */
@@ -527,14 +567,6 @@ Restart:
 #ifdef TRACE
   if (arg_len > 0) printf("command line: %s\n", arg_ptr + 1);
 #endif
-
-  /* Humanのメモリ管理ブロック設定 */
-  SR_S_ON();
-  mem_set(HUMAN_HEAD, 0, S_LONG);
-  mem_set(HUMAN_HEAD + 0x04, 0, S_LONG);
-  mem_set(HUMAN_HEAD + 0x08, HUMAN_WORK, S_LONG);
-  mem_set(HUMAN_HEAD + 0x0C, ra[0], S_LONG);
-  SR_S_OFF();
 
   /* プロセス管理ブロック設定 */
   if (!make_psp(fname, HUMAN_HEAD, mem_aloc, HUMAN_HEAD, prog_size2)) {

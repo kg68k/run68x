@@ -45,6 +45,7 @@
 #endif
 
 #include "ansicolor-w32.h"
+#include "dos_memory.h"
 #include "host_generic.h"
 #include "host_win32.h"
 #include "human68k.h"
@@ -56,10 +57,7 @@ static Long Kflush(short);
 static Long Ioctrl(short, Long);
 static Long Dup(short);
 static Long Dup2(short, short);
-static Long Malloc(Long);
-static Long Mfree(Long);
 static Long Dskfre(short, Long);
-static Long Setblock(Long, Long);
 static Long Create(char *, short);
 static Long Newfile(char *, short);
 static Long Open(char *, short);
@@ -179,6 +177,35 @@ static Long Curdir(short drv, char *buf_ptr) {
   return HOST_DOS_CURDIR(drv, buf_ptr);
 }
 
+// DOS _MALLOC (0xff48)
+static Long DosMalloc(ULong param) {
+  return Malloc(MALLOC_FROM_LOWER, ReadParamULong(&param), psp[nest_cnt]);
+}
+
+// DOS _MFREE (0xff49)
+static Long DosMfree(ULong param) {
+  return Mfree(ReadParamULong(&param));
+}
+
+// DOS _SETBLOCK (0xff4a)
+static Long DosSetblock(ULong param) {
+  ULong adr = ReadParamULong(&param);
+  ULong size = ReadParamULong(&param);
+  return Setblock(adr, size);
+}
+
+// DOS _MALLOC2 (0xff58, 0xff88)
+static Long DosMalloc2(ULong param) {
+  UWord mode = ReadParamUWord(&param);
+  UByte modeByte = mode & 0xff;
+  if (modeByte > MALLOC_FROM_HIGHER) return DOSE_ILGPARM;
+  ULong size = ReadParamULong(&param);
+  ULong parent =
+      (mode & 0x8000) ? ReadParamULong(&param) : (ULong)psp[nest_cnt];
+
+  return Malloc(modeByte, size, parent);
+}
+
 // DOS _FILEDATE (0xff87)
 static Long Filedate(short hdl, Long dt) {  //
   return HOST_DOS_FILEDATE(hdl, dt);
@@ -224,8 +251,8 @@ static bool Exit2(const char *name, Long exit_code) {
   if (nest_cnt == 0) {
     return true;
   }
-  sr = mem_get(psp[nest_cnt] + 0x44, S_WORD);
-  Mfree(psp[nest_cnt] + MB_SIZE);
+  sr = mem_get(psp[nest_cnt] + PSP_PARENT_SR, S_WORD);
+  Mfree(psp[nest_cnt] + SIZEOF_MEMBLK);
   nest_cnt--;
   pc = nest_pc[nest_cnt];
   ra[7] = nest_sp[nest_cnt];
@@ -913,26 +940,22 @@ bool dos_call(UByte code) {
       rd[0] = Curdir(srt, prog_ptr + data);
       break;
     case 0x48: /* MALLOC */
-      len = mem_get(stack_adr, S_LONG);
       if (func_trace_f) {
-        printf("%-10s len=%d\n", "MALLOC", len);
+        printf("%-10s len=%d\n", "MALLOC", mem_get(stack_adr, S_LONG));
       }
-      rd[0] = Malloc(len);
+      rd[0] = DosMalloc(stack_adr);
       break;
     case 0x49: /* MFREE */
-      data = mem_get(stack_adr, S_LONG);
       if (func_trace_f) {
-        printf("%-10s addr=%08X\n", "MFREE", data);
+        printf("%-10s addr=%08X\n", "MFREE", mem_get(stack_adr, S_LONG));
       }
-      rd[0] = Mfree(data);
+      rd[0] = DosMfree(stack_adr);
       break;
     case 0x4A: /* SETBLOCK */
-      data = mem_get(stack_adr, S_LONG);
-      len = mem_get(stack_adr + 4, S_LONG);
       if (func_trace_f) {
-        printf("%-10s size=%d\n", "SETBLOCK", len);
+        printf("%-10s size=%d\n", "SETBLOCK", mem_get(stack_adr + 4, S_LONG));
       }
-      rd[0] = Setblock(data, len);
+      rd[0] = DosSetblock(stack_adr);
       break;
     case 0x4B: /* EXEC */
       srt = (short)mem_get(stack_adr, S_WORD);
@@ -983,7 +1006,7 @@ bool dos_call(UByte code) {
       rd[0] = Nfiles(buf);
       break;
     case 0x51: /* GETPDB */
-      rd[0] = psp[nest_cnt] + MB_SIZE;
+      rd[0] = psp[nest_cnt] + SIZEOF_MEMBLK;
       if (func_trace_f) {
         printf("%-10s\n", "GETPDB");
       }
@@ -1021,11 +1044,12 @@ bool dos_call(UByte code) {
       rd[0] = Filedate(fhdl, data);
       break;
     case 0x58: /* MALLOC2 */
-      len = mem_get(stack_adr + 2, S_LONG);
+    case 0x88: /* MALLOC2 (Human68k v3) */
       if (func_trace_f) {
-        printf("%-10s len=%d\n", "MALLOC2", len);
+        printf("%-10s mode=%d, len=%d\n", "MALLOC2", mem_get(stack_adr, S_WORD),
+               mem_get(stack_adr + 2, S_LONG));
       }
-      rd[0] = Malloc(len);
+      rd[0] = DosMalloc2(stack_adr);
       break;
     case 0x5B: /* NEWFILE */
       data = mem_get(stack_adr, S_LONG);
@@ -1082,9 +1106,9 @@ bool dos_call(UByte code) {
       close_all_files();
       if (nest_cnt == 0) return true;
 
-      Setblock(psp[nest_cnt] + MB_SIZE, len + PSP_SIZE - MB_SIZE);
-      mem_set(psp[nest_cnt] + 0x04, 0xFF, S_BYTE);
-      sr = (short)mem_get(psp[nest_cnt] + 0x44, S_WORD);
+      Setblock(psp[nest_cnt] + SIZEOF_MEMBLK, len + SIZEOF_PSP - SIZEOF_MEMBLK);
+      mem_set(psp[nest_cnt] + MEMBLK_PARENT, 0xFF, S_BYTE);
+      sr = (short)mem_get(psp[nest_cnt] + PSP_PARENT_SR, S_WORD);
       nest_cnt--;
       pc = nest_pc[nest_cnt];
       ra[7] = nest_sp[nest_cnt];
@@ -1235,97 +1259,6 @@ static Long Dup2(short org, short new) {
 
 /*
  　機能：
-     DOSCALL MALLOCを実行する
-   パラメータ：
-     Long  size      <in>    メモリサイズ(バイト)
-   戻り値：
-     Long  メモリブロックへのポインタ(>0)
-              エラーコード(<0)
- */
-static Long Malloc(Long size) {
-  char *mem_ptr;
-  Long mem_adr;  /* メモリブロックのアドレス */
-  Long mem_end;  /* メモリブロックの終端アドレス */
-  Long end_adr;  /* メモリブロックの一番低位のアドレス */
-  Long next_adr; /* 次のメモリブロックのアドレス */
-  Long data;
-
-  mem_adr = psp[nest_cnt];
-  end_adr = mem_get(mem_adr + 0x08, S_LONG);
-  size &= 0xFFFFFF;
-
-  while ((next_adr = mem_get(mem_adr + 0x0C, S_LONG)) != 0) {
-    /* メモリブロックIDを検査 */
-    data = mem_get(next_adr + 0x04, S_BYTE);
-    if (data != 0x00 && data != 0xFF)
-      return (0x82000000); /* 完全に確保できない */
-    mem_adr = next_adr;
-    mem_end = mem_get(mem_adr + 0x08, S_LONG);
-    if (mem_end > end_adr) end_adr = mem_end;
-  }
-
-  if ((end_adr & 0xF) != 0) end_adr += (16 - (end_adr % 16));
-
-  if (end_adr + MB_SIZE + size > mem_aloc) {
-    if (mem_aloc - (end_adr + MB_SIZE) < 0)
-      return (0x82000000); /* 完全に確保できない */
-    /* 確保できる最大長 */
-    return (0x81000000 + mem_aloc - (end_adr + MB_SIZE));
-  }
-
-  /* メモリ管理ブロックを作成 */
-  mem_ptr = prog_ptr + end_adr;
-  memset(mem_ptr, 0x00, MB_SIZE);
-  mem_set(mem_adr + 0x0C, end_adr, S_LONG);
-  mem_set(end_adr, mem_adr, S_LONG);
-  mem_set(end_adr + 0x04, psp[nest_cnt], S_LONG);
-  mem_set(end_adr + 0x08, end_adr + MB_SIZE + size, S_LONG);
-  return (end_adr + MB_SIZE);
-}
-
-/*
- 　機能：
-     DOSCALL MFREEを実行する
-   パラメータ：
-     Long  adr       <in>    メモリアドレス
-   戻り値：
-     Long  エラーコード(<0)
- */
-static Long Mfree(Long adr) {
-  Long prev_adr;
-  Long next_adr;
-  Long data;
-
-  if (adr < 0) return (-9); /* 無効なメモリ管理ポインタ */
-
-  if (adr == 0) {
-    mem_set(psp[nest_cnt] + 0x0C, 0, S_LONG);
-    return (0);
-  }
-
-  /* メモリブロックIDを検査 */
-  data = mem_get(adr - MB_SIZE + 0x04, S_BYTE);
-  if (data != 0x00 && data != 0xFF) return (-9); /* 無効なメモリ管理ポインタ */
-
-  /* 前のブロックを調べる */
-  prev_adr = mem_get(adr - MB_SIZE, S_LONG);
-  data = mem_get(prev_adr + 0x04, S_BYTE);
-  if (data != 0x00 && data != 0xFF) return (-7); /* メモリ管理領域が壊された */
-
-  /* 次のブロックを調べる＆ポインタを張り替える */
-  next_adr = mem_get(adr - MB_SIZE + 0x0C, S_LONG);
-  if (next_adr != 0) {
-    data = mem_get(next_adr + 0x04, S_BYTE);
-    if (data != 0x00 && data != 0xFF)
-      return (-7); /* メモリ管理領域が壊された */
-    mem_set(next_adr, prev_adr, S_LONG);
-  }
-  mem_set(prev_adr + 0x0C, next_adr, S_LONG);
-  return (0);
-}
-
-/*
- 　機能：
      DOSCALL DSKFREを実行する
    パラメータ：
      Long  drv       <in>    ドライブ番号(0)
@@ -1355,53 +1288,6 @@ static Long Dskfre(short drv, Long buf) {
 #else
   return -15;
 #endif
-}
-
-/*
-   機能：
-     DOSCALL SETBLOCKを実行する
-   パラメータ：
-     Long  adr       <in>    アドレス
-     Long  size      <in>    サイズ
-   戻り値：
-     Long  エラーコード
- */
-static Long Setblock(Long adr, Long size) {
-  Long data;
-  Long tail_adr;
-  Long near_adr;
-  Long mem_adr;
-  Long next_adr;
-
-  if (adr == 0) adr = psp[nest_cnt] + MB_SIZE;
-
-  /* メモリブロックIDを検査 */
-  data = mem_get(adr - 0x0C, S_BYTE);
-  if (data != 0x00 && data != 0xFF) return (-9);
-
-  /* サイズを検査 */
-  size &= 0x00FFFFFF;
-  tail_adr = mem_get(adr - 0x08, S_LONG);
-  data = tail_adr - adr;
-  if (size > data) {
-    near_adr = mem_aloc;
-    /* 前のブロックを見る */
-    mem_adr = adr - MB_SIZE;
-    while ((next_adr = mem_get(mem_adr, S_LONG)) != HUMAN_HEAD) {
-      if (next_adr >= tail_adr && next_adr < near_adr) near_adr = next_adr;
-      mem_adr = next_adr;
-    }
-    /* 後ろのブロックを見る */
-    mem_adr = adr - MB_SIZE;
-    while ((next_adr = mem_get(mem_adr + 0x0C, S_LONG)) != 0) {
-      if (next_adr >= tail_adr && next_adr < near_adr) near_adr = next_adr;
-      mem_adr = next_adr;
-    }
-    if (adr + size > near_adr) return (0x81000000 + near_adr - adr);
-  }
-
-  mem_set(adr - 0x08, adr + size, S_LONG);
-  return (0);
 }
 
 /*
@@ -2827,11 +2713,9 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
   char fname[89];
   char *name_ptr;
   int loadmode;
-  Long mem;
   Long prev_adr;
   Long end_adr;
   Long pc1;
-  Long size;
   Long prog_size;
   Long prog_size2;
 
@@ -2845,24 +2729,22 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
 
   if (nest_cnt + 1 >= NEST_MAX) return (-8);
 
-  mem = Malloc(mem_aloc);
-  if ((mem = Malloc(mem_aloc)) == (Long)0x82000000) {
+  // 最大メモリを確保する
+  Long parent = psp[nest_cnt];
+  ULong size = Malloc(MALLOC_FROM_LOWER, 0x00ffffff, parent) & 0x00ffffff;
+  Long mem = Malloc(MALLOC_FROM_LOWER, size, parent);
+  if (mem < 0) {
     fclose(fp);
-    return (-8); /* メモリが確保できない */
+    return -8;  // メモリが確保できない
   }
-  mem &= 0xFFFFFF;
-  size = mem;
-  if ((mem = Malloc(mem)) > 0xFFFFFF) {
-    fclose(fp);
-    return (-8);
-  }
+
   prev_adr = mem_get(mem - 0x10, S_LONG);
   end_adr = mem_get(mem - 0x08, S_LONG);
   memset(prog_ptr + mem, 0, size);
 
   prog_size2 = ((loadmode << 24) | end_adr);
-  pc1 = prog_read(fp, fname, mem - MB_SIZE + PSP_SIZE, &prog_size, &prog_size2,
-                  false);
+  pc1 = prog_read(fp, fname, mem - SIZEOF_MEMBLK + SIZEOF_PSP, &prog_size,
+                  &prog_size2, false);
   if (pc1 < 0) {
     Mfree(mem);
     return (pc1);
@@ -2870,13 +2752,10 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
 
   nest_pc[nest_cnt] = pc;
   nest_sp[nest_cnt] = ra[7];
-  ra[0] = mem - MB_SIZE;
-  ra[1] = mem - MB_SIZE + PSP_SIZE + prog_size;
+  ra[0] = mem - SIZEOF_MEMBLK;
+  ra[1] = mem - SIZEOF_MEMBLK + SIZEOF_PSP + prog_size;
   ra[2] = cmd;
-  if (env == 0)
-    ra[3] = mem_get(psp[nest_cnt] + 0x10, S_LONG);
-  else
-    ra[3] = env;
+  ra[3] = (env == 0) ? mem_get(psp[nest_cnt] + PSP_ENV_PTR, S_LONG) : env;
   ra[4] = pc1;
   nest_cnt++;
   if (!make_psp(fname, prev_adr, end_adr, psp[nest_cnt - 1], prog_size2)) {

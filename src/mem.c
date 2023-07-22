@@ -77,7 +77,7 @@ Long imi_get(char size) {
  戻り値： true = OK
          false = NGだが、0を読み込んだとみなす
 */
-static bool mem_red_chk(Long adr) {
+bool mem_red_chk(Long adr) {
   char message[256];
 
   adr &= 0x00FFFFFF;
@@ -86,7 +86,7 @@ static bool mem_red_chk(Long adr) {
     sprintf(message, "I/OポートorROM($%06X)から読み込もうとしました。", adr);
     err68(message);
   }
-  if (SR_S_REF() == 0 || adr >= mem_aloc) {
+  if (SR_S_REF() == 0 || (ULong)adr >= mem_aloc) {
     sprintf(message, "不正アドレス($%06X)からの読み込みです。", adr);
     err68(message);
   }
@@ -98,7 +98,7 @@ static bool mem_red_chk(Long adr) {
  戻り値： true = OK
          false = NGだが、何も書き込まずにOKとみなす
 */
-static int mem_wrt_chk(Long adr) {
+bool mem_wrt_chk(Long adr) {
   char message[256];
 
   adr &= 0x00FFFFFF;
@@ -107,7 +107,7 @@ static int mem_wrt_chk(Long adr) {
     sprintf(message, "I/OポートorROM($%06X)に書き込もうとしました。", adr);
     err68(message);
   }
-  if (SR_S_REF() == 0 || adr >= mem_aloc) {
+  if (SR_S_REF() == 0 || (ULong)adr >= mem_aloc) {
     sprintf(message, "不正アドレスへの書き込みです($%06X)", adr);
     err68(message);
   }
@@ -121,7 +121,7 @@ static int mem_wrt_chk(Long adr) {
 Long mem_get(Long adr, char size) {
   Long d;
 
-  if (adr < ENV_TOP || adr >= mem_aloc) {
+  if (adr < ENV_TOP || (ULong)adr >= mem_aloc) {
     if (!mem_red_chk(adr)) return (0);
   }
   UByte *mem = (UByte *)prog_ptr + adr;
@@ -147,7 +147,7 @@ Long mem_get(Long adr, char size) {
  戻り値：なし
 */
 void mem_set(Long adr, Long d, char size) {
-  if (adr < ENV_TOP || adr >= mem_aloc) {
+  if (adr < ENV_TOP || (ULong)adr >= mem_aloc) {
     if (!mem_wrt_chk(adr)) return;
   }
 
