@@ -36,11 +36,11 @@ void InitFileInfo_win32(FILEINFO* finfop, int fileno) {
 
 // ファイルを閉じる
 bool CloseFile_win32(FILEINFO* finfop) {
-  HANDLE handle = finfop->host.handle;
-  if (handle == NULL) return false;
+  HANDLE hFile = finfop->host.handle;
+  if (hFile == NULL) return false;
 
   finfop->host.handle = NULL;
-  return (CloseHandle(handle) == FALSE) ? false : true;
+  return (CloseHandle(hFile) == FALSE) ? false : true;
 }
 
 // DOS _MKDIR (0xff39)
@@ -90,33 +90,38 @@ Long DosCurdir_win32(short drv, char* buf_ptr) {
   return DOSE_SUCCESS;
 }
 
-// DOS _FILEDATE (0xff87)
-Long DosFiledate_win32(short hdl, Long dt) {
-  FILETIME ctime, atime, wtime;
-  int64_t ll_wtime;
+// DOS _FILEDATE 取得モード
+static Long DosFiledate_get(HANDLE hFile) {
+  FILETIME ftWrite, ftLocal;
+  WORD date, time;
 
-  if (!finfo[hdl].is_opened) return DOSE_BADF;  // オープンされていない
+  if (!GetFileTime(hFile, NULL, NULL, &ftWrite)) return DOSE_BADF;
+  if (!FileTimeToLocalFileTime(&ftWrite, &ftLocal)) return DOSE_ILGARG;
+  if (!FileTimeToDosDateTime(&ftLocal, &date, &time)) return DOSE_ILGARG;
 
-  HANDLE hFile = finfo[hdl].host.handle;
+  return ((ULong)date << 16) | time;
+}
 
-  if (dt != 0) { /* 設定 */
-    GetFileTime(hFile, &ctime, &atime, &wtime);
-    ll_wtime = (dt >> 16) * 86400 * 10000000 + (dt & 0xFFFF) * 10000000;
-    wtime.dwLowDateTime = (DWORD)(ll_wtime & 0xFFFFFFFF);
-    wtime.dwHighDateTime = (DWORD)(ll_wtime >> 32);
-    if (SetFileTime(hFile, &ctime, &atime, &wtime) == FALSE) {
-      // 書き込み不可
-      // 実際のHuman68kでは-19が返ることはない。
-      return DOSE_RDONLY;
-    }
-    finfo[hdl].date = (ULong)(ll_wtime / 10000000 / 86400);
-    finfo[hdl].time = (ULong)((ll_wtime / 10000000) % 86400);
-    return DOSE_SUCCESS;
-  }
+// DOS _FILEDATE 設定モード
+static Long DosFiledate_set(HANDLE hFile, ULong dt) {
+  FILETIME ftWrite, ftLocal;
 
-  GetFileTime(hFile, &ctime, &atime, &wtime);
-  ll_wtime =
-      (((int64_t)wtime.dwLowDateTime) << 32) + (int64_t)wtime.dwLowDateTime;
-  return (Long)(((ll_wtime / 86400 / 10000000) << 16) +
-                (ll_wtime / 10000000) % 86400);
+  if (!DosDateTimeToFileTime(dt >> 16, dt & 0xffff, &ftLocal)) return DOSE_BADF;
+  if (!LocalFileTimeToFileTime(&ftLocal, &ftWrite)) return DOSE_ILGARG;
+  if (!SetFileTime(hFile, NULL, NULL, &ftWrite)) return DOSE_ILGARG;
+
+  return DOSE_SUCCESS;
+}
+
+// DOS _FILEDATE (0xff57, 0xff87)
+Long DosFiledate_win32(UWord fileno, ULong dt) {
+  FILEINFO* finfop = &finfo[fileno];
+
+  if (!finfop->is_opened) return DOSE_BADF;  // オープンされていない
+
+  if (dt == 0) return DosFiledate_get(finfop->host.handle);
+
+  if (finfop->mode == 0)
+    return DOSE_ILGARG;  // 読み込みオープンでは設定できない
+  return DosFiledate_set(finfop->host.handle, dt);
 }

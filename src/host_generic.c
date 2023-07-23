@@ -109,8 +109,8 @@ Long DosCurdir_generic(short drv, char *buf_ptr) {
   return 0;
 }
 
-// DOS _FILEDATE (0xff87) (未実装)
-Long DosFiledate_generic(short hdl, Long dt) {
+// DOS _FILEDATE (0xff57, 0xff87) (未実装)
+Long DosFiledate_generic(UWord fileno, ULong dt) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }

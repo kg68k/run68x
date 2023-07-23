@@ -40,7 +40,7 @@ Long DosChdir_generic(Long name);
 Long DosCurdir_generic(short drv, char* buf_ptr);
 #define HOST_DOS_CURDIR DosCurdir_generic
 
-Long DosFiledate_generic(short hdl, Long dt);
+Long DosFiledate_generic(UWord fileno, ULong dt);
 #define HOST_DOS_FILEDATE DosFiledate_generic
 
 #endif

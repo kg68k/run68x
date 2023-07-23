@@ -40,7 +40,7 @@ Long DosChdir_win32(Long name);
 Long DosCurdir_win32(short drv, char* buf_ptr);
 #define HOST_DOS_CURDIR DosCurdir_win32
 
-Long DosFiledate_win32(short hdl, Long dt);
+Long DosFiledate_win32(UWord fileno, ULong dt);
 #define HOST_DOS_FILEDATE DosFiledate_win32
 
 #endif

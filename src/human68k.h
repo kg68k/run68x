@@ -18,12 +18,19 @@
 #ifndef HUMAN68K_H
 #define HUMAN68K_H
 
+// ワークエリア
+#define OSWORK_TOP 0x1c00
+#define OSWORK_MEMORY_END 0x1c00
+#define OSWORK_ROOT_PSP 0x1c04
+#define SIZEOF_OSWORK 1024
+
 // DOSコールエラー番号
 #define DOSE_SUCCESS 0
 #define DOSE_ILGFNC -1
 #define DOSE_NODIR -3
 #define DOSE_BADF -6
 #define DOSE_ILGMPTR -9
+#define DOSE_ILGARG -12
 #define DOSE_ILGFNAME -13
 #define DOSE_ILGPARM -14
 #define DOSE_ILGDRV -15
@@ -31,20 +38,6 @@
 #define DOSE_EXISTDIR -20
 #define DOSE_NOTEMPTY -21
 #define DOSE_EXISTFILE -80
-
-// パス名関係の定数
-#define DRV_CLN_LEN 2     // "A:"
-#define DRV_CLN_BS_LEN 3  // "A:\\"
-#define HUMAN68K_PATH_MAX 65
-
-// 標準ファイルハンドル
-#define HUMAN68K_STDIN 0
-#define HUMAN68K_STDOUT 1
-#define HUMAN68K_STDERR 2
-#define HUMAN68K_STDAUX 3
-#define HUMAN68K_STDPRN 4
-#define HUMAN68K_SYSTEM_FILENO_MAX 4
-#define HUMAN68K_USER_FILENO_MIN 5
 
 // メモリブロック
 #define MEMBLK_PREV 0x00
@@ -75,10 +68,18 @@ enum {
 #define PSP_EXEFILE_NAME 0xc4
 #define SIZEOF_PSP 256  // メモリブロックを含む
 
-// ワークエリア
-#define OSWORK_TOP 0x1c00
-#define OSWORK_MEMORY_END 0x1c00
-#define OSWORK_ROOT_PSP 0x1c04
-#define SIZEOF_OSWORK 1024
+// 標準ファイルハンドル
+#define HUMAN68K_STDIN 0
+#define HUMAN68K_STDOUT 1
+#define HUMAN68K_STDERR 2
+#define HUMAN68K_STDAUX 3
+#define HUMAN68K_STDPRN 4
+#define HUMAN68K_SYSTEM_FILENO_MAX 4
+#define HUMAN68K_USER_FILENO_MIN 5
+
+// パス名関係の定数
+#define DRV_CLN_LEN 2     // "A:"
+#define DRV_CLN_BS_LEN 3  // "A:\\"
+#define HUMAN68K_PATH_MAX 65
 
 #endif

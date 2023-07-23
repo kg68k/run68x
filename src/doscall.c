@@ -204,9 +204,11 @@ static Long DosMalloc2(ULong param) {
   return Malloc(modeByte, size, parent);
 }
 
-// DOS _FILEDATE (0xff87)
-static Long Filedate(short hdl, Long dt) {  //
-  return HOST_DOS_FILEDATE(hdl, dt);
+// DOS _FILEDATE (0xff57, 0xff87)
+static Long DosFiledate(ULong param) {
+  UWord fileno = ReadParamUWord(&param);
+  ULong dt = ReadParamULong(&param);
+  return HOST_DOS_FILEDATE(fileno, dt);
 }
 
 // ファイルを閉じてFILEINFOを未使用状態に戻す
@@ -1034,12 +1036,12 @@ bool dos_call(UByte code) {
       rd[0] = Rename(data, buf);
       break;
     case 0x57: /* FILEDATE */
-      fhdl = (short)mem_get(stack_adr, S_WORD);
-      data = mem_get(stack_adr + 2, S_LONG);
+    case 0x87: /* FILEDATE (Human68k v3) */
       if (func_trace_f) {
-        printf("%-10s file_no=%d datetime=%X\n", "FILEDATE", fhdl, data);
+        printf("%-10s file_no=%d datetime=%X\n", "FILEDATE",
+               mem_get(stack_adr, S_WORD), mem_get(stack_adr + 2, S_LONG));
       }
-      rd[0] = Filedate(fhdl, data);
+      rd[0] = DosFiledate(stack_adr);
       break;
     case 0x58: /* MALLOC2 */
     case 0x88: /* MALLOC2 (Human68k v3) */
