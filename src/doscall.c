@@ -2056,10 +2056,7 @@ static Long Nfiles(Long buf) {
       return -2;
     }
   }
-  /* buf_ptr領域に発見したファイルの情報をセットし直す。*/
-  /* 予約領域をセット(4バイトしか使わない。*/
-  *((HANDLE *)&buf_ptr[2]) = handle; /* DIRCLS, DIRFATの領域を使った。*/
-  for (i = 6; i < 21; i++) buf_ptr[i] = 0;
+
   /* DATEとTIMEをセット */
   {
     SYSTEMTIME st;
