@@ -183,9 +183,7 @@ static Long DosMalloc(ULong param) {
 }
 
 // DOS _MFREE (0xff49)
-static Long DosMfree(ULong param) {
-  return Mfree(ReadParamULong(&param));
-}
+static Long DosMfree(ULong param) { return Mfree(ReadParamULong(&param)); }
 
 // DOS _SETBLOCK (0xff4a)
 static Long DosSetblock(ULong param) {
@@ -222,7 +220,7 @@ static Long find_free_file(void) {
   int i;
 
   for (i = HUMAN68K_USER_FILENO_MIN; i < FILE_MAX; i++) {
-    if (!&finfo[i].is_opened) {
+    if (!finfo[i].is_opened) {
       return (Long)i;
     }
   }
@@ -1376,9 +1374,13 @@ static Long Newfile(char *p, short atr) {
     if (strlen(&(p[i])) > 4) return (-13);
   }
 #ifdef _WIN32
-  HANDLE handle = CreateFile(p, GENERIC_READ | GENERIC_WRITE, 0, NULL,
-                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (handle == INVALID_HANDLE_VALUE) return -23;  // ディスクがいっぱい
+  HANDLE handle = CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL,
+                             CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (handle == INVALID_HANDLE_VALUE) {
+    DWORD e = GetLastError();
+    if (e == ERROR_FILE_EXISTS) return DOSE_EXISTFILE;
+    return -23;  // ディスクがいっぱい
+  }
   finfo[ret].host.handle = handle;
 #else
   FILE *fp = fopen(p, "rb");
@@ -1627,7 +1629,7 @@ static Long Write(short hdl, Long buf, Long len) {
   char *write_buf;
   Long write_len = 0;
 
-  if (!&finfo[hdl].is_opened) return -6;  // オープンされていない
+  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
 
   if (len == 0) return (0);
 

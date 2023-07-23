@@ -30,6 +30,7 @@
 #define DOSE_RDONLY -19
 #define DOSE_EXISTDIR -20
 #define DOSE_NOTEMPTY -21
+#define DOSE_EXISTFILE -80
 
 // パス名関係の定数
 #define DRV_CLN_LEN 2     // "A:"
