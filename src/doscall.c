@@ -1934,6 +1934,8 @@ handle = FindFirstFileEx
   strncpy(&buf_ptr[30], f_data.cFileName, 22);
   buf_ptr[30 + 22] = 0;
 
+  return 0;
+
 #else
   char *name_ptr;
   char *buf_ptr;
@@ -1995,8 +1997,8 @@ handle = FindFirstFileEx
     closedir(dir);
   }
   printf("DOSCALL FILES:not defined yet %s %d\n", __FILE__, __LINE__);
+  return -1;
 #endif
-  return (0);
 }
 
 /*
@@ -2078,10 +2080,12 @@ static Long Nfiles(Long buf) {
   strncpy(&buf_ptr[30], f_data.cFileName, 22);
   buf_ptr[30 + 22] = 0;
 
+  return 0;
+
 #else
   printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__);
+  return -1;
 #endif
-  return (0);
 }
 
 /*
