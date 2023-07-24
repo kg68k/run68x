@@ -104,7 +104,7 @@ void read_ini(char *path, char *prog) {
   }
   /* ディレクトリ名とファイル名を結合する。*/
   snprintf(path, MAX_PATH, "%s%s", dir, buf);
-#if defined(_DEBUG)
+#ifdef PRINT_RUN68INI_PATH
   printf("INI:%s\n", path);
 #endif
   /* フルパス名を使ってファイルをオープンする。*/
