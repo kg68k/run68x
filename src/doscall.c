@@ -1290,6 +1290,23 @@ static Long Dskfre(short drv, Long buf) {
 #endif
 }
 
+#ifndef _WIN32
+static char *to_slash(size_t size, char *buf, const char *path) {
+  // 成功時にFILEINFO::nameにコピーするのでここでチェック
+  if (size > sizeof(((FILEINFO){}).name)) return NULL;
+
+  if (strlen(path) >= size) return NULL;
+
+  char *p = strncpy(buf, path, size);
+  char *root = (p[0] && p[1] == ':') ? p + strlen("A:") : p;
+  do {
+    if (*p == '\\') *p = '/';
+  } while (*p++);
+
+  return root;
+}
+#endif
+
 /*
    機能：
      DOSCALL CREATEを実行する
@@ -1303,18 +1320,11 @@ static Long Dskfre(short drv, Long buf) {
 static Long Create(char *p, short atr) {
   Long i;
 
-#ifndef WIN32
-  char *name = p;
-  int namelen = strlen(name);
-  for (int i = 0; i < namelen; ++i) {
-    if (name[i] == '\\') {
-      name[i] = '/';
-    }
-    if (name[i] == ':') {
-      p = &name[i + 1];
-    }
-  }
-  // printf("Create(\"%s\", %d) = %s\n", name, atr, p);
+#ifndef _WIN32
+  char buf[89];
+  p = to_slash(sizeof(buf), buf, p);
+  if (p == NULL) return DOSE_ILGFNAME;
+  // printf("Create(\"%s\", 0x%02x)\n", p, atr);
 #endif
 
   Long ret = find_free_file();
@@ -1358,6 +1368,13 @@ static Long Create(char *p, short atr) {
  */
 static Long Newfile(char *p, short atr) {
   Long i;
+
+#ifndef _WIN32
+  char buf[89];
+  p = to_slash(sizeof(buf), buf, p);
+  if (p == NULL) return DOSE_ILGFNAME;
+  // printf("Newfile(\"%s\", 0x%02x)\n", p, atr);
+#endif
 
   Long ret = find_free_file();
   if (ret < 0) return -4;  // オープンしているファイルが多すぎる
@@ -1415,18 +1432,11 @@ static Long Open(char *p, short mode) {
   int len;
   Long i;
 
-#ifndef WIN32
-  char *name = p;
-  int namelen = strlen(name);
-  for (int i = 0; i < namelen; ++i) {
-    if (name[i] == '\\') {
-      name[i] = '/';
-    }
-    if (name[i] == ':') {
-      p = &name[i + 1];
-    }
-  }
-  // printf("Open(\"%s\", %d) = %s\n", name, mode, p);
+#ifndef _WIN32
+  char buf[89];
+  p = to_slash(sizeof(buf), buf, p);
+  if (p == NULL) return DOSE_ILGFNAME;
+  // printf("Open(\"%s\", 0x%02x)\n", p, mode);
 #endif
 
   switch (mode) {
@@ -1941,6 +1951,10 @@ handle = FindFirstFileEx
   char *buf_ptr;
   name_ptr = prog_ptr + name;
   buf_ptr = prog_ptr + buf;
+
+  char slbuf[89];
+  name_ptr = to_slash(sizeof(slbuf), slbuf, name_ptr);
+  if (name_ptr == NULL) return DOSE_ILGFNAME;
 
   {
     FILE *fp = fopen(name_ptr, "rb");
