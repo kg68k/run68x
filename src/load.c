@@ -33,7 +33,40 @@ static UByte xhead[XHEAD_SIZE];
 
 static Long xhead_getl(int);
 
-static char *GetAPath(char **path_p, char *buf);
+#ifdef _WIN32
+#define PATH_DELIMITER ';'
+#else
+#define PATH_DELIMITER ':'
+#endif
+
+static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
+  unsigned int i;
+  *buf = '\0';
+
+  if (path_p == NULL || *path_p == NULL) return NULL;
+
+  while ((*path_p)[0] != '\0') {
+    const size_t len = strlen(*path_p);
+    for (i = 0; i < len && (*path_p)[i] != PATH_DELIMITER; i++) {
+      /* 2バイトコードのスキップ */
+      ;
+    }
+    if (i >= bufSize) {
+      *path_p += i + ((*path_p)[0] == '\0') ? 0 : 1;
+      continue;
+    }
+
+    strncpy(buf, *path_p, i);
+    buf[i] = '\0';
+    if ((*path_p)[i] == '\0') {
+      *path_p = &((*path_p)[i]);
+    } else {
+      *path_p += i + 1;
+    }
+    return buf;
+  }
+  return NULL;
+}
 
 /*
   機能：
@@ -83,14 +116,23 @@ FILE *prog_open(char *fname, bool print_error) {
   }
 #endif
   /* PATH環境変数を取得する */
-#ifdef _WIN32
   char env_p[4096];
+#ifdef _WIN32
   Getenv_common("PATH", env_p);
   p = env_p;
 #else
   p = getenv("PATH");
+  strncpy(env_p, (p == NULL) ? "" : p, sizeof(env_p));
+  env_p[sizeof(env_p) - 1] = '\0';
+  p = env_p;
 #endif
-  for (strcpy(dir, cwd); strlen(dir) != 0; GetAPath(&p, dir)) {
+  for (strcpy(dir, cwd); strlen(dir) != 0; GetAPath(&p, sizeof(dir), dir)) {
+    size_t len = strlen(dir) + strlen("/") + strlen(fname) + strlen(".x");
+    if (len >= 89) {
+      // printf("too long path: %s\n", dir);
+      continue;
+    }
+
     if (exp != NULL) {
       strcpy(fullname, dir);
       if (dir[strlen(dir) - 1] != sep_chr) strcat(fullname, sep_str);
@@ -114,35 +156,6 @@ EndOfFunc:
   return fp;
 ErrorRet:
   if (print_error) fprintf(stderr, "ファイルがオープンできません\n");
-  return NULL;
-}
-
-#ifdef _WIN32
-#define PATH_DELIMITER ':'
-#else
-#define PATH_DELIMITER ';'
-#endif
-
-static char *GetAPath(char **path_p, char *buf) {
-  unsigned int i;
-
-  if (path_p == NULL || *path_p == NULL || strlen(*path_p) == 0) {
-    *buf = '\0';
-    goto ErrorReturn;
-  }
-  for (i = 0; i < strlen(*path_p) && (*path_p)[i] != PATH_DELIMITER; i++) {
-    /* 2バイトコードのスキップ */
-    ;
-  }
-  strncpy(buf, *path_p, i);
-  buf[i] = '\0';
-  if ((*path_p)[i] == '\0') {
-    *path_p = &((*path_p)[i]);
-  } else {
-    *path_p += i + 1;
-  }
-  return buf;
-ErrorReturn:
   return NULL;
 }
 
