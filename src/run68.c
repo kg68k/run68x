@@ -204,8 +204,7 @@ static int exec_trap(bool *restart) {
         fprintf(stderr, "(run68) breakpoint:%d counts left.\n", stepcount);
         stepcount = 0;
       }
-    } else if (cwatchpoint != 0x4afc &&
-               cwatchpoint == ((prog_ptr[pc] << 8) + prog_ptr[pc + 1])) {
+    } else if (cwatchpoint != 0x4afc && cwatchpoint == PeekW(pc)) {
       fprintf(stderr, "(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
               cwatchpoint);
       if (stepcount != 0) {
@@ -300,8 +299,7 @@ static int exec_notrap(bool *restart) {
         fprintf(stderr, "(run68) breakpoint:%d counts left.\n", stepcount);
         stepcount = 0;
       }
-    } else if (cwatchpoint != 0x4afc &&
-               cwatchpoint == ((prog_ptr[pc] << 8) + prog_ptr[pc + 1])) {
+    } else if (cwatchpoint != 0x4afc && cwatchpoint == PeekW(pc)) {
       fprintf(stderr, "(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
               cwatchpoint);
       debug_on = true;

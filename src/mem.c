@@ -22,6 +22,10 @@
 
 #include "run68.h"
 
+enum {
+  GVRAM = 0x00c00000,
+};
+
 /*
  　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
  　　　　の値を得る
@@ -50,43 +54,36 @@ Long idx_get(void) {
  戻り値：データの値
 */
 Long imi_get(char size) {
-  Long d;
-  UByte *mem = (UByte *)prog_ptr + pc;
+  ULong adr = pc;
 
   switch (size) {
     case S_BYTE:
       pc += 2;
-      return (*(mem + 1));
+      return PeekB(adr + 1);  // 1ワード中の下位バイトが実データ
     case S_WORD:
       pc += 2;
-      d = *(mem++);
-      d = ((d << 8) | *mem);
-      return (d);
-    default: /* S_LONG */
+      return PeekW(adr);
+    default:  // S_LONG
       pc += 4;
-      d = *(mem++);
-      d = ((d << 8) | *(mem++));
-      d = ((d << 8) | *(mem++));
-      d = ((d << 8) | *mem);
-      return (d);
+      return PeekL(adr);
   }
 }
 
 /*
  　機能：読み込みアドレスのチェック
+   引数：adr アドレス(ADDRESS_MASK でマスクした値)
  戻り値： true = OK
          false = NGだが、0を読み込んだとみなす
 */
-bool mem_red_chk(Long adr) {
+bool mem_red_chk(ULong adr) {
   char message[256];
 
-  adr &= 0x00FFFFFF;
-  if (adr >= 0xC00000) {
+  if (GVRAM <= adr) {
     if (ini_info.io_through) return false;
     sprintf(message, "I/OポートorROM($%06X)から読み込もうとしました。", adr);
     err68(message);
   }
-  if (SR_S_REF() == 0 || (ULong)adr >= mem_aloc) {
+  if (SR_S_REF() == 0 || mem_aloc <= adr) {
     sprintf(message, "不正アドレス($%06X)からの読み込みです。", adr);
     err68(message);
   }
@@ -95,19 +92,19 @@ bool mem_red_chk(Long adr) {
 
 /*
  　機能：書き込みアドレスのチェック
+   引数：adr アドレス(ADDRESS_MASK でマスクした値)
  戻り値： true = OK
          false = NGだが、何も書き込まずにOKとみなす
 */
-bool mem_wrt_chk(Long adr) {
+bool mem_wrt_chk(ULong adr) {
   char message[256];
 
-  adr &= 0x00FFFFFF;
-  if (adr >= 0xC00000) {
+  if (GVRAM <= adr) {
     if (ini_info.io_through) return false;
     sprintf(message, "I/OポートorROM($%06X)に書き込もうとしました。", adr);
     err68(message);
   }
-  if (SR_S_REF() == 0 || (ULong)adr >= mem_aloc) {
+  if (SR_S_REF() == 0 || mem_aloc <= adr) {
     sprintf(message, "不正アドレスへの書き込みです($%06X)", adr);
     err68(message);
   }
@@ -118,27 +115,19 @@ bool mem_wrt_chk(Long adr) {
  　機能：メモリから指定されたサイズのデータをゲットする
  戻り値：データの値
 */
-Long mem_get(Long adr, char size) {
-  Long d;
-
-  if (adr < ENV_TOP || (ULong)adr >= mem_aloc) {
-    if (!mem_red_chk(adr)) return (0);
+Long mem_get(ULong adr, char size) {
+  adr &= ADDRESS_MASK;
+  if (adr < ENV_TOP || mem_aloc <= adr) {
+    if (!mem_red_chk(adr)) return 0;
   }
-  UByte *mem = (UByte *)prog_ptr + adr;
 
   switch (size) {
     case S_BYTE:
-      return (*mem);
+      return PeekB(adr);
     case S_WORD:
-      d = *(mem++);
-      d = ((d << 8) | *mem);
-      return (d);
-    default: /* S_LONG */
-      d = *(mem++);
-      d = ((d << 8) | *(mem++));
-      d = ((d << 8) | *(mem++));
-      d = ((d << 8) | *mem);
-      return (d);
+      return PeekW(adr);
+    default:  // S_LONG
+      return PeekL(adr);
   }
 }
 
@@ -146,26 +135,21 @@ Long mem_get(Long adr, char size) {
  　機能：メモリに指定されたサイズのデータをセットする
  戻り値：なし
 */
-void mem_set(Long adr, Long d, char size) {
-  if (adr < ENV_TOP || (ULong)adr >= mem_aloc) {
+void mem_set(ULong adr, Long d, char size) {
+  adr &= ADDRESS_MASK;
+  if (adr < ENV_TOP || mem_aloc <= adr) {
     if (!mem_wrt_chk(adr)) return;
   }
 
-  UByte *mem = (UByte *)prog_ptr + adr;
-
   switch (size) {
     case S_BYTE:
-      *mem = (d & 0xFF);
+      PokeB(adr, d);
       return;
     case S_WORD:
-      *(mem++) = ((d >> 8) & 0xFF);
-      *mem = (d & 0xFF);
+      PokeW(adr, d);
       return;
-    default: /* S_LONG */
-      *(mem++) = ((d >> 24) & 0xFF);
-      *(mem++) = ((d >> 16) & 0xFF);
-      *(mem++) = ((d >> 8) & 0xFF);
-      *mem = (d & 0xFF);
+    default:  // S_LONG
+      PokeL(adr, d);
       return;
   }
 }

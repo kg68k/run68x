@@ -400,7 +400,6 @@ void OPBuf_display(int n) {
     const EXEC_INSTRUCTION_INFO *op;
     Long addr, naddr;
     char *s, hex[64];
-    unsigned short code;
     int j;
 
     op = OPBuf_getentry(i);
@@ -409,8 +408,7 @@ void OPBuf_display(int n) {
     sprintf(hex, "$%06X ", addr);
     while (addr < naddr) {
       char *p = hex + strlen(hex);
-      code = ((prog_ptr[addr]) << 8) + prog_ptr[addr + 1];
-      sprintf(p, "%04X ", code);
+      sprintf(p, "%04X ", PeekW(addr));
       addr += 2;
     }
     for (j = strlen(hex); j < 34; j++) {
@@ -460,25 +458,18 @@ int get_idx(int *pc, char *regstr) {
  戻り値：データの値
 */
 Long get_imi(int *pc, char size) {
-  Long d;
-  UByte *mem = (UByte *)prog_ptr + (*pc);
+  ULong adr = (ULong)*pc;
 
   switch (size) {
     case S_BYTE:
       (*pc) += 2;
-      return (*(mem + 1));
+      return PeekB(adr + 1);
     case S_WORD:
       (*pc) += 2;
-      d = *(mem++);
-      d = ((d << 8) | *mem);
-      return (d);
-    default: /* S_LONG */
+      return PeekW(adr);
+    default:  // S_LONG
       (*pc) += 4;
-      d = *(mem++);
-      d = ((d << 8) | *(mem++));
-      d = ((d << 8) | *(mem++));
-      d = ((d << 8) | *mem);
-      return (d);
+      return PeekL(adr);
   }
 }
 

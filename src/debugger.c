@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include "run68.h"
+#include "mem.h"
 
 /* デバッグモードのプロンプト */
 #define PROMPT "(run68)"
@@ -86,7 +87,6 @@ RUN68_COMMAND debugger(bool running) {
     Long naddr, addr = pc;
     char hex[64];
     char *s = disassemble(addr, &naddr);
-    unsigned short code;
     int j;
 
     /* まず全レジスタを表示し、*/
@@ -99,8 +99,7 @@ RUN68_COMMAND debugger(bool running) {
     }
     while (addr < naddr) {
       char *p = hex + strlen(hex);
-      code = ((prog_ptr[addr]) << 8) + prog_ptr[addr + 1];
-      sprintf(p, "%04X ", code);
+      sprintf(p, "%04X ", PeekW(addr));
       addr += 2;
     }
     for (j = strlen(hex); j < 34; j++) {
@@ -450,7 +449,6 @@ static void display_list(int argc, char **argv) {
   for (i = 0; i < n; i++) {
     char *s = disassemble(addr, &naddr);
     char hex[64];
-    unsigned short code;
 
     sprintf(hex, "$%06X ", addr);
     if (addr == naddr) {
@@ -459,8 +457,7 @@ static void display_list(int argc, char **argv) {
     }
     while (addr < naddr) {
       char *p = hex + strlen(hex);
-      code = ((prog_ptr[addr]) << 8) + prog_ptr[addr + 1];
-      sprintf(p, "%04X ", code);
+      sprintf(p, "%04X ", PeekW(addr));
       addr += 2;
     }
     for (j = strlen(hex); j < 34; j++) {

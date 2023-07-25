@@ -30,10 +30,68 @@ NORETURN void run68_abort(Long adr);
 bool mem_red_chk(Long adr);
 bool mem_wrt_chk(Long adr);
 
-static inline Word imi_get_word(void) {
-  UByte* p = (UByte*)prog_ptr + pc;
-  pc += 2;
+// メインメモリから1バイト読み込む(ビッグエンディアン)
+static inline UByte PeekB(ULong adr) { return *(UByte*)(prog_ptr + adr); }
+
+// メインメモリから1ワード読み込む(ビッグエンディアン)
+static inline UWord PeekW(ULong adr) {
+  UByte* p = (UByte*)(prog_ptr + adr);
+#if defined(_MSC_VER)
+  return _byteswap_ushort(*(UWord*)p);
+#elif defined(__GNUC__)
+  return __builtin_bswap16(*(UWord*)p);
+#else
   return (p[0] << 8) | p[1];
+#endif
+}
+
+// メインメモリから1ロングワード読み込む(ビッグエンディアン)
+static inline ULong PeekL(ULong adr) {
+  UByte* p = (UByte*)(prog_ptr + adr);
+#if defined(_MSC_VER)
+  return _byteswap_ulong(*(ULong*)p);
+#elif defined(__GNUC__)
+  return __builtin_bswap32(*(ULong*)p);
+#else
+  return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+#endif
+}
+
+// メインメモリに1バイト書き込む(ビッグエンディアン)
+static inline void PokeB(ULong adr, UByte n) { *(UByte*)(prog_ptr + adr) = n; }
+
+// メインメモリに1ワード書き込む(ビッグエンディアン)
+static inline void PokeW(ULong adr, UWord n) {
+  UByte* p = (UByte*)(prog_ptr + adr);
+#if defined(_MSC_VER)
+  *(UWord*)p = _byteswap_ushort(n);
+#elif defined(__GNUC__)
+  *(UWord*)p = __builtin_bswap16(n);
+#else
+  p[0] = n >> 8;
+  p[1] = n;
+#endif
+}
+
+// メインメモリに1ロングワード書き込む(ビッグエンディアン)
+static inline void PokeL(ULong adr, ULong n) {
+  UByte* p = (UByte*)(prog_ptr + adr);
+#if defined(_MSC_VER)
+  *(ULong*)p = _byteswap_ulong(n);
+#elif defined(__GNUC__)
+  *(ULong*)p = __builtin_bswap32(n);
+#else
+  p[0] = n >> 24;
+  p[1] = n >> 16;
+  p[2] = n >> 8;
+  p[3] = n;
+#endif
+}
+
+static inline Word imi_get_word(void) {
+  ULong adr = pc;
+  pc += 2;
+  return PeekW(adr);
 }
 
 // スーパーバイザモードで1ワードのメモリを読む
@@ -43,8 +101,7 @@ static inline UWord ReadSuperUWord(ULong adr) {
     if (!mem_red_chk(adr)) return 0;
   }
 
-  UByte* p = (UByte*)prog_ptr + adr;
-  return (p[0] << 8) | p[1];
+  return PeekW(adr);
 }
 
 // スーパーバイザモードで1ロングワードのメモリを読む
@@ -54,8 +111,7 @@ static inline ULong ReadSuperULong(ULong adr) {
     if (!mem_red_chk(adr)) return 0;
   }
 
-  UByte* p = (UByte*)prog_ptr + adr;
-  return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
+  return PeekL(adr);
 }
 
 // スーパーバイザモードで1バイトのメモリを書く
@@ -65,8 +121,7 @@ static inline void WriteSuperUByte(ULong adr, UByte n) {
     if (!mem_wrt_chk(adr)) return;
   }
 
-  UByte* p = (UByte*)prog_ptr + adr;
-  p[0] = n;
+  PokeB(adr, n);
 }
 
 // スーパーバイザモードで1ワードのメモリを書く
@@ -76,9 +131,7 @@ static inline void WriteSuperUWord(ULong adr, UWord n) {
     if (!mem_wrt_chk(adr)) return;
   }
 
-  UByte* p = (UByte*)prog_ptr + adr;
-  p[0] = n >> 8;
-  p[1] = n;
+  PokeW(adr, n);
 }
 
 // スーパーバイザモードで1ロングワードのメモリを書く
@@ -88,11 +141,7 @@ static inline void WriteSuperULong(ULong adr, ULong n) {
     if (!mem_wrt_chk(adr)) return;
   }
 
-  UByte* p = (UByte*)prog_ptr + adr;
-  p[0] = n >> 24;
-  p[1] = n >> 16;
-  p[2] = n >> 8;
-  p[3] = n;
+  PokeL(adr, n);
 }
 
 // スタックに積まれたUWord引数を読む(DOSCALL、FEFUNC用)
