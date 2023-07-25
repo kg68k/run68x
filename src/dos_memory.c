@@ -91,8 +91,7 @@ Long Malloc(UByte mode, ULong size, ULong parent) {
       cNewblk = negetive_align_memblk(limit - sizeWithHeader);
     }
 
-    build_memory_block(cNewblk, cMemblk, parent, cNewblk + sizeWithHeader,
-                       cNext);
+    BuildMemoryBlock(cNewblk, cMemblk, parent, cNewblk + sizeWithHeader, cNext);
     return cNewblk + SIZEOF_MEMBLK;
   }
 
@@ -101,8 +100,8 @@ Long Malloc(UByte mode, ULong size, ULong parent) {
 }
 
 // メモリブロックのヘッダを作成する
-void build_memory_block(ULong adr, ULong prev, ULong parent, ULong end,
-                        ULong next) {
+void BuildMemoryBlock(ULong adr, ULong prev, ULong parent, ULong end,
+                      ULong next) {
   WriteSuperULong(adr + MEMBLK_PREV, prev);
   WriteSuperULong(adr + MEMBLK_PARENT, parent);
   WriteSuperULong(adr + MEMBLK_END, end);

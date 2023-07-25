@@ -20,7 +20,11 @@
 
 #ifdef _WIN32
 
+#include "human68k.h"
 #include "run68.h"
+
+bool CanonicalPathName_win32(const char* path, Human68kPathName* hpn);
+#define HOST_CANONICAL_PATHNAME CanonicalPathName_win32
 
 void InitFileInfo_win32(FILEINFO* finfop, int fileno);
 #define HOST_INIT_FILEINFO InitFileInfo_win32

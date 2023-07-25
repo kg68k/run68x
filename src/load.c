@@ -58,11 +58,7 @@ static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
 
     strncpy(buf, *path_p, i);
     buf[i] = '\0';
-    if ((*path_p)[i] == '\0') {
-      *path_p = &((*path_p)[i]);
-    } else {
-      *path_p += i + 1;
-    }
+    *path_p = (*path_p)[i] ? &((*path_p)[i]) : &((*path_p)[i + 1]);
     return buf;
   }
   return NULL;
@@ -349,7 +345,7 @@ static bool set_fname(char *p, Long psp_adr) {
   mem_ptr = prog_ptr + psp_adr + PSP_EXEFILE_NAME;
   strcpy(mem_ptr, &(p[i]));
 
-  mem_ptr = prog_ptr + psp_adr + PSP_EXEFILE_PATH;
+  mem_ptr = prog_ptr + psp_adr + PSP_EXEFILE_PATH + 2;
   if (i == 0) {
     /* カレントディレクトリをセット */
 #ifdef _WIN32
@@ -378,7 +374,7 @@ static bool set_fname(char *p, Long psp_adr) {
     strcpy(mem_ptr, &(p[i]));
   }
 
-  mem_ptr = prog_ptr + psp_adr + PSP_EXEFILE_DRIVE;
+  mem_ptr = prog_ptr + psp_adr + PSP_EXEFILE_PATH;
   if (i == 0) {
     /* カレントドライブをセット */
 #ifdef _WIN32
@@ -425,6 +421,27 @@ bool make_psp(char *fname, Long prev_adr, Long end_adr, Long process_id,
 
   psp[nest_cnt] = ra[0];
   return true;
+}
+
+// PSPを作成する
+//   事前にBuildMemoryBlock()でメモリブロックを作成しておくこと。
+void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
+              ULong parentSsp, const ProgramSpec *progSpec,
+              const Human68kPathName *pathname) {
+  memset(&prog_ptr[psp + SIZEOF_MEMBLK], 0, SIZEOF_PSP - SIZEOF_MEMBLK);
+
+  WriteSuperULong(psp + PSP_ENV_PTR, envptr);
+  WriteSuperULong(psp + PSP_CMDLINE, cmdline);
+  ULong bssTop = psp + SIZEOF_PSP + progSpec->codeSize;
+  WriteSuperULong(psp + PSP_BSS_PTR, bssTop);
+  WriteSuperULong(psp + PSP_HEAP_PTR, bssTop);
+  WriteSuperULong(psp + PSP_STACK_PTR, bssTop + progSpec->bssSize);
+
+  WriteSuperULong(psp + PSP_PARENT_SSP, parentSsp);
+  WriteSuperUWord(psp + PSP_PARENT_SR, parentSr);
+
+  strcpy(&prog_ptr[psp + PSP_EXEFILE_PATH], pathname->path);
+  strcpy(&prog_ptr[psp + PSP_EXEFILE_NAME], pathname->name);
 }
 
 /* $Id: load.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */

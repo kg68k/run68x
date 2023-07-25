@@ -42,6 +42,8 @@
 #include <windows.h>
 #endif
 
+#include "human68k.h"
+
 #if CHAR_MIN != 0
 #error "plain 'char' type must be unsigned."
 #endif
@@ -224,9 +226,17 @@ void read_ini(char *path, char *prog);
 void readenv_from_ini(char *path);
 
 /* load.c */
+typedef struct {
+  ULong codeSize;
+  ULong bssSize;
+} ProgramSpec;
+
 FILE *prog_open(char *, bool);
 Long prog_read(FILE *, char *, Long, Long *, Long *, bool);
 bool make_psp(char *, Long, Long, Long, Long);
+void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
+              ULong parentSsp, const ProgramSpec *progSpec,
+              const Human68kPathName *pathname);
 
 /* exec.c */
 bool prog_exec(void);

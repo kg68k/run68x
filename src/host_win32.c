@@ -16,12 +16,47 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
 #include <direct.h>
+#include <stdlib.h>
 #include <string.h>
 #include <windows.h>
 
 #include "human68k.h"
 #include "run68.h"
 
+// パス名の正規化
+bool CanonicalPathName_win32(const char* path, Human68kPathName* hpn) {
+  // Human68k仕様に変換できなければエラーにするので、Windowsの仕様より小さくてよい
+  char buf[HUMAN68K_PATH_MAX + 1];
+  char drive[DRV_CLN_LEN + 1];
+  char dir[HUMAN68K_DIR_MAX + 1];
+  char fname[HUMAN68K_NAME_MAX + 1];
+  char ext[HUMAN68K_NAME_MAX + 1];  // 長い拡張子対策
+
+  if (_fullpath(buf, path, sizeof(buf)) == NULL) return false;
+  if (_splitpath_s(buf, drive, sizeof(drive), dir, sizeof(dir), fname,
+                   sizeof(fname), ext, sizeof(ext)) != 0) {
+    return false;
+  }
+  if (strlen(drive) != DRV_CLN_LEN) return false;
+
+  size_t nameLen = strlen(fname);
+  size_t extLen = strlen(ext);
+
+  if (extLen > HUMAN68K_EXT_MAX) {
+    // ".abcd"のような"."+4文字以上の拡張子は、Human68k標準では使用不可だが
+    // TwentyOne +P環境では主ファイル名の一部としてなら存在できる。
+    // Windowsの_splitpath_s()では拡張子として扱われるので、主ファイル名に繰り込む。
+    nameLen += extLen;
+    extLen = 0;
+    if (nameLen > HUMAN68K_NAME_MAX) return false;
+  }
+
+  strcat(strcpy(hpn->path, drive), dir);
+  strcat(strcpy(hpn->name, fname), ext);
+  hpn->nameLen = nameLen;
+  hpn->extLen = extLen;
+  return true;
+}
 static HANDLE fileno_to_handle(int fileno) {
   if (fileno == HUMAN68K_STDIN) return GetStdHandle(STD_INPUT_HANDLE);
   if (fileno == HUMAN68K_STDOUT) return GetStdHandle(STD_OUTPUT_HANDLE);
@@ -78,7 +113,7 @@ Long DosChdir_win32(Long name) {
 
 // DOS _CURDIR (0xff47)
 Long DosCurdir_win32(short drv, char* buf_ptr) {
-  char buf[DRV_CLN_LEN + HUMAN68K_PATH_MAX] = {0};
+  char buf[HUMAN68K_DRV_DIR_MAX + 1] = {0};
   const char* p = _getdcwd(drv, buf, sizeof(buf));
 
   if (p == NULL) {
@@ -112,6 +147,8 @@ static Long DosFiledate_set(HANDLE hFile, ULong dt) {
 
   return DOSE_SUCCESS;
 }
+
+#include <pathcch.h>
 
 // DOS _FILEDATE (0xff57, 0xff87)
 Long DosFiledate_win32(UWord fileno, ULong dt) {

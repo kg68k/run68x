@@ -24,7 +24,7 @@ Long Malloc(UByte mode, ULong size, ULong parent);
 Long Mfree(ULong adr);
 Long Setblock(ULong adr, ULong size);
 
-void build_memory_block(ULong adrs, ULong prev, ULong parent, ULong end,
-                        ULong next);
+void BuildMemoryBlock(ULong adrs, ULong prev, ULong parent, ULong end,
+                      ULong next);
 
 #endif

@@ -15,19 +15,103 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-#ifndef USE_ICONV
-#error "USE_ICONV muse be defined."
-#endif
-
-#include <iconv.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#ifdef USE_ICONV
+#include <iconv.h>
+#endif
 
 #include "human68k.h"
 #include "run68.h"
 
 #define ROOT_SLASH_LEN 1  // "/"
+#define DEFAULT_DRV_CLN "A:"
+
+#ifdef USE_ICONV
+
+// UTF-8文字列からShift_JIS文字列への変換
+static bool utf8_to_sjis(char *inbuf, char *outbuf, size_t outbuf_size) {
+  iconv_t icd = iconv_open("Shift_JIS", "UTF-8");
+  size_t inbytes = strlen(inbuf);
+  size_t outbytes = outbuf_size - 1;
+  size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
+  iconv_close(icd);
+  *outbuf = '\0';
+  return len != (size_t)-1;
+}
+#define HOST_CONVERT_TO_SJIS utf8_to_sjis
+
+#else
+
+static bool sjis_to_sjis(char *inbuf, char *outbuf, size_t outbuf_size) {
+  size_t len = strlen(inbuf);
+  if (len >= outbuf_size) return false;
+  strcpy(outbuf, inbuf);
+  return true;
+}
+#define HOST_CONVERT_TO_SJIS sjis_to_sjis
+
+#endif
+
+// Shift_JIS文字列中のスラッシュをバックスラッシュに書き換える
+static void to_backslash(char *buf) {
+  for (; *buf; buf += 1) {
+    if (*buf == '/') {
+      *buf = '\\';
+    }
+  }
+}
+
+static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
+  char buf[HUMAN68K_PATH_MAX + 1];
+
+  if (!HOST_CONVERT_TO_SJIS(fullpath, buf, sizeof(buf))) return false;
+
+  char *lastSlash = strrchr(buf, '/');
+  if (lastSlash == NULL) return false;
+
+  char *name = lastSlash + 1;
+  size_t pathLen = name - buf;
+  if (pathLen > HUMAN68K_DIR_MAX) return false;
+
+  size_t nameLen = strlen(name);  // 拡張子を含む長さなので後で差し引く
+  char *ext = strrchr(name, '.');
+  if (ext == NULL) ext = name + nameLen;
+
+  size_t extLen = strlen(ext);
+  nameLen -= extLen;
+  if (extLen > HUMAN68K_EXT_MAX) {
+    nameLen += extLen;
+    extLen = 0;
+  }
+  if (nameLen > HUMAN68K_NAME_MAX) return false;
+
+  const char *prefix = DEFAULT_DRV_CLN;
+  const size_t prefixLen = strlen(DEFAULT_DRV_CLN);
+  strcpy(hpn->path, prefix);
+  strncpy(hpn->path + prefixLen, buf, pathLen);
+  hpn->path[prefixLen + pathLen] = '\0';
+
+  to_backslash(hpn->path);
+  strcpy(hpn->name, name);
+
+  hpn->nameLen = nameLen;
+  hpn->extLen = extLen;
+
+  return true;
+}
+
+// パス名の正規化
+bool CanonicalPathName_generic(const char *path, Human68kPathName *hpn) {
+  char *buf = realpath(path, NULL);
+  if (buf == NULL) return false;
+
+  bool result = canonical_pathname(buf, hpn);
+  free(buf);
+  return result;
+}
 
 static FILE *fileno_to_fp(int fileno) {
   if (fileno == HUMAN68K_STDIN) return stdin;
@@ -72,26 +156,6 @@ Long DosChdir_generic(Long name) {
   return DOSE_ILGFNC;
 }
 
-// UTF-8文字列からShift_JIS文字列への変換
-static size_t utf8_to_sjis(char *inbuf, char *outbuf, size_t outbuf_size) {
-  iconv_t icd = iconv_open("Shift_JIS", "UTF-8");
-  size_t inbytes = strlen(inbuf);
-  size_t outbytes = outbuf_size - 1;
-  size_t result = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
-  iconv_close(icd);
-  *outbuf = '\0';
-  return result;
-}
-
-// Shift_JIS文字列中のスラッシュをバックスラッシュに書き換える
-static void to_backslash(char *buf) {
-  for (; *buf; buf += 1) {
-    if (*buf == '/') {
-      *buf = '\\';
-    }
-  }
-}
-
 // DOS _CURDIR (0xff47)
 Long DosCurdir_generic(short drv, char *buf_ptr) {
   char buf[PATH_MAX];
@@ -101,8 +165,8 @@ Long DosCurdir_generic(short drv, char *buf_ptr) {
     // getdcwd()が失敗する理由は考慮しなくてよい。
     return DOSE_ILGDRV;
   }
-  if (utf8_to_sjis(buf + ROOT_SLASH_LEN, buf_ptr, HUMAN68K_PATH_MAX) ==
-      (size_t)-1) {
+  if (!HOST_CONVERT_TO_SJIS(buf + ROOT_SLASH_LEN, buf_ptr,
+                            (HUMAN68K_DIR_MAX - 1) + 1)) {
     return DOSE_ILGDRV;
   }
   to_backslash(buf_ptr);

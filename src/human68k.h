@@ -18,6 +18,8 @@
 #ifndef HUMAN68K_H
 #define HUMAN68K_H
 
+#include <stddef.h>
+
 // ワークエリア
 #define OSWORK_TOP 0x1c00
 #define OSWORK_MEMORY_END 0x1c00
@@ -63,8 +65,7 @@ enum {
 #define PSP_PARENT_SR 0x44
 #define PSP_PARENT_SSP 0x46
 #define PSP_SHELL_FLAG 0x60
-#define PSP_EXEFILE_DRIVE 0x80
-#define PSP_EXEFILE_PATH 0x82
+#define PSP_EXEFILE_PATH 0x80
 #define PSP_EXEFILE_NAME 0xc4
 #define SIZEOF_PSP 256  // メモリブロックを含む
 
@@ -80,6 +81,21 @@ enum {
 // パス名関係の定数
 #define DRV_CLN_LEN 2     // "A:"
 #define DRV_CLN_BS_LEN 3  // "A:\\"
-#define HUMAN68K_PATH_MAX 65
+
+#define HUMAN68K_DIR_MAX 64  // 先頭の"\\"を含む
+#define HUMAN68K_NAME_MAX 18
+#define HUMAN68K_EXT_MAX 4  // "."を含む
+
+#define HUMAN68K_DRV_DIR_MAX (DRV_CLN_LEN + HUMAN68K_DIR_MAX)
+#define HUMAN68K_FILENAME_MAX (HUMAN68K_NAME_MAX + HUMAN68K_EXT_MAX)
+#define HUMAN68K_PATH_MAX (HUMAN68K_DRV_DIR_MAX + HUMAN68K_FILENAME_MAX)
+
+// パス名正規化バッファ
+//   Human68kで使われているものではなく、run68用に定義したもの
+typedef struct {
+  char path[HUMAN68K_DRV_DIR_MAX + 1];
+  char name[HUMAN68K_FILENAME_MAX + 1];
+  size_t nameLen, extLen;
+} Human68kPathName;
 
 #endif

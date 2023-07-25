@@ -387,21 +387,7 @@ static void init_all_fileinfo(void) {
   }
 }
 
-// Human68kのPSPを作成する
-static void build_human_psp(ULong adr, ULong end) {
-  memset(&prog_ptr[adr], 0, SIZEOF_PSP);
-  build_memory_block(adr, 0, 0, end, 0);
-  WriteSuperULong(OSWORK_ROOT_PSP, adr);
-
-  WriteSuperULong(adr + PSP_ENV_PTR, -1);
-  WriteSuperULong(adr + PSP_PARENT_SR, 0x2000);
-  WriteSuperULong(adr + PSP_PARENT_SSP, 0x00006800);
-  // trap #10～14のベクタ保存は省略
-  strcpy(&prog_ptr[adr + PSP_EXEFILE_PATH], "A:\\");  // ドライブ名の変更は省略
-  strcpy(&prog_ptr[adr + PSP_EXEFILE_NAME], "HUMAN.SYS");
-}
-
-static ULong malloc_for_child(void) {
+static ULong malloc_for_child(ULong expected) {
   ULong parent = ReadSuperULong(OSWORK_ROOT_PSP);
   ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & 0x00ffffff;
   if (size < 256 * 1024) {
@@ -409,25 +395,45 @@ static ULong malloc_for_child(void) {
   }
 
   ULong adr = Malloc(MALLOC_FROM_LOWER, size, parent) - SIZEOF_MEMBLK;
-  return (adr == PROG_PSP) ? adr : 0;
+  return (adr == expected) ? adr : 0;
+}
+
+static ULong init_env(ULong envbuf) {
+  mem_set(envbuf, ENV_SIZE, S_LONG);
+  mem_set(envbuf + 4, 0, S_BYTE);
+  readenv_from_ini(ini_file_name);
+
+  return envbuf;
+}
+
+// コマンドライン文字列作成
+static void make_commandline(int argc, char *argv[], int argbase, ULong adr) {
+  char *arg_ptr = prog_ptr + adr;
+  int arg_len = 0;
+  int i;
+
+  for (i = argbase + 1; i < argc; i++) {
+    if (i > 2) {
+      arg_len++;
+      *(arg_ptr + arg_len) = ' ';
+    }
+    strcpy(arg_ptr + arg_len + 1, argv[i]);
+    arg_len += strlen(argv[i]);
+  }
+
+  if (arg_len > 255) arg_len = 255;
+  *arg_ptr = arg_len;
+  *(arg_ptr + arg_len + 1) = 0x00;
 }
 
 int main(int argc, char *argv[], char *envp[]) {
-  char fname[89];  /* 実行ファイル名 */
-  FILE *fp;        /* 実行ファイルのファイルポインタ */
-  char *arg_ptr;   /* コマンドライン文字列格納領域 */
-  Long prog_size;  /* プログラムサイズ(bss含む) */
-  Long prog_size2; /* プログラムサイズ(bss除く) */
-  int arg_len = 0; /* コマンドラインの長さ */
+  char fname[89]; /* 実行ファイル名 */
+  FILE *fp;       /* 実行ファイルのファイルポインタ */
   int i, j;
-  int argbase = 0; /* アプリケーションコマンドラインの開始位置 */
-  int ret;
   bool restart;
 
   debug_flag = false;
 Restart:
-  arg_len = 0;
-  argbase = 0;
   /* コマンドライン解析 */
   for (i = 1; i < argc; i++) {
     /* フラグを調べる。 */
@@ -484,7 +490,8 @@ Restart:
       break;
     }
   }
-  argbase = i; /* argbase以前の引数はすべてオプションである。*/
+
+  int argbase = i;  // アプリケーションコマンドラインの開始位置
   if (argc - argbase == 0) {
     print_title();
     print_usage();
@@ -503,21 +510,28 @@ Restart:
   }
   memset(&prog_ptr[OSWORK_TOP], 0, SIZEOF_OSWORK);
   WriteSuperULong(OSWORK_MEMORY_END, mem_aloc);
-  build_human_psp(HUMAN_HEAD, PROG_PSP);
 
-  /* A0,A2,A3レジスタに値を設定 */
-  ra[0] = PROG_PSP;  /* メモリ管理ブロックのアドレス */
-  ra[2] = STACK_TOP; /* コマンドラインのアドレス */
-  ra[3] = ENV_TOP;   /* 環境のアドレス */
+  trap_table_make();
 
-  /* 環境の設定 */
-  mem_set(ra[3], ENV_SIZE, S_LONG);
-  mem_set(ra[3] + 4, 0, S_BYTE);
-  /* 環境変数はiniファイルに記述する。(getini.c参照) */
-  readenv_from_ini(ini_file_name);
+  // Human68kのPSPを作成
+  const ULong HumanPsp = HUMAN_HEAD;
+  const ULong HumanCodeSize = PROG_PSP - (HumanPsp + SIZEOF_PSP);
+  BuildMemoryBlock(HumanPsp, 0, 0, PROG_PSP, 0);
+  const ProgramSpec humanSpec = {HumanCodeSize, 0};
+  const Human68kPathName humanName = {"A:\\", "HUMAN.SYS", 0, 0};
+  BuildPsp(HumanPsp, -1, 0, 0x2000, HumanPsp, &humanSpec, &humanName);
+  WriteSuperULong(OSWORK_ROOT_PSP, HumanPsp);
+  nest_cnt = 0;
 
-  ra[0] = malloc_for_child();
-  if (ra[0] == 0) {
+  // 環境変数を初期化
+  const ULong envbuf = init_env(ENV_TOP);
+
+  // コマンドライン文字列を作成
+  const ULong cmdline = STACK_TOP;
+  make_commandline(argc, argv, argbase, cmdline);
+
+  const ULong programPsp = malloc_for_child(PROG_PSP);
+  if (programPsp == 0) {
     fprintf(stderr, "実行ファイルのロード用メモリを確保できません\n");
     return EXIT_FAILURE;
   }
@@ -537,56 +551,42 @@ Restart:
     return EXIT_FAILURE;
   }
 
+  Human68kPathName hpn;
+  if (!HOST_CANONICAL_PATHNAME(fname, &hpn)) {
+    fprintf(stderr, "Human68k形式のパス名に変換できません: %s\n", fname);
+    return EXIT_FAILURE;
+  }
+
   /* プログラムをメモリに読み込む */
-  prog_size2 = mem_aloc;
-  pc = prog_read(fp, fname, PROG_PSP + SIZEOF_PSP, &prog_size, &prog_size2,
-                 true);
-  if (pc < 0) {
-    free((void *)prog_ptr);
+  Long prog_size = 0;          // プログラムサイズ(bss含む)
+  Long prog_size2 = mem_aloc;  // プログラムサイズ(bss除く)
+  const Long entryAddress = prog_read(fp, fname, programPsp + SIZEOF_PSP,
+                                      &prog_size, &prog_size2, true);
+  if (entryAddress < 0) {
+    free(prog_ptr);
     return EXIT_FAILURE;
   }
 
-  /* A1,A4レジスタに値を設定 */
-  ra[1] = PROG_PSP + SIZEOF_PSP + prog_size;  // プログラムの終わり+1のアドレス
-  ra[4] = pc;                                 // 実行開始アドレス
-  nest_cnt = 0;
-
-  /* コマンドライン文字列設定 */
-  arg_ptr = prog_ptr + ra[2];
-  for (i = argbase + 1; i < argc; i++) {
-    if (i > 2) {
-      arg_len++;
-      *(arg_ptr + arg_len) = ' ';
-    }
-    strcpy(arg_ptr + arg_len + 1, argv[i]);
-    arg_len += strlen(argv[i]);
-  }
-  if (arg_len > 255) arg_len = 255;
-  *arg_ptr = arg_len;
-  *(arg_ptr + arg_len + 1) = 0x00;
-#ifdef TRACE
-  if (arg_len > 0) printf("command line: %s\n", arg_ptr + 1);
-#endif
-
-  /* プロセス管理ブロック設定 */
-  if (!make_psp(fname, HUMAN_HEAD, mem_aloc, HUMAN_HEAD, prog_size2)) {
-    free((void *)prog_ptr);
-    fprintf(stderr, "実行ファイル名が長すぎます\n");
-    return EXIT_FAILURE;
-  }
+  const ProgramSpec progSpec = {prog_size2, prog_size - prog_size2};
+  BuildPsp(programPsp, envbuf, cmdline, sr, HumanPsp, &progSpec, &hpn);
 
   init_all_fileinfo();
 
-  trap_table_make();
+  /* レジスタに値を設定 */
+  pc = entryAddress;
+  ra[0] = programPsp;
+  ra[1] =
+      programPsp + SIZEOF_PSP + prog_size;  // プログラムの終わり+1のアドレス
+  ra[2] = cmdline;  // コマンドラインのアドレス
+  ra[3] = envbuf;   // 環境のアドレス
+  ra[4] = pc;       // 実行開始アドレス
+  ra[7] = STACK_TOP + STACK_SIZE;
 
   /* 実行 */
-  ra[7] = STACK_TOP + STACK_SIZE;
+  psp[nest_cnt] = programPsp;
   superjsr_ret = 0;
   usp = 0;
-  if (ini_info.trap_emulate)
-    ret = exec_trap(&restart);
-  else
-    ret = exec_notrap(&restart);
+  int ret = ini_info.trap_emulate ? exec_trap(&restart) : exec_notrap(&restart);
 
   /* 終了 */
   if (trace_f || func_trace_f) {

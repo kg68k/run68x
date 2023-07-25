@@ -1324,7 +1324,7 @@ static Long Create(char *p, short atr) {
   char buf[89];
   p = to_slash(sizeof(buf), buf, p);
   if (p == NULL) return DOSE_ILGFNAME;
-  // printf("Create(\"%s\", 0x%02x)\n", p, atr);
+    // printf("Create(\"%s\", 0x%02x)\n", p, atr);
 #endif
 
   Long ret = find_free_file();
@@ -1373,7 +1373,7 @@ static Long Newfile(char *p, short atr) {
   char buf[89];
   p = to_slash(sizeof(buf), buf, p);
   if (p == NULL) return DOSE_ILGFNAME;
-  // printf("Newfile(\"%s\", 0x%02x)\n", p, atr);
+    // printf("Newfile(\"%s\", 0x%02x)\n", p, atr);
 #endif
 
   Long ret = find_free_file();
@@ -1436,7 +1436,7 @@ static Long Open(char *p, short mode) {
   char buf[89];
   p = to_slash(sizeof(buf), buf, p);
   if (p == NULL) return DOSE_ILGFNAME;
-  // printf("Open(\"%s\", 0x%02x)\n", p, mode);
+    // printf("Open(\"%s\", 0x%02x)\n", p, mode);
 #endif
 
   switch (mode) {
@@ -2730,66 +2730,62 @@ static Long Getfcb(short fhdl) {
 static Long Exec01(Long nm, Long cmd, Long env, int md) {
   FILE *fp;
   char fname[89];
-  char *name_ptr;
-  int loadmode;
-  Long prev_adr;
-  Long end_adr;
-  Long pc1;
-  Long prog_size;
-  Long prog_size2;
 
-  loadmode = ((nm >> 24) & 0x03);
-  nm &= 0xFFFFFF;
-  name_ptr = prog_ptr + nm;
-  if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
+  int loadmode = ((nm >> 24) & 0x03);
+  nm &= 0x00ffffff;
+  char *name_ptr = prog_ptr + nm;
+  if (strlen(name_ptr) > 88) return DOSE_ILGFNAME;  // ファイル名指定誤り
 
   strcpy(fname, name_ptr);
   if ((fp = prog_open(fname, false)) == NULL) return (-2);
 
+  Human68kPathName hpn;
+  if (!HOST_CANONICAL_PATHNAME(fname, &hpn)) return DOSE_ILGFNAME;
+
   if (nest_cnt + 1 >= NEST_MAX) return (-8);
 
   // 最大メモリを確保する
-  Long parent = psp[nest_cnt];
-  ULong size = Malloc(MALLOC_FROM_LOWER, 0x00ffffff, parent) & 0x00ffffff;
-  Long mem = Malloc(MALLOC_FROM_LOWER, size, parent);
-  if (mem < 0) {
+  ULong parentPsp = psp[nest_cnt];
+  ULong size = Malloc(MALLOC_FROM_LOWER, 0x00ffffff, parentPsp) & 0x00ffffff;
+  Long childMemory = Malloc(MALLOC_FROM_LOWER, size, parentPsp);
+  if (childMemory < 0) {
     fclose(fp);
     return -8;  // メモリが確保できない
   }
+  Long childPsp = childMemory - SIZEOF_MEMBLK;
 
-  prev_adr = mem_get(mem - 0x10, S_LONG);
-  end_adr = mem_get(mem - 0x08, S_LONG);
-  memset(prog_ptr + mem, 0, size);
-
-  prog_size2 = ((loadmode << 24) | end_adr);
-  pc1 = prog_read(fp, fname, mem - SIZEOF_MEMBLK + SIZEOF_PSP, &prog_size,
-                  &prog_size2, false);
-  if (pc1 < 0) {
-    Mfree(mem);
-    return (pc1);
+  Long end_adr = mem_get(childPsp + MEMBLK_END, S_LONG);
+  Long prog_size = 0;
+  Long prog_size2 = ((loadmode << 24) | end_adr);
+  const Long entryAddress = prog_read(fp, fname, childPsp + SIZEOF_PSP,
+                                      &prog_size, &prog_size2, false);
+  if (entryAddress < 0) {
+    Mfree(childMemory);
+    return entryAddress;
   }
+
+  ULong envptr =
+      (env == 0) ? mem_get(psp[nest_cnt] + PSP_ENV_PTR, S_LONG) : env;
+
+  const ProgramSpec progSpec = {prog_size2, prog_size - prog_size2};
+  BuildPsp(childPsp, envptr, cmd, sr, parentPsp, &progSpec, &hpn);
 
   nest_pc[nest_cnt] = pc;
   nest_sp[nest_cnt] = ra[7];
-  ra[0] = mem - SIZEOF_MEMBLK;
-  ra[1] = mem - SIZEOF_MEMBLK + SIZEOF_PSP + prog_size;
+  ra[0] = childPsp;
+  ra[1] = childPsp + SIZEOF_PSP + prog_size;
   ra[2] = cmd;
-  ra[3] = (env == 0) ? mem_get(psp[nest_cnt] + PSP_ENV_PTR, S_LONG) : env;
-  ra[4] = pc1;
+  ra[3] = envptr;
+  ra[4] = entryAddress;
   nest_cnt++;
-  if (!make_psp(fname, prev_adr, end_adr, psp[nest_cnt - 1], prog_size2)) {
-    nest_cnt--;
-    Mfree(mem);
-    return (-13);
-  }
+  psp[nest_cnt] = childPsp;
 
   if (md == 0) {
     pc = ra[4];
-    return (rd[0]);
-  } else {
-    nest_cnt--;
-    return (ra[4]);
+    return rd[0];
   }
+  nest_cnt--;
+  return ra[4];
 }
 
 /*
