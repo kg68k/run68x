@@ -426,7 +426,7 @@ static void make_commandline(int argc, char *argv[], int argbase, ULong adr) {
   *(arg_ptr + arg_len + 1) = 0x00;
 }
 
-int main(int argc, char *argv[], char *envp[]) {
+int main(int argc, char *argv[]) {
   char fname[89]; /* 実行ファイル名 */
   FILE *fp;       /* 実行ファイルのファイルポインタ */
   int i, j;

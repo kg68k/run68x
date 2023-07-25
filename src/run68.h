@@ -233,7 +233,6 @@ typedef struct {
 
 FILE *prog_open(char *, bool);
 Long prog_read(FILE *, char *, Long, Long *, Long *, bool);
-bool make_psp(char *, Long, Long, Long, Long);
 void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
               ULong parentSsp, const ProgramSpec *progSpec,
               const Human68kPathName *pathname);
