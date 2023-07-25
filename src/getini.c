@@ -167,11 +167,10 @@ void read_ini(char *path, char *prog) {
 }
 
 /* run68.iniファイルから環境変数の初期値を取得する。*/
-void readenv_from_ini(char *path) {
+void readenv_from_ini(char *path, ULong envbuf) {
   char buf[1024];
   FILE *fp;
   int len;
-  char *mem_ptr; /* メモリ管理ブロック */
   char *read_ptr;
   int env_len = 0; /* 環境の長さ */
 
@@ -182,10 +181,6 @@ void readenv_from_ini(char *path) {
   buf[len - 2] = 'n';
   buf[len - 1] = 'i';
   if ((fp = fopen(buf, "r")) == NULL) return;
-
-  /* 環境変数はiniファイルに記述する。*/
-  mem_set(ra[3], ENV_SIZE, S_LONG);
-  mem_set(ra[3] + 4, 0, S_BYTE);
 
   /* 内容を調べる */
   bool env_flag = false;  // ファイル先頭は [all] セクション
@@ -206,7 +201,7 @@ void readenv_from_ini(char *path) {
       /* 環境変数はiniファイルに記述する。*/
       /* bufに格納された文字列の書式を確認すべきである。*/
       if (env_len + strlen(buf) < ENV_SIZE - 5) {
-        mem_ptr = prog_ptr + ra[3] + 4 + env_len;
+        char *mem_ptr = prog_ptr + envbuf + 4 + env_len;
         strcpy(mem_ptr, buf);
         if (ini_info.env_lower) {
           _strlwr(buf);
@@ -222,6 +217,6 @@ void readenv_from_ini(char *path) {
       }
     }
   }
-  mem_set(ra[3] + 4 + env_len, 0, S_BYTE);
+  *(UByte*)(prog_ptr + envbuf + 4 + env_len) = 0;
   fclose(fp);
 }

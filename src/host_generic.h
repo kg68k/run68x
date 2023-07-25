@@ -26,6 +26,12 @@
 bool CanonicalPathName_generic(const char* path, Human68kPathName* hpn);
 #define HOST_CANONICAL_PATHNAME CanonicalPathName_generic
 
+void AddLastSeparator_generic(char* path);
+#define HOST_ADD_LAST_SEPARATOR AddLastSeparator_generic
+
+bool PathIsFileSpec_generic(const char* path);
+#define HOST_PATH_IS_FILE_SPEC PathIsFileSpec_generic
+
 void InitFileInfo_generic(FILEINFO* finfop, int fileno);
 #define HOST_INIT_FILEINFO InitFileInfo_generic
 

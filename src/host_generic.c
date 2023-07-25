@@ -113,6 +113,19 @@ bool CanonicalPathName_generic(const char *path, Human68kPathName *hpn) {
   return result;
 }
 
+// パス名の末尾にパスデリミタを追加する
+void AddLastSeparator_generic(char *path) {
+  size_t len = strlen(path);
+  if (len == 0 || path[len - 1] != '/') strcpy(path + len, "/");
+}
+
+// 文字列にパス区切り文字が含まれないか(ファイル名だけか)を調べる
+//   true -> ファイル名のみ
+//   false -> "/" が含まれる
+bool PathIsFileSpec_generic(const char *path) {
+  return strchr(path, '/') == NULL;
+}
+
 static FILE *fileno_to_fp(int fileno) {
   if (fileno == HUMAN68K_STDIN) return stdin;
   if (fileno == HUMAN68K_STDOUT) return stdout;

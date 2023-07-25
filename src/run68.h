@@ -223,7 +223,7 @@ extern UWord cwatchpoint;  // 命令ウォッチ
 
 /* getini.c */
 void read_ini(char *path, char *prog);
-void readenv_from_ini(char *path);
+void readenv_from_ini(char *path, ULong envbuf);
 
 /* load.c */
 typedef struct {

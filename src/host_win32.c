@@ -16,6 +16,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
 #include <direct.h>
+#include <shlwapi.h>
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
@@ -57,6 +58,17 @@ bool CanonicalPathName_win32(const char* path, Human68kPathName* hpn) {
   hpn->extLen = extLen;
   return true;
 }
+
+// パス名の末尾にパスデリミタを追加する
+void AddLastSeparator_win32(char* path) { PathAddBackslashA(path); }
+
+// 文字列にパス区切り文字が含まれないか(ファイル名だけか)を調べる
+//   true -> ファイル名のみ
+//   false -> ":" や "\" が含まれる
+bool PathIsFileSpec_win32(const char* path) {
+  return PathIsFileSpecA(path) != FALSE;
+}
+
 static HANDLE fileno_to_handle(int fileno) {
   if (fileno == HUMAN68K_STDIN) return GetStdHandle(STD_INPUT_HANDLE);
   if (fileno == HUMAN68K_STDOUT) return GetStdHandle(STD_OUTPUT_HANDLE);

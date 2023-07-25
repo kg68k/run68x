@@ -25,6 +25,8 @@
 #include <unistd.h>
 #endif
 
+#include "host_generic.h"
+#include "host_win32.h"
 #include "human68k.h"
 #include "mem.h"
 #include "run68.h"
@@ -51,13 +53,15 @@ static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
       /* 2バイトコードのスキップ */
       ;
     }
-    if (i >= bufSize) {
+    if (i >= (bufSize - 1)) {  // パスデリミタを追加する分を差し引いておく
       *path_p += i + ((*path_p)[0] == '\0') ? 0 : 1;
       continue;
     }
 
     strncpy(buf, *path_p, i);
     buf[i] = '\0';
+    HOST_ADD_LAST_SEPARATOR(buf);
+
     *path_p = (*path_p)[i] ? &((*path_p)[i]) : &((*path_p)[i + 1]);
     return buf;
   }
@@ -81,15 +85,9 @@ FILE *prog_open(char *fname, bool print_error) {
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
   char *p;
-#ifdef _WIN32
-  char sep_chr = '\\';
-  char sep_str[] = "\\";
-#else
-  char sep_chr = '/';
-  char sep_str[] = "/";
-#endif
 
-  if (strchr(fname, sep_chr) != NULL || strchr(fname, ':') != NULL) {
+  if (!HOST_PATH_IS_FILE_SPEC(fname)) {
+    // パス区切り文字が含まれる場合は拡張子補完のみ行い、パス検索は行わない
     strcpy(fullname, fname);
     if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
     // ここから追加(by Yokko氏)
@@ -104,7 +102,8 @@ FILE *prog_open(char *fname, bool print_error) {
   if (exp != NULL && !_stricmp(exp, ".x") && !_stricmp(exp, ".r"))
     goto ErrorRet; /* 拡張子が違う */
 #ifdef _WIN32
-  GetCurrentDirectory(sizeof(cwd), cwd);
+  GetCurrentDirectory(sizeof(cwd) - 1, cwd);
+  HOST_ADD_LAST_SEPARATOR(cwd);
 #else
   if (getcwd(cwd, sizeof(cwd)) == NULL) {
     fprintf(stderr, "カレントディレクトリのパス名が長すぎます\n");
@@ -131,17 +130,14 @@ FILE *prog_open(char *fname, bool print_error) {
 
     if (exp != NULL) {
       strcpy(fullname, dir);
-      if (dir[strlen(dir) - 1] != sep_chr) strcat(fullname, sep_str);
       strcat(fullname, fname);
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
     } else {
       strcpy(fullname, dir);
-      if (fullname[strlen(fullname) - 1] != sep_chr) strcat(fullname, sep_str);
       strcat(fullname, fname);
       strcat(fullname, ".r");
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
       strcpy(fullname, dir);
-      if (fullname[strlen(fullname) - 1] != sep_chr) strcat(fullname, sep_str);
       strcat(fullname, fname);
       strcat(fullname, ".x");
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;

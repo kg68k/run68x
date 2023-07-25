@@ -398,10 +398,10 @@ static ULong malloc_for_child(ULong expected) {
   return (adr == expected) ? adr : 0;
 }
 
-static ULong init_env(ULong envbuf) {
-  mem_set(envbuf, ENV_SIZE, S_LONG);
-  mem_set(envbuf + 4, 0, S_BYTE);
-  readenv_from_ini(ini_file_name);
+static ULong init_env(ULong envbuf, ULong size) {
+  WriteSuperULong(envbuf, size);
+  WriteSuperUByte(envbuf + 4, 0);
+  readenv_from_ini(ini_file_name, envbuf);
 
   return envbuf;
 }
@@ -524,7 +524,7 @@ Restart:
   nest_cnt = 0;
 
   // 環境変数を初期化
-  const ULong envbuf = init_env(ENV_TOP);
+  const ULong envbuf = init_env(ENV_TOP, ENV_SIZE);
 
   // コマンドライン文字列を作成
   const ULong cmdline = STACK_TOP;

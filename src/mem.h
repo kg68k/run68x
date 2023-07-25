@@ -58,6 +58,17 @@ static inline ULong ReadSuperULong(ULong adr) {
   return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
 }
 
+// スーパーバイザモードで1バイトのメモリを書く
+static inline void WriteSuperUByte(ULong adr, UByte n) {
+  adr &= ADDRESS_MASK;
+  if ((mem_aloc - 1) < adr) {
+    if (!mem_wrt_chk(adr)) return;
+  }
+
+  UByte* p = (UByte*)prog_ptr + adr;
+  p[0] = n;
+}
+
 // スーパーバイザモードで1ワードのメモリを書く
 static inline void WriteSuperUWord(ULong adr, UWord n) {
   adr &= ADDRESS_MASK;

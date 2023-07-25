@@ -59,6 +59,9 @@ target_compile_features(${PROJECT_NAME} PRIVATE c_std_11)
 
 if(MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE /source-charset:utf-8 /J)
+
+  # PathAddBackslashA()
+  target_link_libraries(${PROJECT_NAME} PRIVATE shlwapi)
 else()
   target_compile_options(${PROJECT_NAME} PRIVATE -funsigned-char -O3 -Wall -Wextra -Werror -Wno-unused-parameter)
 
