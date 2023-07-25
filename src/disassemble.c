@@ -44,7 +44,7 @@ static void fill_space(char *str, unsigned int n) {
 */
 static bool effective_address(Long addr, short mode, short reg, char size,
                               char *str, Long *next_addr) {
-  short disp, ext;
+  short ext;
   ULong imm;
 
   switch (mode) {
@@ -376,7 +376,6 @@ ErrorReturn:
 }
 
 static char *disa4(Long addr, UWord code, Long *next_addr, char *mnemonic) {
-  signed short disp;
   char reg[10], *p, size;
   bool b;
   short stat, dstat;

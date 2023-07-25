@@ -53,8 +53,9 @@ static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
       /* 2バイトコードのスキップ */
       ;
     }
+    size_t skip = i + (((*path_p)[i] == '\0') ? 0 : 1);
     if (i >= (bufSize - 1)) {  // パスデリミタを追加する分を差し引いておく
-      *path_p += i + ((*path_p)[0] == '\0') ? 0 : 1;
+      *path_p += skip;
       continue;
     }
 
@@ -62,7 +63,7 @@ static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
     buf[i] = '\0';
     HOST_ADD_LAST_SEPARATOR(buf);
 
-    *path_p = (*path_p)[i] ? &((*path_p)[i]) : &((*path_p)[i + 1]);
+    *path_p += skip;
     return buf;
   }
   return NULL;
@@ -103,13 +104,13 @@ FILE *prog_open(char *fname, bool print_error, ULong envptr) {
     goto ErrorRet; /* 拡張子が違う */
 #ifdef _WIN32
   GetCurrentDirectory(sizeof(cwd) - 1, cwd);
-  HOST_ADD_LAST_SEPARATOR(cwd);
 #else
-  if (getcwd(cwd, sizeof(cwd)) == NULL) {
+  if (getcwd(cwd, sizeof(cwd) - 1) == NULL) {
     fprintf(stderr, "カレントディレクトリのパス名が長すぎます\n");
     return NULL;
   }
 #endif
+  HOST_ADD_LAST_SEPARATOR(cwd);
   /* PATH環境変数を取得する */
   char env_p[4096];
 #ifdef _WIN32
