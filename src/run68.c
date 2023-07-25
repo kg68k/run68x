@@ -385,15 +385,15 @@ static void init_all_fileinfo(void) {
   }
 }
 
-static ULong malloc_for_child(ULong expected) {
+static ULong malloc_for_child(void) {
   ULong parent = ReadSuperULong(OSWORK_ROOT_PSP);
   ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & 0x00ffffff;
   if (size < 256 * 1024) {
     return 0;
   }
 
-  ULong adr = Malloc(MALLOC_FROM_LOWER, size, parent) - SIZEOF_MEMBLK;
-  return (adr == expected) ? adr : 0;
+  Long adr = Malloc(MALLOC_FROM_LOWER, size, parent);
+  return (adr < 0) ? 0 : adr - SIZEOF_MEMBLK;
 }
 
 static ULong init_env(ULong envbuf, ULong size) {
@@ -405,7 +405,9 @@ static ULong init_env(ULong envbuf, ULong size) {
 }
 
 // コマンドライン文字列作成
-static void make_commandline(int argc, char *argv[], int argbase, ULong adr) {
+static ULong make_commandline(int argc, char *argv[], int argbase, ULong humanPsp) {
+  ULong adr = Malloc(MALLOC_FROM_LOWER, 256, humanPsp);
+
   char *arg_ptr = prog_ptr + adr;
   int arg_len = 0;
   int i;
@@ -422,6 +424,8 @@ static void make_commandline(int argc, char *argv[], int argbase, ULong adr) {
   if (arg_len > 255) arg_len = 255;
   *arg_ptr = arg_len;
   *(arg_ptr + arg_len + 1) = 0x00;
+
+  return adr;
 }
 
 int main(int argc, char *argv[]) {
@@ -512,23 +516,22 @@ Restart:
   trap_table_make();
 
   // Human68kのPSPを作成
-  const ULong HumanPsp = HUMAN_HEAD;
-  const ULong HumanCodeSize = PROG_PSP - (HumanPsp + SIZEOF_PSP);
-  BuildMemoryBlock(HumanPsp, 0, 0, PROG_PSP, 0);
-  const ProgramSpec humanSpec = {HumanCodeSize, 0};
+  const ULong humanPsp = HUMAN_HEAD;
+  const ULong humanCodeSize = PROG_PSP - (humanPsp + SIZEOF_PSP);
+  BuildMemoryBlock(humanPsp, 0, 0, PROG_PSP, 0);
+  const ProgramSpec humanSpec = {humanCodeSize, 0};
   const Human68kPathName humanName = {"A:\\", "HUMAN.SYS", 0, 0};
-  BuildPsp(HumanPsp, -1, 0, 0x2000, HumanPsp, &humanSpec, &humanName);
-  WriteSuperULong(OSWORK_ROOT_PSP, HumanPsp);
+  BuildPsp(humanPsp, -1, 0, 0x2000, humanPsp, &humanSpec, &humanName);
+  WriteSuperULong(OSWORK_ROOT_PSP, humanPsp);
   nest_cnt = 0;
 
   // 環境変数を初期化
-  const ULong envbuf = init_env(ENV_TOP, ENV_SIZE);
+  const ULong humanEnv = init_env(ENV_TOP, ENV_SIZE);
 
   // コマンドライン文字列を作成
-  const ULong cmdline = STACK_TOP;
-  make_commandline(argc, argv, argbase, cmdline);
+  const ULong cmdline = make_commandline(argc, argv, argbase, humanPsp);
 
-  const ULong programPsp = malloc_for_child(PROG_PSP);
+  const ULong programPsp = malloc_for_child();
   if (programPsp == 0) {
     fprintf(stderr, "実行ファイルのロード用メモリを確保できません\n");
     return EXIT_FAILURE;
@@ -544,7 +547,7 @@ Restart:
    * プログラムをPATH環境変数で設定したディレクトリから探して
    * 読み込みを行う。
    */
-  if ((fp = prog_open(fname, true)) == NULL) {
+  if ((fp = prog_open(fname, true, humanEnv)) == NULL) {
     fprintf(stderr, "run68:Program '%s' was not found.\n", argv[argbase]);
     return EXIT_FAILURE;
   }
@@ -566,7 +569,7 @@ Restart:
   }
 
   const ProgramSpec progSpec = {prog_size2, prog_size - prog_size2};
-  BuildPsp(programPsp, envbuf, cmdline, sr, HumanPsp, &progSpec, &hpn);
+  BuildPsp(programPsp, humanEnv, cmdline, sr, humanPsp, &progSpec, &hpn);
 
   init_all_fileinfo();
 
@@ -576,7 +579,7 @@ Restart:
   ra[1] =
       programPsp + SIZEOF_PSP + prog_size;  // プログラムの終わり+1のアドレス
   ra[2] = cmdline;  // コマンドラインのアドレス
-  ra[3] = envbuf;   // 環境のアドレス
+  ra[3] = humanEnv;   // 環境のアドレス
   ra[4] = pc;       // 実行開始アドレス
   ra[7] = STACK_TOP + STACK_SIZE;
 

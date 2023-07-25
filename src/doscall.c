@@ -1011,7 +1011,8 @@ bool dos_call(UByte code) {
         printf("%-10s\n", "GETPDB");
       }
       break;
-    case 0x53: /* GETENV */
+    case 0x53:  // GETENV
+    case 0x83:  // GETENV (Human68k v3)
       data = mem_get(stack_adr, S_LONG);
       env = mem_get(stack_adr + 4, S_LONG);
       buf = mem_get(stack_adr + 8, S_LONG);
@@ -1035,16 +1036,16 @@ bool dos_call(UByte code) {
       }
       rd[0] = Rename(data, buf);
       break;
-    case 0x57: /* FILEDATE */
-    case 0x87: /* FILEDATE (Human68k v3) */
+    case 0x57:  // FILEDATE
+    case 0x87:  // FILEDATE (Human68k v3)
       if (func_trace_f) {
         printf("%-10s file_no=%d datetime=%X\n", "FILEDATE",
                mem_get(stack_adr, S_WORD), mem_get(stack_adr + 2, S_LONG));
       }
       rd[0] = DosFiledate(stack_adr);
       break;
-    case 0x58: /* MALLOC2 */
-    case 0x88: /* MALLOC2 (Human68k v3) */
+    case 0x58:  // MALLOC2
+    case 0x88:  // MALLOC2 (Human68k v3)
       if (func_trace_f) {
         printf("%-10s mode=%d, len=%d\n", "MALLOC2", mem_get(stack_adr, S_WORD),
                mem_get(stack_adr + 2, S_LONG));
@@ -2213,22 +2214,18 @@ static Long Settim2(Long tim) {
  戻り値：エラーコード
  */
 static Long Getenv(Long name, Long env, Long buf) {
-  Long ret;
-  if (env != 0) return (-10);
-  ret = Getenv_common(prog_ptr + name, prog_ptr + buf);
-  return ret;
+  return Getenv_common(prog_ptr + name, prog_ptr + buf, env);
 }
 
-Long Getenv_common(const char *name_p, char *buf_p) {
-  char *mem_ptr;
-  /*
-  WIN32の環境変数領域からrun68のエミュレーション領域に複製してある
-  値を検索する仕様にする。
-   */
-  /*
-  環境エリアの先頭(ENV_TOP)から順に環境変数名を検索する。
-   */
-  for (mem_ptr = prog_ptr + ENV_TOP + 4; *mem_ptr != 0; mem_ptr++) {
+Long Getenv_common(const char *name_p, char *buf_p, ULong envptr) {
+  if (envptr == 0) {
+    envptr = ReadSuperULong(psp[nest_cnt] + PSP_ENV_PTR);
+  }
+  if (envptr == (ULong)-1) return DOSE_ILGFNC;
+
+  // 環境エリアの先頭から順に環境変数名を検索する。
+  char *mem_ptr = prog_ptr + envptr + 4;
+  for (; *mem_ptr != 0; mem_ptr++) {
     char ename[256];
     int i;
     /* 環境変数名を取得する。*/
@@ -2236,12 +2233,9 @@ Long Getenv_common(const char *name_p, char *buf_p) {
       ename[i] = *(mem_ptr++);
     }
     ename[i] = '\0';
-    if (_stricmp(name_p, ename) == 0) {
-      /* 環境変数が見つかった。*/
-      while (*mem_ptr == '=' || *mem_ptr == ' ') {
-        mem_ptr++;
-      }
-      strcpy(buf_p, mem_ptr);
+    if (*mem_ptr == '=' && strcmp(name_p, ename) == 0) {
+      // 環境変数が見つかった。
+      strcpy(buf_p, mem_ptr + 1);
       return 0;
     }
     /* 変数名が一致しなかったら、変数の値をスキップする。*/
@@ -2250,7 +2244,7 @@ Long Getenv_common(const char *name_p, char *buf_p) {
   }
   /* 変数が見つからなかったらNULLポインタを返す。*/
   (*buf_p) = 0;
-  return -10;
+  return DOSE_ILGFNC;
 }
 
 /*
@@ -2737,7 +2731,7 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
   if (strlen(name_ptr) > 88) return DOSE_ILGFNAME;  // ファイル名指定誤り
 
   strcpy(fname, name_ptr);
-  if ((fp = prog_open(fname, false)) == NULL) return (-2);
+  if ((fp = prog_open(fname, false, env)) == NULL) return (-2);
 
   Human68kPathName hpn;
   if (!HOST_CANONICAL_PATHNAME(fname, &hpn)) return DOSE_ILGFNAME;
@@ -2811,8 +2805,8 @@ static Long Exec2(Long nm, Long cmd, Long env) {
     strcpy(cmd_ptr + 1, p);
   }
 
-  /* 環境変数PATHに従ってファイルを検索し、オープンする。*/
-  fp = prog_open(name_ptr, true);
+  /* 環境変数pathに従ってファイルを検索し、オープンする。*/
+  fp = prog_open(name_ptr, true, env);
   if (fp == NULL) {
     return 0;
   } else {
@@ -2842,7 +2836,7 @@ static Long Exec3(Long nm, Long adr1, Long adr2) {
   if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
   strcpy(fname, name_ptr);
-  if ((fp = prog_open(fname, false)) == NULL) return (-2);
+  if ((fp = prog_open(fname, false, (ULong)-1)) == NULL) return (-2);
 
   prog_size2 = ((loadmode << 24) | adr2);
   ret = prog_read(fp, fname, adr1, &prog_size, &prog_size2, false);

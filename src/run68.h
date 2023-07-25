@@ -231,7 +231,7 @@ typedef struct {
   ULong bssSize;
 } ProgramSpec;
 
-FILE *prog_open(char *, bool);
+FILE *prog_open(char *, bool, ULong);
 Long prog_read(FILE *, char *, Long, Long *, Long *, bool);
 void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
               ULong parentSsp, const ProgramSpec *progSpec,
@@ -260,7 +260,7 @@ Long sub_long(Long src, Long dest, int size);
 /* doscall.c */
 void close_all_files(void);
 bool dos_call(UByte);
-Long Getenv_common(const char *name_p, char *buf_p);
+Long Getenv_common(const char *name_p, char *buf_p, ULong envptr);
 
 /* iocscall.c */
 bool iocs_call(void);

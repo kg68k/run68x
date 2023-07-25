@@ -80,7 +80,7 @@ static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
     NULL = オープンできない
     !NULL = 実行ファイルのファイルポインタ
 */
-FILE *prog_open(char *fname, bool print_error) {
+FILE *prog_open(char *fname, bool print_error, ULong envptr) {
   char dir[MAX_PATH], fullname[MAX_PATH], cwd[MAX_PATH];
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
@@ -113,7 +113,7 @@ FILE *prog_open(char *fname, bool print_error) {
   /* PATH環境変数を取得する */
   char env_p[4096];
 #ifdef _WIN32
-  Getenv_common("PATH", env_p);
+  Getenv_common("path", env_p, envptr);
   p = env_p;
 #else
   p = getenv("PATH");
