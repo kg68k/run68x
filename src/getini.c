@@ -173,6 +173,7 @@ void readenv_from_ini(char *path, ULong envbuf) {
   int len;
   char *read_ptr;
   int env_len = 0; /* 環境の長さ */
+  const size_t envSize = ReadSuperULong(envbuf);
 
   /* INIファイルの名前(パス含む)を得る */
   strcpy(buf, path);
@@ -200,7 +201,7 @@ void readenv_from_ini(char *path, ULong envbuf) {
     if (env_flag) {
       /* 環境変数はiniファイルに記述する。*/
       /* bufに格納された文字列の書式を確認すべきである。*/
-      if (env_len + strlen(buf) < ENV_SIZE - 5) {
+      if (env_len + strlen(buf) < envSize - 5) {
         char *mem_ptr = prog_ptr + envbuf + 4 + env_len;
         strcpy(mem_ptr, buf);
         if (ini_info.env_lower) {
@@ -217,6 +218,6 @@ void readenv_from_ini(char *path, ULong envbuf) {
       }
     }
   }
-  *(UByte*)(prog_ptr + envbuf + 4 + env_len) = 0;
+  *(UByte *)(prog_ptr + envbuf + 4 + env_len) = 0;
   fclose(fp);
 }

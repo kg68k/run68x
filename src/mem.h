@@ -20,15 +20,17 @@
 
 #include "run68.h"
 
+void SetSupervisorArea(ULong adr);
+
 Long idx_get(void);
 Long imi_get(char size);
-Long mem_get(Long adr, char size);
-void mem_set(Long adr, Long d, char size);
+Long mem_get(ULong adr, char size);
+void mem_set(ULong adr, Long d, char size);
 NORETURN void run68_abort(Long adr);
 
 // インライン関数用
-bool mem_red_chk(Long adr);
-bool mem_wrt_chk(Long adr);
+bool mem_red_chk(ULong adr);
+bool mem_wrt_chk(ULong adr);
 
 // メインメモリから1バイト読み込む(ビッグエンディアン)
 static inline UByte PeekB(ULong adr) { return *(UByte*)(prog_ptr + adr); }

@@ -33,9 +33,6 @@
 #include <windows.h>
 #endif
 
-// TODO: ロードアドレスを動的に割り当てる
-#define PROG_PSP (STACK_TOP + STACK_SIZE)
-
 EXEC_INSTRUCTION_INFO OP_info;
 FILEINFO finfo[FILE_MAX];
 INI_INFO ini_info;
@@ -385,8 +382,7 @@ static void init_all_fileinfo(void) {
   }
 }
 
-static ULong malloc_for_child(void) {
-  ULong parent = ReadSuperULong(OSWORK_ROOT_PSP);
+static ULong malloc_for_child(ULong parent) {
   ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & 0x00ffffff;
   if (size < 256 * 1024) {
     return 0;
@@ -396,16 +392,19 @@ static ULong malloc_for_child(void) {
   return (adr < 0) ? 0 : adr - SIZEOF_MEMBLK;
 }
 
-static ULong init_env(ULong envbuf, ULong size) {
-  WriteSuperULong(envbuf, size);
-  WriteSuperUByte(envbuf + 4, 0);
-  readenv_from_ini(ini_file_name, envbuf);
-
-  return envbuf;
+static ULong init_env(ULong size, ULong parent) {
+  Long buf = Malloc(MALLOC_FROM_LOWER, size, parent);
+  if (buf != 0) {
+    WriteSuperULong(buf, size);
+    WriteSuperUByte(buf + 4, 0);
+    readenv_from_ini(ini_file_name, buf);
+  }
+  return buf;
 }
 
 // コマンドライン文字列作成
-static ULong make_commandline(int argc, char *argv[], int argbase, ULong humanPsp) {
+static ULong make_commandline(int argc, char *argv[], int argbase,
+                              ULong humanPsp) {
   ULong adr = Malloc(MALLOC_FROM_LOWER, 256, humanPsp);
 
   char *arg_ptr = prog_ptr + adr;
@@ -517,23 +516,35 @@ Restart:
 
   // Human68kのPSPを作成
   const ULong humanPsp = HUMAN_HEAD;
-  const ULong humanCodeSize = PROG_PSP - (humanPsp + SIZEOF_PSP);
-  BuildMemoryBlock(humanPsp, 0, 0, PROG_PSP, 0);
+  const ULong humanCodeSize = HUMAN_TAIL - (humanPsp + SIZEOF_PSP);
+  BuildMemoryBlock(humanPsp, 0, 0, HUMAN_TAIL, 0);
   const ProgramSpec humanSpec = {humanCodeSize, 0};
   const Human68kPathName humanName = {"A:\\", "HUMAN.SYS", 0, 0};
   BuildPsp(humanPsp, -1, 0, 0x2000, humanPsp, &humanSpec, &humanName);
   WriteSuperULong(OSWORK_ROOT_PSP, humanPsp);
   nest_cnt = 0;
 
+  // メインメモリの0番地からHuman68kの末尾までをスーパーバイザ領域に設定する。
+  // エリアセットレジスタの仕様上は8KB単位。
+  // Human68kの使用メモリを動的に変更する場合は、メモリブロックの末尾アドレスも
+  // 同期させること。
+  SetSupervisorArea(HUMAN_TAIL);
+
   // 環境変数を初期化
-  const ULong humanEnv = init_env(ENV_TOP, ENV_SIZE);
+  const ULong humanEnv = init_env(DEFAULT_ENV_SIZE, humanPsp);
 
   // コマンドライン文字列を作成
   const ULong cmdline = make_commandline(argc, argv, argbase, humanPsp);
 
-  const ULong programPsp = malloc_for_child();
-  if (programPsp == 0) {
-    fprintf(stderr, "実行ファイルのロード用メモリを確保できません\n");
+  // スタックを確保
+  const ULong programStack =
+      Malloc(MALLOC_FROM_LOWER, DEFAULT_STACK_SIZE, humanPsp);
+  const ULong stackBottom = programStack + DEFAULT_STACK_SIZE;
+
+  const ULong programPsp = malloc_for_child(humanPsp);
+
+  if (humanEnv == 0 || cmdline == 0 || programStack == 0 || programPsp == 0) {
+    fprintf(stderr, "メインメモリからプロセス用のメモリを確保できません\n");
     return EXIT_FAILURE;
   }
 
@@ -578,10 +589,10 @@ Restart:
   ra[0] = programPsp;
   ra[1] =
       programPsp + SIZEOF_PSP + prog_size;  // プログラムの終わり+1のアドレス
-  ra[2] = cmdline;  // コマンドラインのアドレス
-  ra[3] = humanEnv;   // 環境のアドレス
-  ra[4] = pc;       // 実行開始アドレス
-  ra[7] = STACK_TOP + STACK_SIZE;
+  ra[2] = cmdline;   // コマンドラインのアドレス
+  ra[3] = humanEnv;  // 環境のアドレス
+  ra[4] = pc;        // 実行開始アドレス
+  ra[7] = stackBottom;
 
   /* 実行 */
   psp[nest_cnt] = programPsp;

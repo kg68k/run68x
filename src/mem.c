@@ -26,6 +26,12 @@ enum {
   GVRAM = 0x00c00000,
 };
 
+// メインメモリの0番地からsupervisorEndまでがスーパーバイザ領域
+static ULong supervisorEnd;
+
+// メインメモリをスーパーバイザ領域として設定する
+void SetSupervisorArea(ULong adr) { supervisorEnd = adr; }
+
 /*
  　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
  　　　　の値を得る
@@ -117,7 +123,7 @@ bool mem_wrt_chk(ULong adr) {
 */
 Long mem_get(ULong adr, char size) {
   adr &= ADDRESS_MASK;
-  if (adr < ENV_TOP || mem_aloc <= adr) {
+  if (adr < supervisorEnd || mem_aloc <= adr) {
     if (!mem_red_chk(adr)) return 0;
   }
 
@@ -137,7 +143,7 @@ Long mem_get(ULong adr, char size) {
 */
 void mem_set(ULong adr, Long d, char size) {
   adr &= ADDRESS_MASK;
-  if (adr < ENV_TOP || mem_aloc <= adr) {
+  if (adr < supervisorEnd || mem_aloc <= adr) {
     if (!mem_wrt_chk(adr)) return;
   }
 

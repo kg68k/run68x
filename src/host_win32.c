@@ -160,8 +160,6 @@ static Long DosFiledate_set(HANDLE hFile, ULong dt) {
   return DOSE_SUCCESS;
 }
 
-#include <pathcch.h>
-
 // DOS _FILEDATE (0xff57, 0xff87)
 Long DosFiledate_win32(UWord fileno, ULong dt) {
   FILEINFO* finfop = &finfo[fileno];

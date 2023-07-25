@@ -63,11 +63,15 @@ typedef uint32_t ULong;
 #endif
 
 #define DEFAULT_MAIN_MEMORY_SIZE (12 * 1024 * 1024)
+#define DEFAULT_STACK_SIZE (64 * 1024)
+#define DEFAULT_ENV_SIZE (8 * 1024)
 
-#define XHEAD_SIZE 0x40       /* Xファイルのヘッダサイズ */
-#define HUMAN_HEAD 0x6800     /* Humanのメモリ管理ブロック位置 */
-#define FCB_WORK 0x20F00      /* DOSCALL GETFCB用ワーク領域 */
-#define HUMAN_WORK 0x21000    /* 割り込み処理先等のワーク領域 */
+#define XHEAD_SIZE 0x40     /* Xファイルのヘッダサイズ */
+#define HUMAN_HEAD 0x6800   /* Humanのメモリ管理ブロック位置 */
+#define FCB_WORK 0x20F00    /* DOSCALL GETFCB用ワーク領域 */
+#define HUMAN_WORK 0x21000  /* 割り込み処理先等のワーク領域 */
+#define HUMAN_TAIL 0x21C00  // Human68kの末尾 8*1024の倍数であること
+
 #define TRAP0_WORK 0x20FF0000 /* TRAP割り込み処理先等のワーク領域 */
 #define TRAP1_WORK 0x21FF0000 /* TRAP割り込み処理先等のワーク領域 */
 #define TRAP2_WORK 0x22FF0000 /* TRAP割り込み処理先等のワーク領域 */
@@ -77,10 +81,7 @@ typedef uint32_t ULong;
 #define TRAP6_WORK 0x26FF0000 /* TRAP割り込み処理先等のワーク領域 */
 #define TRAP7_WORK 0x27FF0000 /* TRAP割り込み処理先等のワーク領域 */
 #define TRAP8_WORK 0x28FF0000 /* TRAP割り込み処理先等のワーク領域 */
-#define ENV_TOP 0x21C00
-#define ENV_SIZE 0x2000
-#define STACK_TOP ENV_TOP + ENV_SIZE
-#define STACK_SIZE 0x10000 /* 64KB */
+
 #define NEST_MAX 20
 #define FILE_MAX 20
 
