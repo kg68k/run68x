@@ -24,8 +24,7 @@
 #include <string.h>
 
 #include "dos_memory.h"
-#include "host_generic.h"
-#include "host_win32.h"
+#include "host.h"
 #include "human68k.h"
 #include "hupair.h"
 #include "mem.h"

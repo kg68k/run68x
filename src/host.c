@@ -17,21 +17,23 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #ifdef USE_ICONV
 #include <iconv.h>
 #endif
 
-#include "host_generic.h"
+#include "host.h"
 #include "human68k.h"
 #include "run68.h"
 
 #define ROOT_SLASH_LEN 1  // "/"
 #define DEFAULT_DRV_CLN "A:"
 
-#ifdef USE_ICONV
-
+#ifdef HOST_CONVERT_TO_SJIS_GENERIC_ICONV
 // UTF-8文字列からShift_JIS文字列への変換
 bool Utf8ToSjis_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
   iconv_t icd = iconv_open("Shift_JIS", "UTF-8");
@@ -42,9 +44,9 @@ bool Utf8ToSjis_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
   *outbuf = '\0';
   return len != (size_t)-1;
 }
+#endif
 
-#else
-
+#ifdef HOST_CONVERT_TO_SJIS_GENERIC
 // Shift_JIS文字列からShift_JIS文字列への無変換コピー
 bool SjisToSjis_generic(char *inbuf, char *outbuf, size_t outbuf_size) {
   size_t len = strlen(inbuf);
@@ -52,7 +54,6 @@ bool SjisToSjis_generic(char *inbuf, char *outbuf, size_t outbuf_size) {
   strcpy(outbuf, inbuf);
   return true;
 }
-
 #endif
 
 // Shift_JIS文字列中のスラッシュをバックスラッシュに書き換える
@@ -64,6 +65,7 @@ static void to_backslash(char *buf) {
   }
 }
 
+#ifdef HOST_CANONICAL_PATHNAME_GENERIC
 static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
   char buf[HUMAN68K_PATH_MAX + 1];
 
@@ -112,20 +114,26 @@ bool CanonicalPathName_generic(const char *path, Human68kPathName *hpn) {
   free(buf);
   return result;
 }
+#endif
 
+#ifdef HOST_ADD_LAST_SEPARATOR_GENERIC
 // パス名の末尾にパスデリミタを追加する
 void AddLastSeparator_generic(char *path) {
   size_t len = strlen(path);
   if (len == 0 || path[len - 1] != '/') strcpy(path + len, "/");
 }
+#endif
 
+#ifdef HOST_PATH_IS_FILE_SPEC_GENERIC
 // 文字列にパス区切り文字が含まれないか(ファイル名だけか)を調べる
 //   true -> ファイル名のみ
 //   false -> "/" が含まれる
 bool PathIsFileSpec_generic(const char *path) {
   return strchr(path, '/') == NULL;
 }
+#endif
 
+#ifdef HOST_INIT_FILEINFO_GENERIC
 static FILE *fileno_to_fp(int fileno) {
   if (fileno == HUMAN68K_STDIN) return stdin;
   if (fileno == HUMAN68K_STDOUT) return stdout;
@@ -137,7 +145,9 @@ static FILE *fileno_to_fp(int fileno) {
 void InitFileInfo_generic(FILEINFO *finfop, int fileno) {
   finfop->host.fp = fileno_to_fp(fileno);
 }
+#endif
 
+#ifdef HOST_CLOSE_FILE_GENERIC
 // ファイルを閉じる
 bool CloseFile_generic(FILEINFO *finfop) {
   FILE *fp = finfop->host.fp;
@@ -146,29 +156,37 @@ bool CloseFile_generic(FILEINFO *finfop) {
   finfop->host.fp = NULL;
   return fclose(fp) == EOF ? false : true;
 }
+#endif
 
 static void not_implemented(const char *name) {
   fprintf(stderr, "run68: %s()は未実装です。\n", name);
 }
 
+#ifdef HOST_DOS_MKDIR_GENERIC
 // DOS _MKDIR (0xff39) (未実装)
 Long DosMkdir_generic(Long name) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }
+#endif
 
+#ifdef HOST_DOS_RMDIR_GENERIC
 // DOS _RMDIR (0xff3a) (未実装)
 Long DosRmdir_generic(Long name) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }
+#endif
 
+#ifdef HOST_DOS_CHDIR_GENERIC
 // DOS _CHDIR (0xff3b) (未実装)
 Long DosChdir_generic(Long name) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }
+#endif
 
+#ifdef HOST_DOS_CURDIR_GENERIC
 // DOS _CURDIR (0xff47)
 Long DosCurdir_generic(short drv, char *buf_ptr) {
   char buf[PATH_MAX];
@@ -185,9 +203,12 @@ Long DosCurdir_generic(short drv, char *buf_ptr) {
   to_backslash(buf_ptr);
   return 0;
 }
+#endif
 
+#ifdef HOST_DOS_FILEDATE_GENERIC
 // DOS _FILEDATE (0xff57, 0xff87) (未実装)
 Long DosFiledate_generic(UWord fileno, ULong dt) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }
+#endif

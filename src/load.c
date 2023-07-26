@@ -25,8 +25,7 @@
 #include <unistd.h>
 #endif
 
-#include "host_generic.h"
-#include "host_win32.h"
+#include "host.h"
 #include "human68k.h"
 #include "mem.h"
 #include "run68.h"

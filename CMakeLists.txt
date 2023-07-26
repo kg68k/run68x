@@ -18,6 +18,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/eaaccess.c
   src/exec.c
   src/getini.c
+  src/host.c
+  src/host.h
   src/human68k.h
   src/hupair.c
   src/hupair.h
@@ -49,11 +51,6 @@ if(WIN32)
     src/ansicolor-w32.h
     src/host_win32.c
     src/host_win32.h
-  )
-else()
-  target_sources(${PROJECT_NAME} PRIVATE
-    src/host_generic.c
-    src/host_generic.h
   )
 endif()
 

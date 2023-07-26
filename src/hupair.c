@@ -22,8 +22,7 @@
 #include <string.h>
 
 #include "dos_memory.h"
-#include "host_generic.h"
-#include "host_win32.h"
+#include "host.h"
 #include "run68.h"
 
 static const char hupairMark[] = "#HUPAIR";
