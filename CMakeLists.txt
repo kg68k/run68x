@@ -19,6 +19,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/exec.c
   src/getini.c
   src/human68k.h
+  src/hupair.c
+  src/hupair.h
   src/key.c
   src/iocscall.c
   src/line0.c

@@ -27,6 +27,7 @@
 #include "host_generic.h"
 #include "host_win32.h"
 #include "human68k.h"
+#include "hupair.h"
 #include "mem.h"
 
 #ifdef _WIN32
@@ -402,31 +403,6 @@ static ULong init_env(ULong size, ULong parent) {
   return buf;
 }
 
-// コマンドライン文字列作成
-static ULong make_commandline(int argc, char *argv[], int argbase,
-                              ULong humanPsp) {
-  ULong adr = Malloc(MALLOC_FROM_LOWER, 256, humanPsp);
-
-  char *arg_ptr = prog_ptr + adr;
-  int arg_len = 0;
-  int i;
-
-  for (i = argbase + 1; i < argc; i++) {
-    if (i > 2) {
-      arg_len++;
-      *(arg_ptr + arg_len) = ' ';
-    }
-    strcpy(arg_ptr + arg_len + 1, argv[i]);
-    arg_len += strlen(argv[i]);
-  }
-
-  if (arg_len > 255) arg_len = 255;
-  *arg_ptr = arg_len;
-  *(arg_ptr + arg_len + 1) = 0x00;
-
-  return adr;
-}
-
 int main(int argc, char *argv[]) {
   char fname[89]; /* 実行ファイル名 */
   FILE *fp;       /* 実行ファイルのファイルポインタ */
@@ -533,21 +509,6 @@ Restart:
   // 環境変数を初期化
   const ULong humanEnv = init_env(DEFAULT_ENV_SIZE, humanPsp);
 
-  // コマンドライン文字列を作成
-  const ULong cmdline = make_commandline(argc, argv, argbase, humanPsp);
-
-  // スタックを確保
-  const ULong programStack =
-      Malloc(MALLOC_FROM_LOWER, DEFAULT_STACK_SIZE, humanPsp);
-  const ULong stackBottom = programStack + DEFAULT_STACK_SIZE;
-
-  const ULong programPsp = malloc_for_child(humanPsp);
-
-  if (humanEnv == 0 || cmdline == 0 || programStack == 0 || programPsp == 0) {
-    fprintf(stderr, "メインメモリからプロセス用のメモリを確保できません\n");
-    return EXIT_FAILURE;
-  }
-
   /* 実行ファイルのオープン */
   if (strlen(argv[argbase]) >= sizeof(fname)) {
     fprintf(stderr, "ファイルのパス名が長すぎます\n");
@@ -566,6 +527,22 @@ Restart:
   Human68kPathName hpn;
   if (!HOST_CANONICAL_PATHNAME(fname, &hpn)) {
     fprintf(stderr, "Human68k形式のパス名に変換できません: %s\n", fname);
+    return EXIT_FAILURE;
+  }
+
+  // コマンドライン文字列を作成
+  const ULong cmdline = EncodeHupair(argc - (argbase + 1), &argv[argbase + 1],
+                                     hpn.name, humanPsp);
+
+  // スタックを確保
+  const ULong programStack =
+      Malloc(MALLOC_FROM_LOWER, DEFAULT_STACK_SIZE, humanPsp);
+  const ULong stackBottom = programStack + DEFAULT_STACK_SIZE;
+
+  const ULong programPsp = malloc_for_child(humanPsp);
+
+  if (humanEnv == 0 || cmdline == 0 || programStack == 0 || programPsp == 0) {
+    fprintf(stderr, "メインメモリからプロセス用のメモリを確保できません\n");
     return EXIT_FAILURE;
   }
 

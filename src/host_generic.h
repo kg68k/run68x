@@ -23,6 +23,16 @@
 #include "human68k.h"
 #include "run68.h"
 
+#ifdef USE_ICONV
+bool Utf8ToSjis_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size);
+#define HOST_CONVERT_TO_SJIS Utf8ToSjis_generic_iconv
+#endif
+
+#ifndef HOST_CONVERT_TO_SJIS
+bool SjisToSjis_generic(char* inbuf, char* outbuf, size_t outbuf_size);
+#define HOST_CONVERT_TO_SJIS SjisToSjis_generic
+#endif
+
 bool CanonicalPathName_generic(const char* path, Human68kPathName* hpn);
 #define HOST_CANONICAL_PATHNAME CanonicalPathName_generic
 

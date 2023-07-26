@@ -23,6 +23,7 @@
 #include <iconv.h>
 #endif
 
+#include "host_generic.h"
 #include "human68k.h"
 #include "run68.h"
 
@@ -32,7 +33,7 @@
 #ifdef USE_ICONV
 
 // UTF-8文字列からShift_JIS文字列への変換
-static bool utf8_to_sjis(char *inbuf, char *outbuf, size_t outbuf_size) {
+bool Utf8ToSjis_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
   iconv_t icd = iconv_open("Shift_JIS", "UTF-8");
   size_t inbytes = strlen(inbuf);
   size_t outbytes = outbuf_size - 1;
@@ -41,17 +42,16 @@ static bool utf8_to_sjis(char *inbuf, char *outbuf, size_t outbuf_size) {
   *outbuf = '\0';
   return len != (size_t)-1;
 }
-#define HOST_CONVERT_TO_SJIS utf8_to_sjis
 
 #else
 
-static bool sjis_to_sjis(char *inbuf, char *outbuf, size_t outbuf_size) {
+// Shift_JIS文字列からShift_JIS文字列への無変換コピー
+bool SjisToSjis_generic(char *inbuf, char *outbuf, size_t outbuf_size) {
   size_t len = strlen(inbuf);
   if (len >= outbuf_size) return false;
   strcpy(outbuf, inbuf);
   return true;
 }
-#define HOST_CONVERT_TO_SJIS sjis_to_sjis
 
 #endif
 

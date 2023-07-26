@@ -1012,7 +1012,6 @@ bool dos_call(UByte code) {
       }
       break;
     case 0x53:  // GETENV
-    case 0x83:  // GETENV (Human68k v3)
       data = mem_get(stack_adr, S_LONG);
       env = mem_get(stack_adr + 4, S_LONG);
       buf = mem_get(stack_adr + 8, S_LONG);
@@ -1037,7 +1036,6 @@ bool dos_call(UByte code) {
       rd[0] = Rename(data, buf);
       break;
     case 0x57:  // FILEDATE
-    case 0x87:  // FILEDATE (Human68k v3)
       if (func_trace_f) {
         printf("%-10s file_no=%d datetime=%X\n", "FILEDATE",
                mem_get(stack_adr, S_WORD), mem_get(stack_adr + 2, S_LONG));
@@ -1045,7 +1043,6 @@ bool dos_call(UByte code) {
       rd[0] = DosFiledate(stack_adr);
       break;
     case 0x58:  // MALLOC2
-    case 0x88:  // MALLOC2 (Human68k v3)
       if (func_trace_f) {
         printf("%-10s mode=%d, len=%d\n", "MALLOC2", mem_get(stack_adr, S_WORD),
                mem_get(stack_adr + 2, S_LONG));
