@@ -19,13 +19,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "host.h"
 #include "mem.h"
 #include "run68.h"
 
 #ifdef _WIN32
 #include <windows.h>
-#elif defined(__linux__)
-#include <sys/sysinfo.h>
 #endif
 
 #if defined(USE_ICONV)
@@ -47,13 +46,15 @@ static void Dayasc(Long, Long);
 static Long Intvcs(Long, Long);
 static void Dmamove(Long, Long, Long, Long);
 
+// IOCS _ONTIME (0x7f)
+static RegPair IocsOntime(void) { return HOST_IOCS_ONTIME(); }
+
 /*
  　機能：IOCSCALLを実行する
  戻り値： true = 実行終了
          false = 実行継続
 */
 bool iocs_call() {
-  ULong ul;
   int x, y;
   short save_s;
 
@@ -154,24 +155,11 @@ bool iocs_call() {
     case 0x6E: /* HSYNCST */
       err68("水平同期割り込みを設定しようとしました");
     case 0x7F: /* ONTIME */
-#ifdef _WIN32
-      ul = GetTickCount() / 1000;
-      rd[0] = (ul % (60 * 60 * 24)) * 100;
-      rd[1] = ((ul / (60 * 60 * 24)) & 0xFFFF);
-#elif !defined(__linux__)
-      ul = time(NULL);
-      rd[0] = (ul % (60 * 60 * 24)) * 100;
-      rd[1] = ((ul / (60 * 60 * 24)) & 0xFFFF);
-#else  //__linux__
     {
-      struct sysinfo info;
-      sysinfo(&info);
-      ul = info.uptime;
-      rd[0] = (ul % (60 * 60 * 24)) * 100;
-      rd[1] = ((ul / (60 * 60 * 24)) & 0xFFFF);
-    }
-#endif
-      break;
+      RegPair r = IocsOntime();
+      rd[0] = r.r0;
+      rd[1] = r.r1;
+    } break;
     case 0x80: /* B_INTVCS */
       rd[0] = Intvcs(rd[1], ra[1]);
       break;

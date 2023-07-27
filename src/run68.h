@@ -56,6 +56,10 @@ typedef uint16_t UWord;
 typedef int32_t Long;
 typedef uint32_t ULong;
 
+typedef struct {
+  ULong r0, r1;
+} RegPair;
+
 #ifndef _WIN32
 #define MAX_PATH PATH_MAX
 #define _fcvt fcvt

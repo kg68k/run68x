@@ -18,10 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
 #ifdef USE_ICONV
 #include <iconv.h>
 #endif
@@ -187,6 +183,8 @@ Long DosChdir_generic(Long name) {
 #endif
 
 #ifdef HOST_DOS_CURDIR_GENERIC
+#include <unistd.h>
+
 // DOS _CURDIR (0xff47)
 Long DosCurdir_generic(short drv, char *buf_ptr) {
   char buf[PATH_MAX];
@@ -210,5 +208,18 @@ Long DosCurdir_generic(short drv, char *buf_ptr) {
 Long DosFiledate_generic(UWord fileno, ULong dt) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
+}
+#endif
+
+#ifdef HOST_IOCS_ONTIME_GENERIC
+#include <sys/sysinfo.h>
+
+// IOCS _ONTIME (0x7f)
+RegPair IocsOntime_generic(void) {
+  struct sysinfo info;
+  if (sysinfo(&info) != 0) return (RegPair){0, 0};
+
+  ldiv_t r = ldiv(info.uptime, 24 * 60 * 60);
+  return (RegPair){(ULong)(r.rem * 100), (ULong)(r.quot & 0xffff)};
 }
 #endif

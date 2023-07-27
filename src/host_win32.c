@@ -21,6 +21,7 @@
 #include <string.h>
 #include <windows.h>
 
+#include "host.h"
 #include "human68k.h"
 #include "run68.h"
 
@@ -171,4 +172,13 @@ Long DosFiledate_win32(UWord fileno, ULong dt) {
   if (finfop->mode == 0)
     return DOSE_ILGARG;  // 読み込みオープンでは設定できない
   return DosFiledate_set(finfop->host.handle, dt);
+}
+
+// IOCS _ONTIME (0x7f)
+RegPair IocsOntime_win32(void) {
+  // GetTickCount64()のミリ秒単位から、IOCS _ONTIMEの1/100秒単位に換算する
+  ULONGLONG t = GetTickCount64() / 10;
+
+  lldiv_t r = lldiv(t, 24 * 60 * 60 * 100);
+  return (RegPair){(ULong)r.rem, (ULong)(r.quot & 0xffff)};
 }

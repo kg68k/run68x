@@ -53,5 +53,8 @@ Long DosCurdir_win32(short drv, char* buf_ptr);
 Long DosFiledate_win32(UWord fileno, ULong dt);
 #define HOST_DOS_FILEDATE DosFiledate_win32
 
+RegPair IocsOntime_win32(void);
+#define HOST_IOCS_ONTIME IocsOntime_win32
+
 #endif
 #endif

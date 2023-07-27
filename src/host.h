@@ -18,6 +18,7 @@
 #ifndef HOST_H
 #define HOST_H
 
+#include "host_misc.h"
 #include "host_win32.h"
 #include "human68k.h"
 #include "run68.h"
@@ -92,6 +93,12 @@ Long DosCurdir_generic(short drv, char* buf_ptr);
 #define HOST_DOS_FILEDATE_GENERIC
 Long DosFiledate_generic(UWord fileno, ULong dt);
 #define HOST_DOS_FILEDATE DosFiledate_generic
+#endif
+
+#ifndef HOST_IOCS_ONTIME
+#define HOST_IOCS_ONTIME_GENERIC
+RegPair IocsOntime_generic(void);
+#define HOST_IOCS_ONTIME IocsOntime_generic
 #endif
 
 #endif
