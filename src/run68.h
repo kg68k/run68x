@@ -243,8 +243,8 @@ typedef struct {
   ULong bssSize;
 } ProgramSpec;
 
-FILE *prog_open(char *, bool, ULong);
-Long prog_read(FILE *, char *, Long, Long *, Long *, bool);
+FILE *prog_open(char *, ULong, void (*)(const char *));
+Long prog_read(FILE *, char *, Long, Long *, Long *, void (*)(const char *));
 void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
               ULong parentSsp, const ProgramSpec *progSpec,
               const Human68kPathName *pathname);

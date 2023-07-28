@@ -516,7 +516,7 @@ Restart:
    * プログラムをPATH環境変数で設定したディレクトリから探して
    * 読み込みを行う。
    */
-  if ((fp = prog_open(fname, true, humanEnv)) == NULL) {
+  if ((fp = prog_open(fname, humanEnv, print)) == NULL) {
     printFmt("run68:Program '%s' was not found.\n", argv[argbase]);
     return EXIT_FAILURE;
   }
@@ -547,7 +547,7 @@ Restart:
   Long prog_size = 0;          // プログラムサイズ(bss含む)
   Long prog_size2 = mem_aloc;  // プログラムサイズ(bss除く)
   const Long entryAddress = prog_read(fp, fname, programPsp + SIZEOF_PSP,
-                                      &prog_size, &prog_size2, true);
+                                      &prog_size, &prog_size2, print);
   if (entryAddress < 0) {
     free(prog_ptr);
     return EXIT_FAILURE;

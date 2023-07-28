@@ -68,6 +68,12 @@ static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
   return NULL;
 }
 
+// prog_open()、prog_read()でエラー処理時のコールバックに
+// NULLが指定された場合のダミー関数
+static void onErrorDummy(const char *message) {
+  //
+}
+
 /*
   機能：
     実行ファイルをオープンする。環境変数のPATHから取得したパスを
@@ -80,11 +86,12 @@ static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
     NULL = オープンできない
     !NULL = 実行ファイルのファイルポインタ
 */
-FILE *prog_open(char *fname, bool print_error, ULong envptr) {
+FILE *prog_open(char *fname, ULong envptr, void (*err)(const char *)) {
   char dir[MAX_PATH], fullname[MAX_PATH], cwd[MAX_PATH];
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
   char *p;
+  void (*onError)(const char *) = err ? err : onErrorDummy;
 
   if (!HOST_PATH_IS_FILE_SPEC(fname)) {
     // パス区切り文字が含まれる場合は拡張子補完のみ行い、パス検索は行わない
@@ -105,7 +112,7 @@ FILE *prog_open(char *fname, bool print_error, ULong envptr) {
   GetCurrentDirectory(sizeof(cwd) - 1, cwd);
 #else
   if (getcwd(cwd, sizeof(cwd) - 1) == NULL) {
-    if (print_error) print("カレントディレクトリのパス名が長すぎます\n");
+    onError("カレントディレクトリのパス名が長すぎます\n");
     return NULL;
   }
 #endif
@@ -147,7 +154,7 @@ EndOfFunc:
   strcpy(fname, fullname);
   return fp;
 ErrorRet:
-  if (print_error) print("ファイルがオープンできません\n");
+  onError("ファイルがオープンできません\n");
   return NULL;
 }
 
@@ -188,7 +195,7 @@ static bool xrelocate(Long reloc_adr, Long reloc_size, Long read_top) {
  　　　　!0 = プログラム開始アドレス
 */
 static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
-                      bool print_error) {
+                      void (*onError)(const char *)) {
   Long pc_begin;
   Long code_size;
   Long data_size;
@@ -196,7 +203,7 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
   Long reloc_size;
 
   if (xhead_getl(0x3C) != 0) {
-    if (print_error) printf("BINDされているファイルです\n");
+    onError("BINDされているファイルです\n");
     return (0);
   }
   pc_begin = xhead_getl(0x08);
@@ -207,7 +214,7 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
 
   if (reloc_size != 0) {
     if (!xrelocate(code_size + data_size, reloc_size, read_top)) {
-      if (print_error) print("未対応のリロケート情報があります\n");
+      onError("未対応のリロケート情報があります\n");
       return (0);
     }
   }
@@ -225,7 +232,7 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
  　　　　負 = エラーコード
 */
 Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
-               Long *prog_sz2, bool print_error)
+               Long *prog_sz2, void (*err)(const char *))
 /* prog_sz2はロードモード＋リミットアドレスの役割も果たす */
 {
   char *read_ptr;
@@ -234,28 +241,29 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
   bool x_file = false;
   int loadmode;
   int i;
+  void (*onError)(const char *) = err ? err : onErrorDummy;
 
   loadmode = ((*prog_sz2 >> 24) & 0x03);
   *prog_sz2 &= 0xFFFFFF;
 
   if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
-    if (print_error) print("ファイルのシークに失敗しました\n");
+    onError("ファイルのシークに失敗しました\n");
     return (-11);
   }
   if ((*prog_sz = ftell(fp)) <= 0) {
     fclose(fp);
-    if (print_error) print("ファイルサイズが０です\n");
+    onError("ファイルサイズが０です\n");
     return (-11);
   }
   if (fseek(fp, 0, SEEK_SET) != 0) {
     fclose(fp);
-    if (print_error) print("ファイルのシークに失敗しました\n");
+    onError("ファイルのシークに失敗しました\n");
     return (-11);
   }
   if (read_top + *prog_sz > *prog_sz2) {
     fclose(fp);
-    if (print_error) print("ファイルサイズが大きすぎます\n");
+    onError("ファイルサイズが大きすぎます\n");
     return (-8);
   }
 
@@ -267,7 +275,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
   if (*prog_sz >= XHEAD_SIZE) {
     if (fread(read_ptr, 1, XHEAD_SIZE, fp) != XHEAD_SIZE) {
       fclose(fp);
-      if (print_error) printf("ファイルの読み込みに失敗しました\n");
+      onError("ファイルの読み込みに失敗しました\n");
       return (-11);
     }
     read_sz -= XHEAD_SIZE;
@@ -290,7 +298,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
 
   if (fread(read_ptr, 1, read_sz, fp) != (size_t)read_sz) {
     fclose(fp);
-    if (print_error) print("ファイルの読み込みに失敗しました\n");
+    onError("ファイルの読み込みに失敗しました\n");
     return (-11);
   }
 
@@ -300,7 +308,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
   /* Xファイルの処理 */
   *prog_sz2 = *prog_sz;
   if (x_file) {
-    if ((pc_begin = xfile_cnv(prog_sz, prog_sz2, read_top, print_error)) == 0)
+    if ((pc_begin = xfile_cnv(prog_sz, prog_sz2, read_top, onError)) == 0)
       return (-11);
   }
 

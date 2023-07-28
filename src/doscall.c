@@ -2727,7 +2727,7 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
   if (strlen(name_ptr) > 88) return DOSE_ILGFNAME;  // ファイル名指定誤り
 
   strcpy(fname, name_ptr);
-  if ((fp = prog_open(fname, false, env)) == NULL) return (-2);
+  if ((fp = prog_open(fname, env, NULL)) == NULL) return (-2);
 
   Human68kPathName hpn;
   if (!HOST_CANONICAL_PATHNAME(fname, &hpn)) return DOSE_ILGFNAME;
@@ -2748,7 +2748,7 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
   Long prog_size = 0;
   Long prog_size2 = ((loadmode << 24) | end_adr);
   const Long entryAddress = prog_read(fp, fname, childPsp + SIZEOF_PSP,
-                                      &prog_size, &prog_size2, false);
+                                      &prog_size, &prog_size2, NULL);
   if (entryAddress < 0) {
     Mfree(childMemory);
     return entryAddress;
@@ -2802,7 +2802,7 @@ static Long Exec2(Long nm, Long cmd, Long env) {
   }
 
   /* 環境変数pathに従ってファイルを検索し、オープンする。*/
-  fp = prog_open(name_ptr, true, env);
+  fp = prog_open(name_ptr, env, print);
   if (fp == NULL) {
     return 0;
   } else {
@@ -2816,7 +2816,6 @@ static Long Exec2(Long nm, Long cmd, Long env) {
  戻り値：エラーコード等
  */
 static Long Exec3(Long nm, Long adr1, Long adr2) {
-  FILE *fp;
   char fname[89];
   char *name_ptr;
   int loadmode;
@@ -2832,10 +2831,11 @@ static Long Exec3(Long nm, Long adr1, Long adr2) {
   if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
   strcpy(fname, name_ptr);
-  if ((fp = prog_open(fname, false, (ULong)-1)) == NULL) return (-2);
+  FILE *fp = prog_open(fname, (ULong)-1, NULL);
+  if (fp == NULL) return -2;
 
   prog_size2 = ((loadmode << 24) | adr2);
-  ret = prog_read(fp, fname, adr1, &prog_size, &prog_size2, false);
+  ret = prog_read(fp, fname, adr1, &prog_size, &prog_size2, NULL);
   if (ret < 0) return (ret);
 
   return (prog_size);
