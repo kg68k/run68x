@@ -105,7 +105,7 @@ FILE *prog_open(char *fname, bool print_error, ULong envptr) {
   GetCurrentDirectory(sizeof(cwd) - 1, cwd);
 #else
   if (getcwd(cwd, sizeof(cwd) - 1) == NULL) {
-    fprintf(stderr, "カレントディレクトリのパス名が長すぎます\n");
+    if (print_error) print("カレントディレクトリのパス名が長すぎます\n");
     return NULL;
   }
 #endif
@@ -147,7 +147,7 @@ EndOfFunc:
   strcpy(fname, fullname);
   return fp;
 ErrorRet:
-  if (print_error) fprintf(stderr, "ファイルがオープンできません\n");
+  if (print_error) print("ファイルがオープンできません\n");
   return NULL;
 }
 
@@ -196,7 +196,7 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
   Long reloc_size;
 
   if (xhead_getl(0x3C) != 0) {
-    if (print_error) fprintf(stderr, "BINDされているファイルです\n");
+    if (print_error) printf("BINDされているファイルです\n");
     return (0);
   }
   pc_begin = xhead_getl(0x08);
@@ -207,7 +207,7 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
 
   if (reloc_size != 0) {
     if (!xrelocate(code_size + data_size, reloc_size, read_top)) {
-      if (print_error) fprintf(stderr, "未対応のリロケート情報があります\n");
+      if (print_error) print("未対応のリロケート情報があります\n");
       return (0);
     }
   }
@@ -240,22 +240,22 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
 
   if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
-    if (print_error) fprintf(stderr, "ファイルのシークに失敗しました\n");
+    if (print_error) print("ファイルのシークに失敗しました\n");
     return (-11);
   }
   if ((*prog_sz = ftell(fp)) <= 0) {
     fclose(fp);
-    if (print_error) fprintf(stderr, "ファイルサイズが０です\n");
+    if (print_error) print("ファイルサイズが０です\n");
     return (-11);
   }
   if (fseek(fp, 0, SEEK_SET) != 0) {
     fclose(fp);
-    if (print_error) fprintf(stderr, "ファイルのシークに失敗しました\n");
+    if (print_error) print("ファイルのシークに失敗しました\n");
     return (-11);
   }
   if (read_top + *prog_sz > *prog_sz2) {
     fclose(fp);
-    if (print_error) fprintf(stderr, "ファイルサイズが大きすぎます\n");
+    if (print_error) print("ファイルサイズが大きすぎます\n");
     return (-8);
   }
 
@@ -267,7 +267,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
   if (*prog_sz >= XHEAD_SIZE) {
     if (fread(read_ptr, 1, XHEAD_SIZE, fp) != XHEAD_SIZE) {
       fclose(fp);
-      if (print_error) fprintf(stderr, "ファイルの読み込みに失敗しました\n");
+      if (print_error) printf("ファイルの読み込みに失敗しました\n");
       return (-11);
     }
     read_sz -= XHEAD_SIZE;
@@ -290,7 +290,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
 
   if (fread(read_ptr, 1, read_sz, fp) != (size_t)read_sz) {
     fclose(fp);
-    if (print_error) fprintf(stderr, "ファイルの読み込みに失敗しました\n");
+    if (print_error) print("ファイルの読み込みに失敗しました\n");
     return (-11);
   }
 

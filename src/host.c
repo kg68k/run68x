@@ -155,7 +155,7 @@ bool CloseFile_generic(FILEINFO *finfop) {
 #endif
 
 static void not_implemented(const char *name) {
-  fprintf(stderr, "run68: %s()は未実装です。\n", name);
+  printFmt("run68: %s()は未実装です。\n", name);
 }
 
 #ifdef HOST_DOS_MKDIR_GENERIC

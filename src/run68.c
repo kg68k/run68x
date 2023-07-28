@@ -18,6 +18,7 @@
 #include "run68.h"
 
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,12 +79,11 @@ static void print_title(void) {
   const char *title =  //
       "run68x " RUN68X_VERSION
       "  Copyright (C) 2023 TcbnErik\n"
-      "  based on "
-      "X68000 console emulator Ver." RUN68VERSION "\n";
-  fprintf(stderr, "%s", title);
-  fprintf(stderr, "          %s\n", "Created in 1996 by Yokko");
-  fprintf(stderr, "          %s\n",
-          "Maintained since Oct. 1999 by masamic and Chack'n");
+      "  based on X68000 console emulator Ver." RUN68VERSION
+      "\n"
+      "          Created in 1996 by Yokko\n"
+      "          Maintained since Oct. 1999 by masamic and Chack'n\n";
+  print(title);
 }
 
 static void print_usage(void) {
@@ -92,7 +92,7 @@ static void print_usage(void) {
       "             -f         function call trace\n"
       "             -t         mpu trace\n"
       "             -debug     run with debugger\n";
-  fprintf(stderr, "%s", usage);
+  print(usage);
 }
 
 /*
@@ -194,18 +194,18 @@ static int exec_trap(bool *restart) {
       if (trap_count > 1) trap_count--;
     }
     if (trap_pc != 0 && pc == trap_pc) {
-      fprintf(stderr,
-              "(run68) trapped:MPUがアドレス$%06Xの命令を実行しました。\n", pc);
+      printFmt("(run68) trapped:MPUがアドレス$%06Xの命令を実行しました。\n",
+               pc);
       debug_on = true;
       if (stepcount != 0) {
-        fprintf(stderr, "(run68) breakpoint:%d counts left.\n", stepcount);
+        printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
         stepcount = 0;
       }
     } else if (cwatchpoint != 0x4afc && cwatchpoint == PeekW(pc)) {
-      fprintf(stderr, "(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
-              cwatchpoint);
+      printFmt("(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
+               cwatchpoint);
       if (stepcount != 0) {
-        fprintf(stderr, "(run68) breakpoint:%d counts left.\n", stepcount);
+        printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
         stepcount = 0;
       }
     }
@@ -288,20 +288,19 @@ static int exec_notrap(bool *restart) {
       superjsr_ret = 0;
     }
     if (trap_pc != 0 && pc == trap_pc) {
-      fprintf(stderr,
-              "(run68) breakpoint:MPUがアドレス$%06Xの命令を実行しました。\n",
-              pc);
+      printFmt("(run68) breakpoint:MPUがアドレス$%06Xの命令を実行しました。\n",
+               pc);
       debug_on = true;
       if (stepcount != 0) {
-        fprintf(stderr, "(run68) breakpoint:%d counts left.\n", stepcount);
+        printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
         stepcount = 0;
       }
     } else if (cwatchpoint != 0x4afc && cwatchpoint == PeekW(pc)) {
-      fprintf(stderr, "(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
-              cwatchpoint);
+      printFmt("(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
+               cwatchpoint);
       debug_on = true;
       if (stepcount != 0) {
-        fprintf(stderr, "(run68) breakpoint:%d counts left.\n", stepcount);
+        printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
         stepcount = 0;
       }
     }
@@ -420,7 +419,7 @@ Restart:
         case 't':
           if (strlen(argv[i]) == 2) {
             trace_f = true;
-            fprintf(stderr, "MPU命令トレースフラグ=ON\n");
+            print("MPU命令トレースフラグ=ON\n");
           } else if (argv[i][2] == 'r') {
             char *p; /* アドレス文字列へのポインタ */
             if (strlen(argv[i]) == strlen("-tr")) {
@@ -432,13 +431,13 @@ Restart:
             /* 16進文字列が正しいことを確認 */
             for (j = 0; (unsigned int)j < strlen(p); j++) {
               if (!isxdigit((unsigned char)p[j])) {
-                fprintf(stderr, "16進アドレス指定は無効です。(\"%s\")\n", p);
+                printFmt("16進アドレス指定は無効です。(\"%s\")\n", p);
                 invalid_flag = true;
               }
             }
             /* トラップするPCのアドレスを取得する。*/
             sscanf(p, "%x", &trap_pc);
-            fprintf(stderr, "MPU命令トラップフラグ=ON ADDR=$%06X\n", trap_pc);
+            printFmt("MPU命令トラップフラグ=ON ADDR=$%06X\n", trap_pc);
           } else {
             invalid_flag = true;
           }
@@ -450,18 +449,17 @@ Restart:
           }
           debug_on = true;
           debug_flag = false;
-          fprintf(stderr, "デバッガを起動します。\n");
+          print("デバッガを起動します。\n");
           break;
         case 'f':
           func_trace_f = true;
-          fprintf(stderr, "ファンクションコールトレースフラグ=ON\n");
+          print("ファンクションコールトレースフラグ=ON\n");
           break;
         default:
           invalid_flag = true;
           break;
       }
-      if (invalid_flag)
-        fprintf(stderr, "無効なフラグ'%s'は無視されます。\n", fsp);
+      if (invalid_flag) printFmt("無効なフラグ'%s'は無視されます。\n", fsp);
     } else {
       break;
     }
@@ -481,7 +479,7 @@ Restart:
 
   /* メインメモリ(1～12MB)を確保する */
   if ((prog_ptr = malloc(mem_aloc)) == NULL) {
-    fprintf(stderr, "メモリが確保できません\n");
+    printFmt("メモリが確保できません\n");
     return EXIT_FAILURE;
   }
   memset(&prog_ptr[OSWORK_TOP], 0, SIZEOF_OSWORK);
@@ -510,7 +508,7 @@ Restart:
 
   /* 実行ファイルのオープン */
   if (strlen(argv[argbase]) >= sizeof(fname)) {
-    fprintf(stderr, "ファイルのパス名が長すぎます\n");
+    print("ファイルのパス名が長すぎます\n");
     return EXIT_FAILURE;
   }
   strcpy(fname, argv[argbase]);
@@ -519,13 +517,13 @@ Restart:
    * 読み込みを行う。
    */
   if ((fp = prog_open(fname, true, humanEnv)) == NULL) {
-    fprintf(stderr, "run68:Program '%s' was not found.\n", argv[argbase]);
+    printFmt("run68:Program '%s' was not found.\n", argv[argbase]);
     return EXIT_FAILURE;
   }
 
   Human68kPathName hpn;
   if (!HOST_CANONICAL_PATHNAME(fname, &hpn)) {
-    fprintf(stderr, "Human68k形式のパス名に変換できません: %s\n", fname);
+    printFmt("Human68k形式のパス名に変換できません: %s\n", fname);
     return EXIT_FAILURE;
   }
 
@@ -541,7 +539,7 @@ Restart:
   const ULong programPsp = malloc_for_child(humanPsp);
 
   if (humanEnv == 0 || cmdline == 0 || programStack == 0 || programPsp == 0) {
-    fprintf(stderr, "メインメモリからプロセス用のメモリを確保できません\n");
+    print("メインメモリからプロセス用のメモリを確保できません\n");
     return EXIT_FAILURE;
   }
 
@@ -596,6 +594,18 @@ Restart:
 
   if (restart) goto Restart;
   return ret;
+}
+
+// 標準エラー出力に文字列を出力する
+void print(const char *message) { fputs(message, stderr); }
+
+// 標準エラー出力にフォーマット文字列を出力する
+void printFmt(const char *fmt, ...) {
+  va_list ap;
+
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
 }
 
 /* $Id: run68.c,v 1.5 2009-08-08 06:49:44 masamic Exp $ */

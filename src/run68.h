@@ -23,12 +23,16 @@
 
 #if defined(__GNUC__)
 #define NORETURN __attribute__((noreturn))
+#define GCC_FORMAT(a, b) __attribute__((format(printf, a, b)))
 #elif defined(_MSC_VER)
 #define NORETURN __declspec(noreturn)
 #endif
 
 #ifndef NORETURN
-#define NORETURN /* NORETURN */
+#define NORETURN /* [[noreturn]] */
+#endif
+#ifndef GCC_FORMAT
+#define GCC_FORMAT(a, b)
 #endif
 
 #include <limits.h>
@@ -225,6 +229,9 @@ extern ULong mem_aloc;     // メインメモリの大きさ(1～12MB)
 extern bool func_trace_f;  // -f ファンクションコールトレース
 extern Long trap_pc;       // -tr MPU命令トレースを行うアドレス
 extern UWord cwatchpoint;  // 命令ウォッチ
+
+void print(const char *message);
+void printFmt(const char *fmt, ...) GCC_FORMAT(1, 2);
 
 /* getini.c */
 void read_ini(char *path, char *prog);

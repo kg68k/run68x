@@ -160,46 +160,40 @@ static int begin_undefined(const char *s) {
 */
 void err68(char *mes) {
   OPBuf_insert(&OP_info);
-  fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
-  if (begin_undefined(mes))
-    fprintf(stderr, "code = %08X\n", mem_get(pc - 4, S_LONG));
+  printFmt("run68 exec error: %s PC=%06X\n", mes, pc);
+  if (begin_undefined(mes)) printFmt("code = %08X\n", mem_get(pc - 4, S_LONG));
   OPBuf_display(10);
   run68_abort(pc);
 }
 
 /*
  　機能：実行時エラーメッセージを表示する(その2)
-   引数：
-        char*	mes	<in>	メッセージ
-        char*	file	<in>	ファイル名
-        int	line	<in>	行番号
+   引数：char*  mes   <in>    メッセージ
+         char*  file  <in>    ファイル名
+         int    line  <in>    行番号
  戻り値：なし
 */
 void err68a(char *mes, char *file, int line) {
   OPBuf_insert(&OP_info);
-  fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
-  fprintf(stderr, "\tAt %s:%d\n", file, line);
-  if (begin_undefined(mes))
-    fprintf(stderr, "code = %08X\n", mem_get(pc - 4, S_LONG));
+  printFmt("run68 exec error: %s PC=%06X\n", mes, pc);
+  printFmt("\tAt %s:%d\n", file, line);
+  if (begin_undefined(mes)) printFmt("code = %08X\n", mem_get(pc - 4, S_LONG));
   OPBuf_display(10);
   run68_abort(pc);
 }
 
 /*
    機能：実行時エラーメッセージを表示する(その3)
-   引数：
-    char*  mes	<in>    メッセージ
-    Long   pc   <in>    プログラムカウンタ
-    Long   ppc  <in>    一つ前に実行した命令のプログラムカウンタ
-   戻り値：
-    なし
+   引数：char*  mes  <in>    メッセージ
+         Long   pc   <in>    プログラムカウンタ
+         Long   ppc  <in>    一つ前に実行した命令のプログラムカウンタ
+   戻り値：なし
 */
 void err68b(char *mes, Long pc, Long ppc) {
   OPBuf_insert(&OP_info);
-  fprintf(stderr, "run68 exec error: %s PC=%06X\n", mes, pc);
-  fprintf(stderr, "PC of previous op code: PC=%06X\n", ppc);
-  if (begin_undefined(mes))
-    fprintf(stderr, "code = %08X\n", mem_get(pc - 4, S_LONG));
+  printFmt("run68 exec error: %s PC=%06X\n", mes, pc);
+  printFmt("PC of previous op code: PC=%06X\n", ppc);
+  if (begin_undefined(mes)) printFmt("code = %08X\n", mem_get(pc - 4, S_LONG));
   OPBuf_display(10);
   run68_abort(pc);
 }
@@ -393,9 +387,10 @@ void OPBuf_display(int n) {
   int max = OPBuf_numentries();
   int i;
   if (max < n) n = max;
-  fprintf(stderr, "** EXECUTED INSTRUCTION HISTORY **\n");
-  fprintf(stderr, "ADDRESS OPCODE                    MNEMONIC\n");
-  fprintf(stderr, "-------------------------------------------------------\n");
+  print(
+      "** EXECUTED INSTRUCTION HISTORY **\n"
+      "ADDRESS OPCODE                    MNEMONIC\n"
+      "-------------------------------------------------------\n");
   for (i = n - 1; 0 <= i; i--) {
     const EXEC_INSTRUCTION_INFO *op;
     Long addr, naddr;
@@ -415,11 +410,7 @@ void OPBuf_display(int n) {
       hex[j] = ' ';
     }
     hex[j] = '\0';
-    if (s == NULL) {
-      fprintf(stderr, "%s%s\n", hex, "????");
-    } else {
-      fprintf(stderr, "%s%s\n", hex, s);
-    }
+    printFmt("%s%s\n", hex, s ? s : "\?\?\?\?");
   }
 }
 

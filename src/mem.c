@@ -164,7 +164,7 @@ void mem_set(ULong adr, Long d, char size) {
  機能：異常終了する
 */
 void run68_abort(Long adr) {
-  fprintf(stderr, "アドレス：%08X\n", adr);
+  printFmt("アドレス：%08X\n", adr);
 
   close_all_files();
 

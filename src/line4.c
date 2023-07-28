@@ -820,7 +820,7 @@ static bool Jmp(char code1, char code2) {
 
 #ifdef TRACE
   /* ニーモニックのトレース出力 */
-  fprintf(stderr, "0x%08x: %s\n", pc, mnemonic);
+  printFmt("0x%08x: %s\n", pc, mnemonic);
 #endif
 
   /* アドレッシングモードに応じた処理 */
