@@ -15,8 +15,6 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-// TODO: UTF-8 から Shift_JIS への変換
-
 #include "hupair.h"
 
 #include <string.h>
@@ -106,7 +104,7 @@ static inline void free_iconv_buf(IconvBufPtr* ibp) {
 #endif
 
 static ULong encodeHupair(int argc, char* argv[], const char* argv0, ULong adr,
-                          ULong size) {
+                          ULong size, bool* hupair) {
   char* p = prog_ptr + adr;
   const char* const buffer_top = p;
 
@@ -161,9 +159,15 @@ static ULong encodeHupair(int argc, char* argv[], const char* argv0, ULong adr,
     } while (*s);
   }
 
-  // コマンドライン文字列の長さが決定したので埋め込む
+  // 255バイトを超えるコマンドライン文字列の場合、子プロセス側がHUPAIRに準拠している必要がある
   len = p - cmdline_top;
-  *cmdline_len_ptr = (len > 255) ? 255 : len;
+  if (len > 255) {
+    *hupair = true;
+    len = 255;  // 埋め込む長さはHUPAIRの規定に従い255にする
+  }
+
+  // コマンドライン文字列の長さが決定したので埋め込む
+  *cmdline_len_ptr = len;
 
   if (!ensureCapacity(&size, sizeof(char))) return 0;
   *p++ = '\0';
@@ -182,12 +186,15 @@ static ULong encodeHupair(int argc, char* argv[], const char* argv0, ULong adr,
   return (ULong)(p - buffer_top);
 }
 
-ULong EncodeHupair(int argc, char* argv[], const char* argv0, ULong parent) {
+ULong EncodeHupair(int argc, char* argv[], const char* argv0, ULong parent,
+                   bool* hupair) {
+  *hupair = false;
+
   ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & 0x00ffffff;
   ULong adr = Malloc(MALLOC_FROM_LOWER, size, parent);
   if ((Long)adr < 0) return 0;
 
-  ULong consumed = encodeHupair(argc, argv, argv0, adr, size);
+  ULong consumed = encodeHupair(argc, argv, argv0, adr, size, hupair);
   if (consumed == 0) {
     Mfree(adr);
     return 0;
@@ -196,4 +203,15 @@ ULong EncodeHupair(int argc, char* argv[], const char* argv0, ULong parent) {
 
   // コマンドライン先頭(文字列長のアドレス)を返す
   return adr + (ULong)sizeof(hupairMark);
+}
+
+bool IsCompliantWithHupair(ULong base, ULong size, ULong entry) {
+  ULong mark = entry + 2;
+  ULong markEnd = mark + (ULong)sizeof(hupairMark);
+
+  if (markEnd > (base + size)) return false;
+  if (memcmp(prog_ptr + mark, hupairMark, sizeof(hupairMark)) != 0)
+    return false;
+
+  return true;
 }

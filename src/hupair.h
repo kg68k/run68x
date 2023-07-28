@@ -20,6 +20,8 @@
 
 #include "run68.h"
 
-ULong EncodeHupair(int argc, char* argv[], const char* argv0, ULong parent);
+ULong EncodeHupair(int argc, char* argv[], const char* argv0, ULong parent,
+                   bool* hupair);
+bool IsCompliantWithHupair(ULong base, ULong size, ULong entry);
 
 #endif

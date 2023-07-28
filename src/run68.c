@@ -78,6 +78,9 @@ char *strlwr(char *str) {
 static void print_title(void) {
   const char *title =  //
       "run68x " RUN68X_VERSION
+#ifdef _DEBUG
+      " (debug)"
+#endif
       "  Copyright (C) 2023 TcbnErik\n"
       "  based on X68000 console emulator Ver." RUN68VERSION
       "\n"
@@ -528,8 +531,9 @@ Restart:
   }
 
   // コマンドライン文字列を作成
-  const ULong cmdline = EncodeHupair(argc - (argbase + 1), &argv[argbase + 1],
-                                     hpn.name, humanPsp);
+  bool needHupair;
+  ULong cmdline = EncodeHupair(argc - (argbase + 1), &argv[argbase + 1],
+                               hpn.name, humanPsp, &needHupair);
 
   // スタックを確保
   const ULong programStack =
@@ -551,6 +555,16 @@ Restart:
   if (entryAddress < 0) {
     free(prog_ptr);
     return EXIT_FAILURE;
+  }
+
+  if (needHupair) {
+    if (!IsCompliantWithHupair(programPsp + SIZEOF_PSP, prog_size,
+                               entryAddress)) {
+      print(
+          "コマンドライン文字列の長さが255バイトを超えましたが、"
+          "プログラムがHUPAIRに対応していないため実行できません。\n");
+      return EXIT_FAILURE;
+    }
   }
 
   const ProgramSpec progSpec = {prog_size2, prog_size - prog_size2};
