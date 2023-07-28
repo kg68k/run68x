@@ -19,8 +19,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "run68.h"
 #include "mem.h"
+#include "run68.h"
 
 /* デバッグモードのプロンプト */
 #define PROMPT "(run68)"
@@ -47,7 +47,6 @@ static char *command_name[] = {
 ULong stepcount;
 
 static RUN68_COMMAND analyze(const char *line, int *argc, char **argv);
-static short determine_string(const char *str);
 static void display_help();
 static void display_history(int argc, char **argv);
 static void display_list(int argc, char **argv);
@@ -56,6 +55,26 @@ static void display_registers();
 static void set_breakpoint(int argc, char **argv);
 static void clear_breakpoint();
 static ULong get_stepcount(int argc, char **argv);
+
+typedef enum {
+  ARGUMENT_TYPE_NAME = 0,
+  ARGUMENT_TYPE_DECIMAL = 1,
+  ARGUMENT_TYPE_HEX = 2,
+  ARGUMENT_TYPE_SYMBOL = 3,
+} ArgumentType;
+
+// 文字列が名前か、10進数値か、16進数か、あるいは記号かを判定する。
+static ArgumentType determine_string(const char *str) {
+  // とりあえずいい加減な実装をする。
+  if (isupper(str[0])) {
+    return ARGUMENT_TYPE_NAME;  // 名前
+  } else if (isdigit(str[0])) {
+    return ARGUMENT_TYPE_DECIMAL;  // 10進数
+  } else if (str[0] == '$') {
+    return ARGUMENT_TYPE_HEX;  // 16進数
+  }
+  return ARGUMENT_TYPE_SYMBOL;  // 記号
+}
 
 static UWord watchcode(int argc, char **argv) {
   unsigned short wcode;
@@ -270,19 +289,6 @@ static RUN68_COMMAND analyze(const char *line, int *argc, char **argv) {
   }
 }
 
-/* 文字列が名前か、10進数値か、16進数か、あるいは記号かを判定する。*/
-static short determine_string(const char *str) {
-  /* とりあえずいい加減な実装をする。*/
-  if ('A' <= str[0] && str[0] <= 'Z') {
-    return 0; /* 名前 */
-  } else if ('0' <= str[0] && str[0] <= '9') {
-    return 1; /* 10進数 */
-  } else if (str[0] == '$') {
-    return 2; /* 16進数 */
-  }
-  return 3; /* 記号 */
-}
-
 static void display_help() {
   fprintf(stderr,
           "       ============= run68 debugger commands =============\n");
@@ -310,46 +316,71 @@ static void display_help() {
           "                  and stops after executing n instructions.\n");
 }
 
+static bool scanSize(const char *s, int *sizeptr) {
+  int size;
+  if (sscanf(s, "%d", &size) != 1 || size <= 0 || size > 1024) return false;
+
+  *sizeptr = size;
+  return true;
+}
+
+static bool scanAddress(const char *s, ULong *adrptr) {
+  int adr;
+  const char *afterDoller = s + 1;
+  if (sscanf(afterDoller, "%x", &adr) != 1) return false;
+
+  *adrptr = adr & ADDRESS_MASK;
+  return true;
+}
+
 static void run68_dump(int argc, char **argv) {
-  static Long dump_addr = -1;
-  static Long size = 32;
-  Long sadr;
+  static ULong dump_addr = 0;
+  static int size = 32;
   int i, j;
 
-  if (dump_addr == -1) {
-    if (argc == 1) {
-      fprintf(stderr, "run68-dump:You must specify $adr at least once.\n");
-      return;
+  bool argumentError = false;
+  if (argc >= 2) {
+    switch (determine_string(argv[1])) {
+      default:
+        argumentError = true;
+        break;
+      case ARGUMENT_TYPE_DECIMAL:
+        if (!scanSize(argv[1], &size)) argumentError = true;
+        break;
+      case ARGUMENT_TYPE_HEX:
+        if (!scanAddress(argv[1], &dump_addr)) argumentError = true;
+        break;
     }
-  } else {
-    sadr = dump_addr;
+printf("%s %d, argumentError=%d\n", __FILE__, __LINE__, (int)argumentError);
   }
-  if (2 <= argc) {
-    if (determine_string(argv[1]) == 1) {
-      sscanf(argv[1], "%d", &size);
-    } else if (argc >= 2 && determine_string(argv[1]) == 2) {
-      sscanf(&argv[1][1], "%x", &sadr);
-    } else {
-      fprintf(stderr, "run68-dump:Argument error.\n");
-      return;
+  if (argc >= 3) {
+    switch (determine_string(argv[2])) {
+      default:
+        argumentError = true;
+        break;
+      case ARGUMENT_TYPE_DECIMAL:
+        if (!scanSize(argv[2], &size)) argumentError = true;
+        break;
     }
-    if (argc == 3) {
-      if (determine_string(argv[2]) == 1) {
-        sscanf(argv[2], "%d", &size);
-      } else {
-        fprintf(stderr, "run68-dump:Argument error.\n");
-        return;
-      }
-    }
+printf("%s %d, argumentError=%d\n", __FILE__, __LINE__, (int)argumentError);
   }
+  if (argumentError) {
+    fprintf(stderr, "run68-dump:Argument error.\n");
+    return;
+  }
+
+  if ((dump_addr + size) > mem_aloc) {
+    // ダンプ対象がメインメモリ外ならエラー
+    fprintf(stderr, "run68-dump:Address range error.\n");
+    return;
+  }
+
   for (i = 0; i < size; i++) {
-    ULong d = prog_ptr[sadr + i];
+    ULong d = prog_ptr[dump_addr + i];
     if (i % 16 == 0) {
-      fprintf(stderr, "%06X:", sadr + i);
-    } else if (i % 8 == 0) {
-      fprintf(stderr, "-");
+      fprintf(stderr, "%06X:", dump_addr + i);
     } else {
-      fprintf(stderr, " ");
+      fprintf(stderr, (i % 8 == 0) ? "-" : " ");
     }
     fprintf(stderr, "%02X", d);
     if (i % 16 == 15 || i == size - 1) {
@@ -360,13 +391,13 @@ static void run68_dump(int argc, char **argv) {
       }
       fprintf(stderr, ":");
       for (j = i & 0xfffffff0; j <= i; j++) {
-        d = prog_ptr[sadr + j];
+        d = prog_ptr[dump_addr + j];
         fprintf(stderr, "%c", (' ' <= d && d <= 0x7e) ? d : '.');
       }
       fprintf(stderr, "\n");
     }
   }
-  dump_addr = sadr + size;
+  dump_addr += size;
 }
 
 static void display_registers() {
