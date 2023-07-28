@@ -6,6 +6,13 @@ run68の改造版です。
 
 
 ## Build
+Windows (Visual Studio 2022、x64)、WSL上のUbuntu 20.04でのみ確認しています。  
+なにか問題があれば報告してください。
+
+### Visual Studio
+フォルダを開いてビルドしてください。
+
+### その他の環境
 ```
 $ cmake -B build
 $ cmake --build build

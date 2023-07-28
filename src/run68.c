@@ -92,9 +92,9 @@ static void print_title(void) {
 static void print_usage(void) {
   const char *usage =
       "Usage: run68 [options] execute_filename [commandline]\n"
-      "             -f         function call trace\n"
-      "             -t         mpu trace\n"
-      "             -debug     run with debugger\n";
+      "    -f        function call trace\n"
+      "    -t        mpu trace\n"
+      "    -debug    run with debugger\n";
   print(usage);
 }
 
