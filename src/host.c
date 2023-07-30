@@ -154,6 +154,25 @@ bool CloseFile_generic(FILEINFO *finfop) {
 }
 #endif
 
+#ifdef HOST_READ_FILE_OR_TTY_GENERIC
+#include <unistd.h>
+
+// 端末からの入力
+Long read_from_tty(char *buffer, ULong length) {
+  ULong read_len = gets2(buffer, length);
+  int crlf_len = ((length - read_len) >= 2) ? 2 : length - read_len;
+  memcpy(buffer + read_len, "\r\n", crlf_len);
+  return read_len + crlf_len;
+}
+
+// ファイル読み込み
+Long ReadFileOrTty_generic(FILEINFO *finfop, char *buffer, ULong length) {
+  if (isatty(fileno(finfop->host.fp))) return read_from_tty(buffer, length);
+
+  return (Long)fread(buffer, 1, length, finfop->host.fp);
+}
+#endif
+
 static void not_implemented(const char *name) {
   printFmt("run68: %s()は未実装です。\n", name);
 }

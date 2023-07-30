@@ -20,7 +20,14 @@
 
 #include "run68.h"
 
+typedef struct {
+  char* bufptr;
+  ULong address;
+  ULong length;
+} MemoryRange;
+
 void SetSupervisorArea(ULong adr);
+bool GetWritableMemoryRange(ULong adr, ULong len, MemoryRange* result);
 
 Long idx_get(void);
 Long imi_get(char size);

@@ -1,0 +1,67 @@
+// run68x - Human68k CUI Emulator based on run68
+// Copyright (C) 2023 TcbnErik
+//
+// This program is free software; you can redistribute it and /or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
+
+#include "dos_file.h"
+
+#include "host.h"
+#include "human68k.h"
+#include "mem.h"
+#include "run68.h"
+
+// DOS _READ
+Long Read(UWord fileno, ULong buffer, ULong length) {
+  // Human68k v3.02ではファイルのエラー検査より先にバイト数が0か調べている
+  if (length == 0) return 0;
+
+  FILEINFO* finfop = &finfo[fileno];
+  if (!finfop->is_opened) return DOSE_BADF;
+
+  // 書き込みモードで開いたファイルでも読み込むことができるので
+  // オープンモードは確認しない
+
+  MemoryRange mem;
+  if (!GetWritableMemoryRange(buffer, length, &mem)) {
+    // バッファアドレスが不正
+    mem_wrt_chk(buffer & ADDRESS_MASK);
+    return DOSE_ILGFNC;  // 戻ってこないはずだが念のため
+  }
+
+  Long result = HOST_READ_FILE_OR_TTY(finfop, mem.bufptr, mem.length);
+  if (result <= 0) return result;
+  if (length == mem.length) return result;  // バッファが全域有効なら完了
+
+  if ((ULong)result < mem.length) {
+    // 有効なバッファより少ないバイト数だけ読み込めたなら完了
+    // 例えば buffer=0x00bffffe, length=4 で result==1 の場合
+    return result;
+  }
+
+  // 有効なバッファちょうどのバイト数だけ読み込めた場合は、残りのバイト数を
+  // 後続の不正なアドレスに読み込む動作を偽装する。
+
+  // 試しに追加で1バイト読み込んでみる
+  char dummy;
+  Long result2 = HOST_READ_FILE_OR_TTY(finfop, &dummy, 1);
+  if (result2 < 0) return result2;
+
+  // ファイル末尾に達していたら、最初の読み込みでちょうど終わっていた
+  if (result2 == 0) return result;
+
+  // 追加で読めてしまったらバスエラー発生
+  mem_wrt_chk((buffer & ADDRESS_MASK) + mem.length);
+  return DOSE_ILGFNC;
+}

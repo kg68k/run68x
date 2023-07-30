@@ -32,13 +32,32 @@ static ULong supervisorEnd;
 // メインメモリをスーパーバイザ領域として設定する
 void SetSupervisorArea(ULong adr) { supervisorEnd = adr; }
 
+static inline ULong ulmin(ULong a, ULong b) { return (a < b) ? a : b; }
+
+// 書込み可能なメモリ範囲を調べる
+bool GetWritableMemoryRange(ULong adr, ULong len, MemoryRange* result) {
+  const ULong end = mem_aloc;
+  *result = (MemoryRange){NULL, 0, 0};
+  adr &= ADDRESS_MASK;
+
+  if (end <= adr) {
+    // メインメモリ外は全て書き込み不可能
+    // 実機の仕様としてはGVRAM等は書き込みできるが、run68では実装していない
+    return false;
+  }
+
+  // メインメモリ末尾まで書き込み可能
+  *result = (MemoryRange){prog_ptr + adr, adr, ulmin(len, end - adr)};
+  return true;
+}
+
 /*
  　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
  　　　　の値を得る
  戻り値：その値
 */
 Long idx_get(void) {
-  char *mem = prog_ptr + pc;
+  char* mem = prog_ptr + pc;
 
   // Brief Extension Word Format
   //   D/A | REG | REG | REG | W/L | SCALE | SCALE | 0

@@ -91,6 +91,16 @@ bool CloseFile_win32(FILEINFO* finfop) {
   return (CloseHandle(hFile) == FALSE) ? false : true;
 }
 
+// ファイル読み込み
+Long ReadFileOrTty_win32(FILEINFO* finfop, char* buffer, ULong length) {
+  DWORD read_len;
+
+  if (ReadFile(finfop->host.handle, buffer, length, &read_len, NULL) == FALSE)
+    return DOSE_BADF;
+
+  return (Long)read_len;
+}
+
 // DOS _MKDIR (0xff39)
 Long DosMkdir_win32(Long name) {
   char* name_ptr = prog_ptr + name;

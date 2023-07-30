@@ -38,6 +38,9 @@ void InitFileInfo_win32(FILEINFO* finfop, int fileno);
 bool CloseFile_win32(FILEINFO* finfop);
 #define HOST_CLOSE_FILE CloseFile_win32
 
+Long ReadFileOrTty_win32(FILEINFO* finfop, char* buffer, ULong length);
+#define HOST_READ_FILE_OR_TTY ReadFileOrTty_win32
+
 Long DosMkdir_win32(Long name);
 #define HOST_DOS_MKDIR DosMkdir_win32
 

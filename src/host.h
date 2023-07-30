@@ -65,6 +65,12 @@ bool CloseFile_generic(FILEINFO* finfop);
 #define HOST_CLOSE_FILE CloseFile_generic
 #endif
 
+#ifndef HOST_READ_FILE_OR_TTY
+#define HOST_READ_FILE_OR_TTY_GENERIC
+Long ReadFileOrTty_generic(FILEINFO* finfop, char* buffer, ULong length);
+#define HOST_READ_FILE_OR_TTY ReadFileOrTty_generic
+#endif
+
 #ifndef HOST_DOS_MKDIR
 #define HOST_DOS_MKDIR_GENERIC
 Long DosMkdir_generic(Long name);

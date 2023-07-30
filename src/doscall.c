@@ -45,6 +45,7 @@
 #endif
 
 #include "ansicolor-w32.h"
+#include "dos_file.h"
 #include "dos_memory.h"
 #include "host.h"
 #include "human68k.h"
@@ -62,10 +63,6 @@ static Long Newfile(char *, short);
 static Long Open(char *, short);
 static Long Close(short);
 static Long Fgets(Long, short);
-static Long Read(short, Long, Long);
-#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Read_conv(short, void *, size_t);
-#endif
 static Long Write(short, Long, Long);
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
 static Long Write_conv(short, void *, size_t);
@@ -94,7 +91,6 @@ static Long Exec01(Long, Long, Long, int);
 static Long Exec2(Long, Long, Long);
 static Long Exec3(Long, Long, Long);
 static void Exec4(Long);
-static Long gets2(char *, int);
 
 #ifndef _WIN32
 void CloseHandle(FILE *fp) { fclose(fp); }
@@ -169,6 +165,15 @@ static Long Rmdir(Long name) {  //
 // DOS _CHDIR (0xff3b)
 static Long Chdir(Long name) {  //
   return HOST_DOS_CHDIR(name);
+}
+
+// DOS _READ (0xff3b)
+static Long DosRead(ULong param) {
+  UWord fileno = ReadParamUWord(&param);
+  ULong buffer = ReadParamULong(&param);
+  ULong length = ReadParamULong(&param);
+
+  return Read(fileno, buffer, length);
 }
 
 // DOS _CURDIR (0xff47)
@@ -278,6 +283,21 @@ static void print_drive_param(const char *prefix, UWord drive,
   printf("%s", suffix);
 }
 
+// -fオプション用のメモリダンプ
+static void dump_memory(ULong adr, ULong length) {
+  const ULong max = 32;
+  const int len = (int)((length < max) ? length : max);
+
+  const char *p = prog_ptr + adr;
+  for (int i = 0; i < len; ++i) {
+    char c = *p++;
+    // マルチバイト文字、1バイト半角カタカナには未対応
+    printFmt((0x20 <= c && c <= 0x7e) ? "%c" : "\\x%02x", c);
+  }
+  if (length > max) print("...");
+  print("\n");
+}
+
 /*
  　機能：DOSCALLを実行する
  戻り値： true = 実行終了
@@ -293,7 +313,6 @@ bool dos_call(UByte code) {
   short srt;
   short fhdl;
   Long c = 0;
-  int i;
 #ifdef _WIN32
   DWORD st;
 #endif
@@ -451,7 +470,7 @@ bool dos_call(UByte code) {
       }
 #ifdef _WIN32
       /* オープン中の全てのファイルをフラッシュする。*/
-      for (i = 5; i < FILE_MAX; i++) {
+      for (int i = 5; i < FILE_MAX; i++) {
         if (finfo[i].is_opened) FlushFileBuffers(finfo[i].host.handle);
       }
 #else
@@ -847,20 +866,13 @@ bool dos_call(UByte code) {
       rd[0] = Close(srt);
       break;
     case 0x3F: /* READ */
-      srt = (short)mem_get(stack_adr, S_WORD);
-      data = mem_get(stack_adr + 2, S_LONG);
-      len = mem_get(stack_adr + 6, S_LONG);
-      rd[0] = Read(srt, data, len);
+      rd[0] = DosRead(stack_adr);
       if (func_trace_f) {
-        char *str = prog_ptr + data;
-        printf("%-10s file_no=%d size=%d ret=%d str=", "READ", srt, len, rd[0]);
-        for (i = 0; i < (len <= 30 ? len : 30); i++) {
-          if (str[i] == 0) break;
-          if (str[i] < ' ') printf("\\%03o", (unsigned char)str[i]);
-          putchar(str[i]);
-        }
-        if (len > 30) printf(" ...(truncated)");
-        printf("\n");
+        ULong adr = mem_get(stack_adr + 2, S_LONG);
+        ULong len = mem_get(stack_adr + 6, S_LONG);
+        printf("%-10s file_no=%d size=%d ret=%d str=", "READ",
+               mem_get(stack_adr, S_WORD), len, rd[0]);
+        dump_memory(adr, len);
       }
       break;
     case 0x40: /* WRITE */
@@ -869,16 +881,9 @@ bool dos_call(UByte code) {
       len = mem_get(stack_adr + 6, S_LONG);
       rd[0] = Write(srt, data, len);
       if (func_trace_f) {
-        char *str = prog_ptr + data;
         printf("%-10s file_no=%d size=%d ret=%d str=", "WRITE", srt, len,
                rd[0]);
-        for (i = 0; i < (len <= 30 ? len : 30); i++) {
-          if (str[i] == 0) break;
-          if (str[i] < ' ') printf("\\%03o", (unsigned char)str[i]);
-          putchar(str[i]);
-        }
-        if (len > 30) printf(" ...(truncated)");
-        printf("\n");
+        dump_memory(data, len);
       }
       break;
     case 0x41: /* DELETE */
@@ -1582,53 +1587,6 @@ static Long Fgets(Long adr, short hdl) {
 
   return (len);
 }
-
-/*
- 　機能：DOSCALL READを実行する
- 戻り値：読み込んだバイト数(負ならエラーコード)
- */
-static Long Read(short hdl, Long buf, Long len) {
-  char *read_buf;
-  Long read_len;
-
-  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
-  if (finfo[hdl].mode == 1) return (-1); /* 無効なファンクションコール */
-
-  if (len == 0) return (0);
-
-  read_buf = prog_ptr + buf;
-#ifdef _WIN32
-  ReadFile(finfo[hdl].host.handle, read_buf, len, (LPDWORD)&read_len, NULL);
-#elif defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-  read_len = Read_conv(hdl, read_buf, len);
-#else
-  read_len = fread(read_buf, 1, len, finfo[hdl].host.fp);
-#endif
-
-  return (read_len);
-}
-
-#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Read_conv(short hdl, void *buf, size_t size) {
-  Long read_len;
-  FILE *fp = finfo[hdl].host.fp;
-
-  if (fp == NULL) return (-6);
-
-  if (!isatty(fileno(fp))) {
-    read_len = fread(buf, 1, size, fp);
-  } else {
-    int crlf_len;
-
-    read_len = gets2(buf, size);
-    crlf_len = size - read_len >= 2 ? 2 : size - read_len;
-    memcpy(buf + read_len, "\r\n", crlf_len);
-    read_len += crlf_len;
-  }
-
-  return read_len;
-}
-#endif
 
 /*
  　機能：DOSCALL WRITEを実行する
@@ -2856,7 +2814,7 @@ static void Exec4(Long adr) {
  　機能：getsの代わりをする
  戻り値：なし
  */
-static Long gets2(char *str, int max) {
+Long gets2(char *str, int max) {
   int c;
   int cnt;
 
