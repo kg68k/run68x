@@ -15,30 +15,6 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/* $Id: getini.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
- * First imported source code and docs
- *
- * Revision 1.5  1999/12/07  12:42:44  yfujii
- * *** empty log message ***
- *
- * Revision 1.5  1999/12/01  04:02:55  yfujii
- * .ini file is now retrieved from the same dir as the run68.exe file.
- *
- * Revision 1.4  1999/10/26  12:26:08  yfujii
- * Environment variable function is drasticaly modified.
- *
- * Revision 1.3  1999/10/22  11:06:22  yfujii
- * Expanded emulation memory from 9M to 12M.
- *
- * Revision 1.2  1999/10/18  03:24:40  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -221,3 +197,27 @@ void readenv_from_ini(char *path, ULong envbuf) {
   *(UByte *)(prog_ptr + envbuf + 4 + env_len) = 0;
   fclose(fp);
 }
+
+/* $Id: getini.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:07  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.5  1999/12/07  12:42:44  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.5  1999/12/01  04:02:55  yfujii
+ * .ini file is now retrieved from the same dir as the run68.exe file.
+ *
+ * Revision 1.4  1999/10/26  12:26:08  yfujii
+ * Environment variable function is drasticaly modified.
+ *
+ * Revision 1.3  1999/10/22  11:06:22  yfujii
+ * Expanded emulation memory from 9M to 12M.
+ *
+ * Revision 1.2  1999/10/18  03:24:40  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */

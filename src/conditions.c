@@ -15,31 +15,6 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/* $Id: conditions.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.2  2009/08/05 14:44:33  masamic
- * Some Bug fix, and implemented some instruction
- * Following Modification contributed by TRAP.
- *
- * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
- * word size.
- * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
- * Add: Nbcd, Sbcd.
- *
- * Revision 1.1.1.1  2001/05/23 11:22:05  masamic
- * First imported source code and docs
- *
- * Revision 1.2  1999/12/07  12:39:54  yfujii
- * *** empty log message ***
- *
- * Revision 1.2  1999/11/29  06:24:04  yfujii
- * Condition code operations are modified to be correct.
- *
- *
- */
-
 #include "run68.h"
 
 static void ccr2bitmap(short ccr, char *bitmap) {
@@ -356,3 +331,28 @@ void neg_conditions(Long dest, Long result, int size, bool zero_flag) {
     CCR_N_OFF();
   }
 }
+
+/* $Id: conditions.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.2  2009/08/05 14:44:33  masamic
+ * Some Bug fix, and implemented some instruction
+ * Following Modification contributed by TRAP.
+ *
+ * Fixed Bug: In disassemble.c, shift/rotate as{lr},ls{lr},ro{lr} alway show
+ * word size.
+ * Modify: enable KEYSNS, register behaiviour of sub ea, Dn.
+ * Add: Nbcd, Sbcd.
+ *
+ * Revision 1.1.1.1  2001/05/23 11:22:05  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.2  1999/12/07  12:39:54  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.2  1999/11/29  06:24:04  yfujii
+ * Condition code operations are modified to be correct.
+ *
+ *
+ */

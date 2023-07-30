@@ -345,7 +345,6 @@ static void run68_dump(int argc, char **argv) {
         if (!scanAddress(argv[1], &dump_addr)) argumentError = true;
         break;
     }
-    printf("%s %d, argumentError=%d\n", __FILE__, __LINE__, (int)argumentError);
   }
   if (argc >= 3) {
     switch (determine_string(argv[2])) {
@@ -356,7 +355,6 @@ static void run68_dump(int argc, char **argv) {
         if (!scanSize(argv[2], &size)) argumentError = true;
         break;
     }
-    printf("%s %d, argumentError=%d\n", __FILE__, __LINE__, (int)argumentError);
   }
   if (argumentError) {
     debuggerError("dump:Argument error.\n");

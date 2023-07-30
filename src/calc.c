@@ -15,24 +15,6 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-/* $Id: calc.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
-
-/*
- * $Log: not supported by cvs2svn $
- * Revision 1.1.1.1  2001/05/23 11:22:05  masamic
- * First imported source code and docs
- *
- * Revision 1.3  1999/12/21  10:08:59  yfujii
- * Uptodate source code from Beppu.
- *
- * Revision 1.2  1999/12/07  12:39:26  yfujii
- * *** empty log message ***
- *
- * Revision 1.2  1999/10/21  12:17:46  yfujii
- * Added RCS keywords and modified for WIN/32 a little.
- *
- */
-
 #include <stdio.h>
 
 #include "run68.h"
@@ -72,3 +54,21 @@ Long sub_long(Long src, Long dest, int size) {
       err68a("不正なデータサイズです。", __FILE__, __LINE__);
   }
 }
+
+/* $Id: calc.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */
+
+/*
+ * $Log: not supported by cvs2svn $
+ * Revision 1.1.1.1  2001/05/23 11:22:05  masamic
+ * First imported source code and docs
+ *
+ * Revision 1.3  1999/12/21  10:08:59  yfujii
+ * Uptodate source code from Beppu.
+ *
+ * Revision 1.2  1999/12/07  12:39:26  yfujii
+ * *** empty log message ***
+ *
+ * Revision 1.2  1999/10/21  12:17:46  yfujii
+ * Added RCS keywords and modified for WIN/32 a little.
+ *
+ */
