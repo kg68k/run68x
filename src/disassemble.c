@@ -1197,11 +1197,11 @@ static char *disac(Long addr, UWord code, Long *next_addr, char *mnemonic) {
       sprintf(mnemonic, "exg.l  d%1d,d%1d", (code & 0x38) >> 9, (code & 0x7));
       *next_addr = addr + 2;
       goto EndOfFunc;
-    case 0xc141:
+    case 0xc148:
       sprintf(mnemonic, "exg.l  a%1d,a%1d", (code & 0x38) >> 9, (code & 0x7));
       *next_addr = addr + 2;
       goto EndOfFunc;
-    case 0xc181:
+    case 0xc188:
       sprintf(mnemonic, "exg.l  d%1d,a%1d", (code & 0x38) >> 9, (code & 0x7));
       *next_addr = addr + 2;
       goto EndOfFunc;
