@@ -22,6 +22,8 @@
 
 #include "run68.h"
 
+NORETURN static void read_invalid_memory(ULong adr);
+
 enum {
   GVRAM = 0x00c00000,
 };
@@ -34,7 +36,7 @@ void SetSupervisorArea(ULong adr) { supervisorEnd = adr; }
 
 static inline ULong ulmin(ULong a, ULong b) { return (a < b) ? a : b; }
 
-// 書込み可能なメモリ範囲を調べる
+// 書き込み可能なメモリ範囲を調べる
 bool GetWritableMemoryRange(ULong adr, ULong len, MemoryRange* result) {
   const ULong end = mem_aloc;
   *result = (MemoryRange){NULL, 0, 0};
@@ -49,6 +51,24 @@ bool GetWritableMemoryRange(ULong adr, ULong len, MemoryRange* result) {
   // メインメモリ末尾まで書き込み可能
   *result = (MemoryRange){prog_ptr + adr, adr, ulmin(len, end - adr)};
   return true;
+}
+
+// 文字列(ASCIIZ)として読み込み可能なメモリか調べ、バッファへのポインタを返す
+//   読み込み不可能ならエラー終了する
+char* GetMemoryBufferString(ULong adr) {
+  const ULong end = mem_aloc;  // メインメモリ外は全て読み込み不可能
+  adr &= ADDRESS_MASK;
+
+  ULong n;
+  for (n = adr; n < end; ++n) {
+    if (prog_ptr[n] == '\0') {
+      // メモリ内にNUL文字があれば、文字列は問題なく読み込み可能
+      return prog_ptr + adr;
+    }
+  }
+
+  // メモリ末尾までNUL文字がなければ不正なメモリを参照してバスエラーになる
+  read_invalid_memory(n);
 }
 
 /*
@@ -202,6 +222,12 @@ void run68_abort(Long adr) {
   printf("  pc=%08lx    sr=%04x\n", pc, sr);
 #endif
   longjmp(jmp_when_abort, 2);
+}
+
+static void read_invalid_memory(ULong adr) {
+  char buf[256];
+  snprintf(buf, sizeof(buf), "不正アドレス($%08x)からの読み込みです。", adr);
+  err68(buf);
 }
 
 /* $Id: mem.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */

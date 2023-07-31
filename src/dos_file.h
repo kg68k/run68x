@@ -21,5 +21,6 @@
 #include "run68.h"
 
 Long Read(UWord fileno, ULong buffer, ULong length);
+Long Maketmp(ULong path, UWord atr);
 
 #endif

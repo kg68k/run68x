@@ -59,7 +59,6 @@ static Long Dup(short);
 static Long Dup2(short, short);
 static Long Dskfre(short, Long);
 static Long Create(char *, short);
-static Long Newfile(char *, short);
 static Long Open(char *, short);
 static Long Close(short);
 static Long Fgets(Long, short);
@@ -196,6 +195,13 @@ static Long DosSetblock(ULong param) {
   return Setblock(adr, size);
 }
 
+// DOS _FILEDATE (0xff57, 0xff87)
+static Long DosFiledate(ULong param) {
+  UWord fileno = ReadParamUWord(&param);
+  ULong dt = ReadParamULong(&param);
+  return HOST_DOS_FILEDATE(fileno, dt);
+}
+
 // DOS _MALLOC2 (0xff58, 0xff88)
 static Long DosMalloc2(ULong param) {
   UWord mode = ReadParamUWord(&param);
@@ -208,11 +214,11 @@ static Long DosMalloc2(ULong param) {
   return Malloc(modeByte, size, parent);
 }
 
-// DOS _FILEDATE (0xff57, 0xff87)
-static Long DosFiledate(ULong param) {
-  UWord fileno = ReadParamUWord(&param);
-  ULong dt = ReadParamULong(&param);
-  return HOST_DOS_FILEDATE(fileno, dt);
+// DOS _MAKETMP (0xff5a, 0xff8a)
+static Long DosMaketmp(ULong param) {
+  ULong path = ReadParamULong(&param);
+  UWord atr = ReadParamUWord(&param);
+  return Maketmp(path, atr);
 }
 
 // ファイルを閉じてFILEINFOを未使用状態に戻す
@@ -1053,6 +1059,14 @@ bool dos_call(UByte code) {
       }
       rd[0] = DosMalloc2(stack_adr);
       break;
+    case 0x5a:  // MAKETMP
+      if (func_trace_f) {
+        ULong path = mem_get(stack_adr, S_LONG);
+        UWord atr = mem_get(stack_adr + 4, S_WORD);
+        printf("%-10s name=\"%s\" attr=%d\n", "MAKETMP", prog_ptr + path, atr);
+      }
+      rd[0] = DosMaketmp(stack_adr);
+      break;
     case 0x5B: /* NEWFILE */
       data = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
@@ -1368,7 +1382,7 @@ static Long Create(char *p, short atr) {
  　機能：DOSCALL NEWFILEを実行する
  戻り値：ファイルハンドル(負ならエラーコード)
  */
-static Long Newfile(char *p, short atr) {
+Long Newfile(char *p, short atr) {
   Long i;
 
 #ifndef _WIN32

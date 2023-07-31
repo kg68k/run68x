@@ -274,6 +274,7 @@ void close_all_files(void);
 bool dos_call(UByte);
 Long Getenv_common(const char *name_p, char *buf_p, ULong envptr);
 Long gets2(char *str, int max);
+Long Newfile(char *, short);
 
 /* iocscall.c */
 bool iocs_call(void);

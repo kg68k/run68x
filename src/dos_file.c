@@ -17,6 +17,9 @@
 
 #include "dos_file.h"
 
+#include <ctype.h>
+#include <string.h>
+
 #include "host.h"
 #include "human68k.h"
 #include "mem.h"
@@ -64,4 +67,75 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
   // 追加で読めてしまったらバスエラー発生
   mem_wrt_chk((buffer & ADDRESS_MASK) + mem.length);
   return DOSE_ILGFNC;
+}
+
+// Human68kにおける2バイト文字の1バイト目の文字コードか
+static int is_mb_lead(char c) {
+  return (0x80 <= c && c <= 0x9f) || (0xe0 <= c && 0xff);
+}
+
+// 最後のパスデリミタ(\ : /)の次のアドレスを求める
+//   パスデリミタがなければ文字列先頭を返す
+char* get_filename(char* path) {
+  char* filename = path;
+  char* p = path;
+  char c;
+
+  while ((c = *p++) != '\0') {
+    if (c == '\\' || c == ':' || c == '/') {
+      filename = p;
+      continue;
+    }
+    if (is_mb_lead(c)) {
+      if (*p++ == '\0') break;
+    }
+  }
+  return filename;
+}
+
+// 文字列中の文字を置換する
+static void replace_char(char* s, char from, char to) {
+  for (; *s; ++s) {
+    if (*s == from) *s = to;
+  }
+}
+
+// DOS _MAKETMP
+Long Maketmp(ULong path, UWord atr) {
+  char* const path_buf = GetMemoryBufferString(path);
+
+  char* const filename = get_filename(path_buf);
+  const size_t len = strlen(filename);
+  if (len == 0) return DOSE_ILGFNAME;
+
+  replace_char(filename, '?', '0');  // ファイル名中の'?'を'0'に置き換える
+
+  for (;;) {
+    Long fileno = Newfile(path_buf, atr);
+    if (fileno != DOSE_EXISTFILE) {
+      // ファイルを作成できれば終了
+      // 同名ファイルが存在する以外のエラーでも終了
+      return fileno;
+    }
+
+    // 同名ファイルが存在するエラーの場合は、ファイル名中の数字に1を加算する
+    bool done = false;
+    for (char* t = filename + len - 1; filename <= t; --t) {
+      if (!isdigit(*t)) continue;
+
+      if (*t == '9') {
+        *t = '0';  // '9'は'0'に戻して上位桁に繰り上げる
+        continue;
+      }
+      *t += 1;  // '0' -> '1', ... '8' -> '9'
+      done = true;
+      break;  // 加算が完了したのでループを抜ける
+    }
+    if (!done) {
+      // 数字がないか、最上位桁からの繰り上げができなかった場合はエラー
+      return DOSE_EXISTFILE;
+    }
+
+    // 加算できたらファイル作成を再試行する
+  }
 }
