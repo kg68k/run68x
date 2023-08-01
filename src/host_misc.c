@@ -21,7 +21,7 @@
 #include "run68.h"
 
 // IOCS _ONTIME (0x7f)
-RegPair IocsOntime_win32(void) {
+RegPair IocsOntime_time(void) {
   time_t t = time(NULL);
   const int secondsPerDay = 24 * 60 * 60;
   return (RegPair){(t % secondsPerDay) * 100, (t / secondsPerDay) & 0xffff};
