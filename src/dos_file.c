@@ -71,7 +71,7 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
 
 // Human68kにおける2バイト文字の1バイト目の文字コードか
 static int is_mb_lead(char c) {
-  return (0x80 <= c && c <= 0x9f) || (0xe0 <= c && 0xff);
+  return (0x80 <= c && c <= 0x9f) || (0xe0 <= c && c <= 0xfc);
 }
 
 // 最後のパスデリミタ(\ : /)の次のアドレスを求める
