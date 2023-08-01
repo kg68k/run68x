@@ -70,8 +70,12 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
 }
 
 // Human68kにおける2バイト文字の1バイト目の文字コードか
+//   Shift_JIS-2004 ... 0x81～0x9f、0xe0～0xfc
+//   Human68kの実際の動作 ... 0x80～0x9f、0xe0～0xff
+//     ただしDOS _MAKETMPのみ0x80～0x9f、0xe0～0xefで、これは不具合と思われる。
+//   ここではHuman68kの実際の動作を採用する
 static int is_mb_lead(char c) {
-  return (0x80 <= c && c <= 0x9f) || (0xe0 <= c && c <= 0xfc);
+  return (0x80 <= c && c <= 0x9f) || (0xe0 <= c);
 }
 
 // 最後のパスデリミタ(\ : /)の次のアドレスを求める
