@@ -22,15 +22,6 @@
 #include "mem.h"
 #include "run68.h"
 
-#ifndef _WIN32
-#include <ctype.h>
-#define _strlwr(p)                         \
-  do {                                     \
-    char *s;                               \
-    for (s = p; *s; s++) *s = tolower(*s); \
-  } while (0)
-#endif
-
 /* 文字列末尾の CR LF を \0 で上書きすることで除去 */
 static void chomp(char *buf) {
   while (strlen(buf) != 0 &&
@@ -49,7 +40,6 @@ void read_ini(char *path, char *prog) {
   char *p;
 
   /* 情報構造体の初期化 */
-  ini_info.env_lower = false;
   ini_info.trap_emulate = false;
   ini_info.pc98_key = false;
   ini_info.io_through = false;
@@ -95,12 +85,10 @@ void read_ini(char *path, char *prog) {
     return;
   }
   sprintf(sec_name, "[%s]", &(prog[i]));
-  _strlwr(sec_name);
 
   /* 内容を調べる */
   bool section_match = true;
   while (fgets(buf, 1023, fp) != NULL) {
-    _strlwr(buf);
     chomp(buf);
 
     /* セクションを見る */
@@ -115,9 +103,7 @@ void read_ini(char *path, char *prog) {
 
     /* キーワードを見る */
     if (section_match) {
-      if (_stricmp(buf, "envlower") == 0)
-        ini_info.env_lower = true;
-      else if (_stricmp(buf, "trapemulate") == 0)
+      if (_stricmp(buf, "trapemulate") == 0)
         ini_info.trap_emulate = true;
       else if (_stricmp(buf, "pc98") == 0)
         ini_info.pc98_key = true;
@@ -147,7 +133,6 @@ void readenv_from_ini(char *path, ULong envbuf) {
   char buf[1024];
   FILE *fp;
   int len;
-  char *read_ptr;
   int env_len = 0; /* 環境の長さ */
   const size_t envSize = ReadSuperULong(envbuf);
 
@@ -162,13 +147,12 @@ void readenv_from_ini(char *path, ULong envbuf) {
   /* 内容を調べる */
   bool env_flag = false;  // ファイル先頭は [all] セクション
   while (fgets(buf, 1023, fp) != NULL) {
-    _strlwr(buf);
     chomp(buf);
 
     /* セクションを見る */
     if (buf[0] == '[') {
       env_flag = false;
-      if (strcmp(buf, "[environment]") == 0) {
+      if (_stricmp(buf, "[environment]") == 0) {
         env_flag = true;
       }
       continue;
@@ -180,12 +164,6 @@ void readenv_from_ini(char *path, ULong envbuf) {
       if (env_len + strlen(buf) < envSize - 5) {
         char *mem_ptr = prog_ptr + envbuf + 4 + env_len;
         strcpy(mem_ptr, buf);
-        if (ini_info.env_lower) {
-          _strlwr(buf);
-          read_ptr = buf;
-          while (*mem_ptr != '\0' && *mem_ptr != '=')
-            *(mem_ptr++) = *(read_ptr++);
-        }
 #ifdef TRACE
         mem_ptr = prog_ptr + ra[3] + 4 + env_len;
         printf("env: %s\n", mem_ptr);

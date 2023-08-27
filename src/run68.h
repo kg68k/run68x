@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "1.0.1"
+#define RUN68X_VERSION "1.1.0-beta"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if defined(__GNUC__)
@@ -182,7 +182,6 @@ typedef struct {
 } FILEINFO;
 
 typedef struct {
-  bool env_lower;
   bool trap_emulate;
   bool pc98_key;
   bool io_through;

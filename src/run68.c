@@ -62,19 +62,6 @@ static bool debug_flag = false;
 
 static char ini_file_name[MAX_PATH];
 
-#ifndef _WIN32
-char *strlwr(char *str) {
-  unsigned char *p = (unsigned char *)str;
-
-  while (*p) {
-    *p = tolower((unsigned char)*p);
-    p++;
-  }
-
-  return str;
-}
-#endif
-
 static void print_title(void) {
   const char *title =  //
       "run68x " RUN68X_VERSION
