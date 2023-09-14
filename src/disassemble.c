@@ -947,7 +947,6 @@ static char *disa8(Long addr, UWord code, Long *next_addr, char *mnemonic) {
     goto EndOfFunc;
   } else {
     char size;
-    char ea[64];
     /* OR */
     switch ((code & 0x1c0) >> 6) {
       case 0:
@@ -1361,7 +1360,7 @@ ErrorReturn:
 */
 
 char *disassemble(Long addr, Long *next_addr) {
-  static char mnemonic[64], *ptr;
+  static char mnemonic[128], *ptr;
 
   ptr = NULL;
   *next_addr = addr;

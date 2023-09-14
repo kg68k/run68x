@@ -2361,7 +2361,7 @@ static Long Nameck(Long name, Long buf) {
   nbuf[i] = '\0';
 
   /* パス名をセット */
-  if (i == 0) {
+  if (i <= 0) {
     strcpy(buf_ptr + 2, ".\\");
   } else {
     for (i--; i >= 0; i--) {
