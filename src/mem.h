@@ -40,16 +40,24 @@ NORETURN void run68_abort(Long adr);
 bool mem_red_chk(ULong adr);
 bool mem_wrt_chk(ULong adr);
 
+#ifndef __BIG_ENDIAN__
+#if defined(_MSC_VER)
+#define BYTESWAP16 _byteswap_ushort
+#define BYTESWAP32 _byteswap_ulong
+#elif defined(__GNUC__)
+#define BYTESWAP16 __builtin_bswap16
+#define BYTESWAP32 __builtin_bswap32
+#endif
+#endif
+
 // メインメモリから1バイト読み込む(ビッグエンディアン)
 static inline UByte PeekB(ULong adr) { return *(UByte*)(prog_ptr + adr); }
 
 // メインメモリから1ワード読み込む(ビッグエンディアン)
 static inline UWord PeekW(ULong adr) {
   UByte* p = (UByte*)(prog_ptr + adr);
-#if defined(_MSC_VER)
-  return _byteswap_ushort(*(UWord*)p);
-#elif defined(__GNUC__)
-  return __builtin_bswap16(*(UWord*)p);
+#ifdef BYTESWAP16
+  return BYTESWAP16(*(UWord*)p);
 #else
   return (p[0] << 8) | p[1];
 #endif
@@ -58,10 +66,8 @@ static inline UWord PeekW(ULong adr) {
 // メインメモリから1ロングワード読み込む(ビッグエンディアン)
 static inline ULong PeekL(ULong adr) {
   UByte* p = (UByte*)(prog_ptr + adr);
-#if defined(_MSC_VER)
-  return _byteswap_ulong(*(ULong*)p);
-#elif defined(__GNUC__)
-  return __builtin_bswap32(*(ULong*)p);
+#ifdef BYTESWAP32
+  return BYTESWAP32(*(ULong*)p);
 #else
   return (p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3];
 #endif
@@ -73,10 +79,8 @@ static inline void PokeB(ULong adr, UByte n) { *(UByte*)(prog_ptr + adr) = n; }
 // メインメモリに1ワード書き込む(ビッグエンディアン)
 static inline void PokeW(ULong adr, UWord n) {
   UByte* p = (UByte*)(prog_ptr + adr);
-#if defined(_MSC_VER)
-  *(UWord*)p = _byteswap_ushort(n);
-#elif defined(__GNUC__)
-  *(UWord*)p = __builtin_bswap16(n);
+#ifdef BYTESWAP16
+  *(UWord*)p = BYTESWAP16(n);
 #else
   p[0] = n >> 8;
   p[1] = n;
@@ -86,10 +90,8 @@ static inline void PokeW(ULong adr, UWord n) {
 // メインメモリに1ロングワード書き込む(ビッグエンディアン)
 static inline void PokeL(ULong adr, ULong n) {
   UByte* p = (UByte*)(prog_ptr + adr);
-#if defined(_MSC_VER)
-  *(ULong*)p = _byteswap_ulong(n);
-#elif defined(__GNUC__)
-  *(ULong*)p = __builtin_bswap32(n);
+#ifdef BYTESWAP32
+  *(ULong*)p = BYTESWAP32(n);
 #else
   p[0] = n >> 24;
   p[1] = n >> 16;
