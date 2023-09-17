@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "1.1.0-beta"
+#define RUN68X_VERSION "1.1.0"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if defined(__GNUC__)
@@ -66,7 +66,6 @@ typedef struct {
 
 #ifndef _WIN32
 #define MAX_PATH PATH_MAX
-#define _fcvt fcvt
 #define _stricmp strcasecmp
 #endif
 

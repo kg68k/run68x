@@ -23,11 +23,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "human68k.h"
 #include "mem.h"
 #include "run68.h"
 
 typedef union {
   double dbl;
+  ULong l[2];
   UByte c[8];
 } DBL;
 
@@ -94,10 +96,70 @@ static void Cdsub(Long);
 static void Cdmul(Long);
 static void Cddiv(Long);
 static int Strl(char *, int);
-static void From_dbl(DBL *, int);
-static void To_dbl(DBL *, Long, Long);
-
 static void Pow(Long, Long, Long, Long);
+
+/*
+ 　機能：倍精度浮動小数点数をレジスタ2つに移動する
+ 戻り値：なし
+*/
+static void From_dbl(DBL *p, int reg) {
+  rd[reg] = (p->c[7] << 24);
+  rd[reg] |= (p->c[6] << 16);
+  rd[reg] |= (p->c[5] << 8);
+  rd[reg] |= p->c[4];
+  rd[reg + 1] = (p->c[3] << 24);
+  rd[reg + 1] |= (p->c[2] << 16);
+  rd[reg + 1] |= (p->c[1] << 8);
+  rd[reg + 1] |= p->c[0];
+}
+
+/*
+ 　機能：4バイト整数2つに入った倍精度浮動小数点数をエンディアン変換する
+ 戻り値：なし
+*/
+static void To_dbl(DBL *dbl, Long d0, Long d1) {
+#ifdef __BIG_ENDIAN__
+  dbl->l[0] = d0;
+  dbl->l[1] = d1;
+#else
+  dbl->l[0] = d1;
+  dbl->l[1] = d0;
+#endif
+}
+
+typedef enum {
+  FPTYPE_ZERO,
+  FPTYPE_NORMALIZED,
+  FPTYPE_DENORMALIZED,
+  FPTYPE_INFINITE,
+  FPTYPE_NAN,
+} FPDataType;
+
+static FPDataType GetFPDataType(Long d0, Long d1) {
+  ULong exp = d0 & 0x7ff00000;
+  ULong mant0 = d0 & 0x000fffff;
+  ULong mant1 = d1;
+
+  if (exp == 0) {
+    return (mant0 == 0 && mant1 == 0) ? FPTYPE_ZERO : FPTYPE_DENORMALIZED;
+  }
+  if (exp == 0x7ff00000) {
+    return (mant0 == 0 && mant1 == 0) ? FPTYPE_INFINITE : FPTYPE_NAN;
+  }
+  return FPTYPE_NORMALIZED;
+}
+
+static int Abs_dbl(DBL *dbl) {
+#ifdef __BIG_ENDIAN__
+  const int idx = 0;
+#else
+  const int idx = 7;
+#endif
+
+  int sign = dbl->c[idx] >> 7;
+  dbl->c[idx] &= 0x7f;
+  return sign;
+}
 
 /*
  　機能：FLOAT CALLを実行する
@@ -1001,27 +1063,82 @@ static void Dfloor(Long d0, Long d1) {
   From_dbl(&arg1, 0);
 }
 
+static int fconvert(double d, ULong adr, int ndigit, size_t maxlen) {
+  char fmt[1024];
+
+  int precision = (d < 1.0) ? 307 : ndigit;
+  int n = snprintf(fmt, sizeof(fmt), "%.*f", precision, d);
+  if (n < 0) {
+    WriteSuperString(adr, "");
+    return 0;
+  }
+
+  // "0." + 小数部(1.0未満)
+  if (fmt[0] == '0' && fmt[1] == '.') {
+    char *decpart = fmt + 2;
+    char *p = decpart;
+    while (*p == '0') p += 1;  // "0."と小数部先頭の"0"を取り除く
+    char *eos = decpart + ndigit;
+    *eos = '\0';
+    WriteSuperString(adr, (p < eos) ? p : eos);
+    return decpart - p;
+  }
+
+  char *point = strchr(fmt, '.');
+  // 整数部 + "." + 小数部
+  if (point != NULL) {
+    point[ndigit + 1] = '\0';
+    memmove(point, point + 1, strlen(point + 1) + 1);  // 小数点"."を取り除く
+    fmt[FEFUNC_FCVT_INT_MAXLEN] = '\0';
+    WriteSuperString(adr, fmt);
+    return point - fmt;
+  }
+
+  // 整数部のみ
+  {
+    int decpt = strlen(fmt);
+    fmt[FEFUNC_FCVT_INT_MAXLEN] = '\0';
+    WriteSuperString(adr, fmt);
+    return decpt;
+  }
+}
+
 /*
  　機能：FEFUNC _FCVTを実行する
  戻り値：なし
 */
 static void Fcvt(Long d0, Long d1, Long keta, Long adr) {
-  DBL arg;
-  char *p;
-  int loc;
-  int sign;
+  const size_t maxlen = 255;
 
-  To_dbl(&arg, d0, d1);
-  p = prog_ptr + adr;
-  keta &= 0xFF;
+  DBL dbl;
+  To_dbl(&dbl, d0, d1);
+  rd[1] = Abs_dbl(&dbl);
 
-  strcpy(p, (char *)_fcvt(arg.dbl, keta, &loc, &sign));
+  switch (GetFPDataType(d0, d1)) {
+    case FPTYPE_NORMALIZED:
+    case FPTYPE_DENORMALIZED:
+      rd[0] = (ULong)fconvert(dbl.dbl, adr, keta & 0xff, maxlen);
+      break;
 
-  rd[0] = loc;
-  if (sign == 0)
-    rd[1] = 0;
-  else
-    rd[1] = 1;
+    case FPTYPE_ZERO: {
+      char buf[256];
+      size_t len = keta & 0xff;
+      memset(buf, '0', len);
+      buf[len] = '\0';
+      WriteSuperString(adr, buf);
+      rd[0] = 0;
+    } break;
+
+    case FPTYPE_INFINITE:
+      WriteSuperString(adr, "#INF");
+      rd[0] = 4;
+      break;
+
+    case FPTYPE_NAN:
+      WriteSuperString(adr, "#NAN");
+      rd[0] = 4;
+      break;
+  }
 }
 
 /*
@@ -1613,36 +1730,6 @@ static int Strl(char *p, int base) {
       break;
   }
   return (l);
-}
-
-/*
- 　機能：倍精度浮動小数点数をレジスタ2つに移動する
- 戻り値：なし
-*/
-static void From_dbl(DBL *p, int reg) {
-  rd[reg] = (p->c[7] << 24);
-  rd[reg] |= (p->c[6] << 16);
-  rd[reg] |= (p->c[5] << 8);
-  rd[reg] |= p->c[4];
-  rd[reg + 1] = (p->c[3] << 24);
-  rd[reg + 1] |= (p->c[2] << 16);
-  rd[reg + 1] |= (p->c[1] << 8);
-  rd[reg + 1] |= p->c[0];
-}
-
-/*
- 　機能：4バイト整数2つに入った倍精度浮動小数点数をエンディアン変換する
- 戻り値：なし
-*/
-static void To_dbl(DBL *p, Long d0, Long d1) {
-  p->c[0] = (d1 & 0xFF);
-  p->c[1] = ((d1 >> 8) & 0xFF);
-  p->c[2] = ((d1 >> 16) & 0xFF);
-  p->c[3] = ((d1 >> 24) & 0xFF);
-  p->c[4] = (d0 & 0xFF);
-  p->c[5] = ((d0 >> 8) & 0xFF);
-  p->c[6] = ((d0 >> 16) & 0xFF);
-  p->c[7] = ((d0 >> 24) & 0xFF);
 }
 
 static void Pow(Long d0, Long d1, Long d2, Long d3) {

@@ -29,6 +29,7 @@ typedef struct {
 void SetSupervisorArea(ULong adr);
 bool GetWritableMemoryRange(ULong adr, ULong len, MemoryRange* result);
 char* GetMemoryBufferString(ULong adr);
+void WriteSuperString(ULong adr, const char* s);
 
 Long idx_get(void);
 Long imi_get(char size);

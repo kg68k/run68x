@@ -19,6 +19,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "run68.h"
 
@@ -69,6 +70,27 @@ char* GetMemoryBufferString(ULong adr) {
 
   // メモリ末尾までNUL文字がなければ不正なメモリを参照してバスエラーになる
   read_invalid_memory(n);
+}
+
+// メモリに文字列(ASCIIZ)を書き込む
+//   読み込み不可能ならエラー終了する
+void WriteSuperString(ULong adr, const char* s) {
+  ULong len = strlen(s) + 1;
+
+  MemoryRange mem;
+  if (!GetWritableMemoryRange(adr, len, &mem)) {
+    // メモリアドレスが不正
+    mem_wrt_chk(adr & ADDRESS_MASK);
+    return;  // 戻ってこないはずだが念のため
+  }
+
+  // 書き込めるところまで(または可能なら全部)書き込む
+  memcpy(mem.bufptr, s, mem.length);
+
+  if (mem.length < len) {
+    // 不正なアドレスまで到達したらバスエラー
+    mem_wrt_chk((adr & ADDRESS_MASK) + mem.length);
+  }
 }
 
 /*

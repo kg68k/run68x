@@ -98,4 +98,7 @@ typedef struct {
   size_t nameLen, extLen;
 } Human68kPathName;
 
+// FEFUNC (FLOAT*.X)
+#define FEFUNC_FCVT_INT_MAXLEN 255
+
 #endif
