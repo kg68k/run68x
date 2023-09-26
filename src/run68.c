@@ -391,6 +391,15 @@ static ULong init_env(ULong size, ULong parent) {
   return buf;
 }
 
+static void setHuman68kPathName(Human68kPathName *hpn, const char *path,
+                                const char *name, const char *ext) {
+  strncpy(hpn->path, path, sizeof(hpn->path));
+  strncpy(hpn->name, name, sizeof(hpn->name));
+  strncat(hpn->name, ext, sizeof(hpn->name));
+  hpn->nameLen = strlen(name);
+  hpn->extLen = strlen(ext);
+}
+
 int main(int argc, char *argv[]) {
   char fname[89]; /* 実行ファイル名 */
   FILE *fp;       /* 実行ファイルのファイルポインタ */
@@ -513,8 +522,11 @@ Restart:
 
   Human68kPathName hpn;
   if (!HOST_CANONICAL_PATHNAME(fname, &hpn)) {
-    printFmt("Human68k形式のパス名に変換できません: %s\n", fname);
-    return EXIT_FAILURE;
+    setHuman68kPathName(&hpn, "A:\\", "PROG", ".X");
+    printFmt(
+        "run68:Human68k形式のパス名に変換できないため、PSP内の実行ファイル名を"
+        "\"%s%s\"に変更します。\n",
+        hpn.path, hpn.name);
   }
 
   // コマンドライン文字列を作成

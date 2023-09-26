@@ -17,6 +17,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifdef USE_ICONV
 #include <iconv.h>
@@ -62,6 +63,66 @@ static void to_backslash(char *buf) {
 }
 
 #ifdef HOST_CANONICAL_PATHNAME_GENERIC
+static void parentPath(char *buf) {
+  size_t len = strlen(buf);
+  if (len <= 1) return;
+
+  buf[len - 1] = '\0';
+  char *s = strrchr(buf, '/');
+  if (s != NULL) s[1] = '\0';
+}
+
+static char *absolutePath(const char *path) {
+  char buf[PATH_MAX];
+
+  if (path[0] == '/') {
+    strcpy(buf, "/");
+    while (path[0] == '/') path += 1;
+  } else {
+    if (getcwd(buf, sizeof(buf) - 1) == NULL) return NULL;
+    if (strcmp(buf, "/") != 0) strcat(buf, "/");
+  }
+
+  while (path[0]) {
+    if (strcmp(path, ".") == 0) {
+      break;
+    }
+    if (strcmp(path, "..") == 0) {
+      parentPath(buf);
+      break;
+    }
+
+    if (strncmp(path, "./", 2) == 0) {
+      path += 2;
+      continue;
+    }
+    if (strncmp(path, "../", 3) == 0) {
+      path += 3;
+      parentPath(buf);
+      continue;
+    }
+
+    size_t buf_len = strlen(buf);
+    char *sep = strchr(path, '/');
+    size_t len = (sep == NULL) ? strlen(path) : (size_t)((sep + 1) - path);
+
+    // "/"なしなら、NUL文字までコピー
+    // "/"ありなら、"/"の次の文字(NUL文字の場合もある)までコピー
+    if ((buf_len + len) >= sizeof(buf)) return NULL;
+    memcpy(buf + buf_len, path, len + 1);
+
+    if (sep == NULL) break;
+
+    // "/"の次の文字を消す
+    buf[buf_len + len] = '\0';
+    path += len;
+  }
+
+  char *mem = malloc(strlen(buf) + 1);
+  if (mem != NULL) strcpy(mem, buf);
+  return mem;
+}
+
 static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
   char buf[HUMAN68K_PATH_MAX + 1];
 
@@ -102,8 +163,9 @@ static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
 }
 
 // パス名の正規化
+//   realpath()はシンボリックリンクを展開してしまうので使わない
 bool CanonicalPathName_generic(const char *path, Human68kPathName *hpn) {
-  char *buf = realpath(path, NULL);
+  char *buf = absolutePath(path);
   if (buf == NULL) return false;
 
   bool result = canonical_pathname(buf, hpn);
