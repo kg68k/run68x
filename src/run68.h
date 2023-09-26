@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "1.1.1-beta.1"
+#define RUN68X_VERSION "1.2.0"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if defined(__GNUC__)
@@ -232,7 +232,7 @@ void print(const char *message);
 void printFmt(const char *fmt, ...) GCC_FORMAT(1, 2);
 
 /* getini.c */
-void read_ini(char *path, char *prog);
+void read_ini(char *path);
 void readenv_from_ini(char *path, ULong envbuf);
 
 /* load.c */

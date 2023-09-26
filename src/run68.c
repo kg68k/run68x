@@ -474,7 +474,7 @@ Restart:
   /* iniファイルの情報を読み込む */
   strcpy(ini_file_name, argv[0]);
   /* iniファイルのフルパス名が得られる。*/
-  read_ini(ini_file_name, fname);
+  read_ini(ini_file_name);
 
   /* メインメモリ(1～12MB)を確保する */
   if ((prog_ptr = malloc(mem_aloc)) == NULL) {

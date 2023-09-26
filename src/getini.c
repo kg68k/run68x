@@ -30,13 +30,10 @@ static void chomp(char *buf) {
   }
 }
 
-void read_ini(char *path, char *prog) {
+void read_ini(char *path) {
   char dir[1024] = {0};
   char buf[1024] = {0};
-  char sec_name[MAX_PATH];
   FILE *fp;
-  int i;
-  int c;
   char *p;
 
   /* 情報構造体の初期化 */
@@ -75,16 +72,6 @@ void read_ini(char *path, char *prog) {
 #endif
   /* フルパス名を使ってファイルをオープンする。*/
   if ((fp = fopen(path, "r")) == NULL) return;
-  /* プログラム名を得る */
-  for (i = strlen(prog) - 1; i >= 0; i--) {
-    if (prog[i] == '\\' || prog[i] == '/' || prog[i] == ':') break;
-  }
-  i++;
-  if (strlen(&(prog[i])) > 22) {
-    fclose(fp);
-    return;
-  }
-  sprintf(sec_name, "[%s]", &(prog[i]));
 
   /* 内容を調べる */
   bool section_match = true;
@@ -95,8 +82,6 @@ void read_ini(char *path, char *prog) {
     if (buf[0] == '[') {
       section_match = false;
       if (_stricmp(buf, "[all]") == 0)
-        section_match = true;
-      else if (_stricmp(buf, sec_name) == 0)
         section_match = true;
       continue;
     }
@@ -109,20 +94,6 @@ void read_ini(char *path, char *prog) {
         ini_info.pc98_key = true;
       else if (_stricmp(buf, "iothrough") == 0)
         ini_info.io_through = true;
-      else if (strncmp(buf, "mainmemory=", 11) == 0) {
-        if (strlen(buf) < 12 || 13 < strlen(buf)) continue;
-        if ('0' <= buf[11] && buf[11] <= '9') {
-          c = buf[11] - '0';
-          if (strlen(buf) == 13 && '0' <= buf[12] && buf[12] <= '9') {
-            c = c * 10 + buf[11] - '0';
-          } else {
-            continue;
-          }
-        } else {
-          continue;
-        }
-        if (1 <= c && c <= 12) mem_aloc = 0x100000 * c;
-      }
     }
   }
   fclose(fp);

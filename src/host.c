@@ -17,7 +17,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #ifdef USE_ICONV
 #include <iconv.h>
@@ -63,6 +62,8 @@ static void to_backslash(char *buf) {
 }
 
 #ifdef HOST_CANONICAL_PATHNAME_GENERIC
+#include <unistd.h>
+
 static void parentPath(char *buf) {
   size_t len = strlen(buf);
   if (len <= 1) return;
