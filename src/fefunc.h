@@ -15,53 +15,12 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
-#ifndef M68K_H
-#define M68K_H
+#ifndef FEFUNC_H
+#define FEFUNC_H
 
-#include <stdint.h>
+#include "m68k.h"
 
-// M680x0 データ型
-typedef int8_t Byte;
-typedef uint8_t UByte;
-typedef int16_t Word;
-typedef uint16_t UWord;
-typedef int32_t Long;
-typedef uint32_t ULong;
-
-typedef struct {
-  ULong r0, r1;
-} RegPair;
-
-#define ADDRESS_MASK 0x00ffffff
-
-// ステータスレジスタ
-#define SR_T1 0x8000
-// #define SR_T0 0x4000
-#define SR_S 0x2000
-// #define SR_M 0x1000
-#define SR_I2 0x0400
-#define SR_I1 0x0200
-#define SR_I0 0x0100
-#define SR_MASK 0xa700
-
-// コンディションコードレジスタ
-#define CCR_X 0x0010
-#define CCR_N 0x0008
-#define CCR_Z 0x0004
-#define CCR_V 0x0002
-#define CCR_C 0x0001
-#define CCR_MASK 0x001f
-
-// 浮動小数点数
-typedef union {
-  double dbl;
-  ULong l[2];
-  UByte c[8];
-} DBL;
-
-typedef union {
-  float flt;
-  UByte c[4];
-} FLT;
+ULong FefuncStoh(Long *pA0);
+void FefuncFcvt(Long *pD0, Long *pD1, ULong ndigit, ULong adr);
 
 #endif

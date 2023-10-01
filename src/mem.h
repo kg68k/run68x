@@ -107,6 +107,16 @@ static inline Word imi_get_word(void) {
   return PeekW(adr);
 }
 
+// スーパーバイザモードで1バイトのメモリを読む
+static inline UWord ReadSuperUByte(ULong adr) {
+  adr &= ADDRESS_MASK;
+  if (mem_aloc <= adr) {
+    if (!mem_red_chk(adr)) return 0;
+  }
+
+  return PeekB(adr);
+}
+
 // スーパーバイザモードで1ワードのメモリを読む
 static inline UWord ReadSuperUWord(ULong adr) {
   adr &= ADDRESS_MASK;

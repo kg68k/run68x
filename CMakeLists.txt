@@ -19,6 +19,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/doscall.c
   src/eaaccess.c
   src/exec.c
+  src/fefunc.c
+  src/fefunc.h
   src/getini.c
   src/host.c
   src/host.h

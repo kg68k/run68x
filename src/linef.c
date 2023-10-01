@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "fefunc.h"
 #include "human68k.h"
 #include "mem.h"
 #include "run68.h"
@@ -31,77 +32,6 @@
 #define CCR_N_C_OFF() (sr &= ~(CCR_N | CCR_C))
 #define CCR_V_C_ON() (sr |= (CCR_V | CCR_C))
 #define CCR_Z_C_ON() (sr |= (CCR_Z | CCR_C))
-
-typedef union {
-  double dbl;
-  ULong l[2];
-  UByte c[8];
-} DBL;
-
-typedef union {
-  float flt;
-  UByte c[4];
-} FLT;
-
-static Long Lmul(Long, Long);
-static Long Ldiv(Long, Long);
-static Long Lmod(Long, Long);
-static ULong Umul(ULong, ULong);
-static ULong Udiv(ULong, ULong);
-static ULong Umod(ULong, ULong);
-static Long Dtol(Long, Long);
-static Long Ltof(Long);
-static Long Ftol(Long);
-static void Ftod(Long);
-static Long Stol(Long);
-static void Stod(Long);
-static void Ltod(Long);
-static void Dtos(Long, Long, Long);
-static void Ltos(Long, Long);
-static void Htos(Long, Long);
-static void Otos(Long, Long);
-static void Btos(Long, Long);
-static void Val(Long);
-static void Iusing(Long, Long, Long);
-static void Using(Long, Long, Long, Long, Long, Long);
-static void Dtst(Long, Long);
-static void Dcmp(Long, Long, Long, Long);
-static void Dneg(Long, Long);
-static void Dadd(Long, Long, Long, Long);
-static void Dsub(Long, Long, Long, Long);
-static void Dmul(Long, Long, Long, Long);
-static void Ddiv(Long, Long, Long, Long);
-static void Dmod(Long, Long, Long, Long);
-static void Dabs(Long, Long);
-static void Dfloor(Long, Long);
-static void Fcvt(Long, Long, Long, Long);
-static void Sin(Long, Long);
-static void Cos(Long, Long);
-static void Tan(Long, Long);
-static void Atan(Long, Long);
-static void Log(Long, Long);
-static void Exp(Long, Long);
-static void Sqr(Long, Long);
-static void Ftst(Long);
-static Long Fmul(Long, Long);
-static Long Fdiv(Long, Long);
-static void Clmul(Long);
-static void Cldiv(Long);
-static void Clmod(Long);
-static void Cumul(ULong);
-static void Cudiv(ULong);
-static void Cumod(ULong);
-static void Cltod(Long);
-static void Cdtol(Long);
-static void Cftod(Long);
-static void Cdtof(Long);
-static void Cdadd(Long);
-static void Cdcmp(Long);
-static void Cdsub(Long);
-static void Cdmul(Long);
-static void Cddiv(Long);
-static int Strl(char *, int);
-static void Pow(Long, Long, Long, Long);
 
 /*
  　機能：倍精度浮動小数点数をレジスタ2つに移動する
@@ -130,286 +60,6 @@ static void To_dbl(DBL *dbl, Long d0, Long d1) {
   dbl->l[0] = d1;
   dbl->l[1] = d0;
 #endif
-}
-
-typedef enum {
-  FPTYPE_ZERO,
-  FPTYPE_NORMALIZED,
-  FPTYPE_DENORMALIZED,
-  FPTYPE_INFINITE,
-  FPTYPE_NAN,
-} FPDataType;
-
-static FPDataType GetFPDataType(Long d0, Long d1) {
-  ULong exp = d0 & 0x7ff00000;
-  ULong mant0 = d0 & 0x000fffff;
-  ULong mant1 = d1;
-
-  if (exp == 0) {
-    return (mant0 == 0 && mant1 == 0) ? FPTYPE_ZERO : FPTYPE_DENORMALIZED;
-  }
-  if (exp == 0x7ff00000) {
-    return (mant0 == 0 && mant1 == 0) ? FPTYPE_INFINITE : FPTYPE_NAN;
-  }
-  return FPTYPE_NORMALIZED;
-}
-
-static int Abs_dbl(DBL *dbl) {
-#ifdef __BIG_ENDIAN__
-  const int idx = 0;
-#else
-  const int idx = 7;
-#endif
-
-  int sign = dbl->c[idx] >> 7;
-  dbl->c[idx] &= 0x7f;
-  return sign;
-}
-
-/*
- 　機能：FLOAT CALLを実行する
- 戻り値： true = 実行終了
-         false = 実行継続
-*/
-static bool fefunc(UByte code) {
-  Long adr;
-  short save_s;
-
-  /* F系列のベクタが書き換えられているかどうか検査 */
-  save_s = SR_S_REF();
-  SR_S_ON();
-  adr = mem_get(0x2C, S_LONG);
-  if (adr != HUMAN_WORK) {
-    ra[7] -= 4;
-    mem_set(ra[7], pc - 2, S_LONG);
-    ra[7] -= 2;
-    mem_set(ra[7], sr, S_WORD);
-    pc = adr;
-    return false;
-  }
-  if (save_s == 0) SR_S_OFF();
-
-#ifdef TRACE
-  printf("trace: FEFUNC   0xFE%02X PC=%06lX\n", code, pc);
-#endif
-  switch (code) {
-    case 0x00:
-      rd[0] = Lmul(rd[0], rd[1]);
-      break;
-    case 0x01:
-      rd[0] = Ldiv(rd[0], rd[1]);
-      break;
-    case 0x02:
-      rd[0] = Lmod(rd[0], rd[1]);
-      break;
-    case 0x04:
-      rd[0] = Umul((ULong)rd[0], (ULong)rd[1]);
-      break;
-    case 0x05:
-      rd[0] = Udiv((ULong)rd[0], (ULong)rd[1]);
-      break;
-    case 0x06:
-      rd[0] = Umod((ULong)rd[0], (ULong)rd[1]);
-      break;
-    case 0x08: /* _IMUL */
-      rd[1] = (ULong)rd[0] * (ULong)rd[1];
-      if (rd[1] < 0)
-        rd[0] = -1; /* 本当は上位4バイトが入る */
-      else
-        rd[0] = 0; /* 本当は上位4バイトが入る */
-      break;
-    case 0x09: /* _IDIV */ /* unsigned int 除算 d0..d1 d0/d1 */
-    {
-      ULong d0;
-      ULong d1;
-
-      d0 = (ULong)rd[0];
-      d1 = (ULong)rd[1];
-
-      rd[0] = Udiv(d0, d1);
-      rd[1] = Umod(d0, d1);
-    } break;
-    case 0x0C: /* _RANDOMIZE */
-      if (rd[0] >= -32768 && rd[0] <= 32767) srand(rd[0] + 32768);
-      break;
-    case 0x0D: /* _SRAND */
-      if (rd[0] >= 0 && rd[0] <= 65535) srand(rd[0]);
-      break;
-    case 0x0E: /* _RAND */
-      rd[0] = ((unsigned)(rand()) % 32768);
-      break;
-    case 0x10:
-      rd[0] = Stol(ra[0]);
-      break;
-    case 0x11:
-      Ltos(rd[0], ra[0]);
-      break;
-    case 0x13:
-      Htos(rd[0], ra[0]);
-      break;
-    case 0x15:
-      Otos(rd[0], ra[0]);
-      break;
-    case 0x17:
-      Btos(rd[0], ra[0]);
-      break;
-    case 0x18:
-      Iusing(rd[0], rd[1], ra[0]);
-      break;
-    case 0x1A:
-      Ltod(rd[0]);
-      break;
-    case 0x1B:
-      rd[0] = Dtol(rd[0], rd[1]);
-      break;
-    case 0x1C:
-      rd[0] = Ltof(rd[0]);
-      break;
-    case 0x1D:
-      rd[0] = Ftol(rd[0]);
-      break;
-    case 0x1E:
-      Ftod(rd[0]);
-      break;
-    case 0x20:
-      Val(ra[0]);
-      break;
-    case 0x21:
-      Using(rd[0], rd[1], rd[2], rd[3], rd[4], ra[0]);
-      break;
-    case 0x22:
-      Stod(ra[0]);
-      break;
-    case 0x23:
-      Dtos(rd[0], rd[1], ra[0]);
-      break;
-    case 0x25:
-      Fcvt(rd[0], rd[1], rd[2], ra[0]);
-      break;
-    case 0x28:
-      Dtst(rd[0], rd[1]);
-      break;
-    case 0x29:
-      Dcmp(rd[0], rd[1], rd[2], rd[3]);
-      break;
-    case 0x2A:
-      Dneg(rd[0], rd[1]);
-      break;
-    case 0x2B:
-      Dadd(rd[0], rd[1], rd[2], rd[3]);
-      break;
-    case 0x2C:
-      Dsub(rd[0], rd[1], rd[2], rd[3]);
-      break;
-    case 0x2D:
-      Dmul(rd[0], rd[1], rd[2], rd[3]);
-      break;
-    case 0x2E:
-      Ddiv(rd[0], rd[1], rd[2], rd[3]);
-      break;
-    case 0x2F:
-      Dmod(rd[0], rd[1], rd[2], rd[3]);
-      break;
-    case 0x30:
-      Dabs(rd[0], rd[1]);
-      break;
-    case 0x33:
-      Dfloor(rd[0], rd[1]);
-      break;
-    case 0x36:
-      Sin(rd[0], rd[1]);
-      break;
-    case 0x37:
-      Cos(rd[0], rd[1]);
-      break;
-    case 0x38:
-      Tan(rd[0], rd[1]);
-      break;
-    case 0x39:
-      Atan(rd[0], rd[1]);
-      break;
-    case 0x3A:
-      Log(rd[0], rd[1]);
-      break;
-    case 0x3B:
-      Exp(rd[0], rd[1]);
-      break;
-    case 0x3C:
-      Sqr(rd[0], rd[1]);
-      break;
-    case 0x3F:
-      Pow(rd[0], rd[1], rd[2], rd[3]);
-      break;
-    case 0x40: /* _RND */
-      rd[0] = rand() * rand() * 4;
-      rd[1] = rand() * rand() * 4;
-      break;
-    case 0x58:
-      Ftst(rd[0]);
-      break;
-    case 0x5D:
-      rd[0] = Fmul(rd[0], rd[1]);
-      break;
-    case 0x5E:
-      rd[0] = Fdiv(rd[0], rd[1]);
-      break;
-      /*
-                      case 0x6C:
-                              rd [ 0 ] = Fsqr( rd [ 0 ] );
-                              break;
-      */
-    case 0xE0: /* __CLMUL : signed int 乗算 */
-      Clmul(ra[7]);
-      break;
-    case 0xE1: /* __CLDIV : signed int 除算 */
-      Cldiv(ra[7]);
-      break;
-    case 0xE2: /* __CLMOD : signed int 除算の剰余 */
-      Clmod(ra[7]);
-      break;
-    case 0xE3: /* __CUMUL : unsigned int 乗算 */
-      Cumul(ra[7]);
-      break;
-    case 0xE4: /* __CUDIV : unsigned int 除算 */
-      Cudiv(ra[7]);
-      break;
-    case 0xE5: /* __CUMOD : unsigned int 除算の剰余 */
-      Cumod(ra[7]);
-      break;
-    case 0xE6:
-      Cltod(ra[7]);
-      break;
-    case 0xE7:
-      Cdtol(ra[7]);
-      break;
-    case 0xEA:
-      Cftod(ra[7]);
-      break;
-    case 0xEB:
-      Cdtof(ra[7]);
-      break;
-    case 0xEC:
-      Cdcmp(ra[7]);
-      break;
-    case 0xED:
-      Cdadd(ra[7]);
-      break;
-    case 0xEE:
-      Cdsub(ra[7]);
-      break;
-    case 0xEF:
-      Cdmul(ra[7]);
-      break;
-    case 0xF0:
-      Cddiv(ra[7]);
-      break;
-    default:
-      printf("0x%X\n", code);
-      err68a("未登録のFEファンクションコールを実行しました", __FILE__,
-             __LINE__);
-  }
-
-  return false;
 }
 
 /*
@@ -540,6 +190,44 @@ static void Ftod(Long d0) {
   ret.dbl = arg.flt;
 
   From_dbl(&ret, 0);
+}
+
+/*
+ 　機能：数字文字列の数字以外の部分までの長さを求める
+ 戻り値：長さ
+*/
+static int Strl(char *p, int base) {
+  int l;
+
+  for (l = 0; p[l] == ' '; l++)
+    ;
+  switch (base) {
+    case 10:
+      for (; p[l] != '\0'; l++) {
+        if (p[l] >= '0' && p[l] <= '9') continue;
+        if (p[l] == '.') continue;
+        break;
+      }
+      break;
+    case 2:
+      for (; p[l] != '\0'; l++) {
+        if (p[l] != '0' && p[l] != '1') break;
+      }
+      break;
+    case 8:
+      for (; p[l] != '\0'; l++) {
+        if (p[l] < '0' || p[l] > '7') break;
+      }
+      break;
+    case 16:
+      for (; p[l] != '\0'; l++) {
+        if (p[l] >= '0' && p[l] <= '9') continue;
+        if (p[l] >= 'A' && p[l] <= 'F') continue;
+        break;
+      }
+      break;
+  }
+  return (l);
 }
 
 /*
@@ -1055,84 +743,6 @@ static void Dfloor(Long d0, Long d1) {
   arg1.dbl = floor(arg1.dbl);
 
   From_dbl(&arg1, 0);
-}
-
-static int fconvert(double d, ULong adr, int ndigit, size_t maxlen) {
-  char fmt[1024];
-
-  int precision = (d < 1.0) ? 307 : ndigit;
-  int n = snprintf(fmt, sizeof(fmt), "%.*f", precision, d);
-  if (n < 0) {
-    WriteSuperString(adr, "");
-    return 0;
-  }
-
-  // "0." + 小数部(1.0未満)
-  if (fmt[0] == '0' && fmt[1] == '.') {
-    char *decpart = fmt + 2;
-    char *p = decpart;
-    while (*p == '0') p += 1;  // "0."と小数部先頭の"0"を取り除く
-    char *eos = decpart + ndigit;
-    *eos = '\0';
-    WriteSuperString(adr, (p < eos) ? p : eos);
-    return decpart - p;
-  }
-
-  char *point = strchr(fmt, '.');
-  // 整数部 + "." + 小数部
-  if (point != NULL) {
-    point[ndigit + 1] = '\0';
-    memmove(point, point + 1, strlen(point + 1) + 1);  // 小数点"."を取り除く
-    fmt[FEFUNC_FCVT_INT_MAXLEN] = '\0';
-    WriteSuperString(adr, fmt);
-    return point - fmt;
-  }
-
-  // 整数部のみ
-  {
-    int decpt = strlen(fmt);
-    fmt[FEFUNC_FCVT_INT_MAXLEN] = '\0';
-    WriteSuperString(adr, fmt);
-    return decpt;
-  }
-}
-
-/*
- 　機能：FEFUNC _FCVTを実行する
- 戻り値：なし
-*/
-static void Fcvt(Long d0, Long d1, Long keta, Long adr) {
-  const size_t maxlen = 255;
-
-  DBL dbl;
-  To_dbl(&dbl, d0, d1);
-  rd[1] = Abs_dbl(&dbl);
-
-  switch (GetFPDataType(d0, d1)) {
-    case FPTYPE_NORMALIZED:
-    case FPTYPE_DENORMALIZED:
-      rd[0] = (ULong)fconvert(dbl.dbl, adr, keta & 0xff, maxlen);
-      break;
-
-    case FPTYPE_ZERO: {
-      char buf[256];
-      size_t len = keta & 0xff;
-      memset(buf, '0', len);
-      buf[len] = '\0';
-      WriteSuperString(adr, buf);
-      rd[0] = 0;
-    } break;
-
-    case FPTYPE_INFINITE:
-      WriteSuperString(adr, "#INF");
-      rd[0] = 4;
-      break;
-
-    case FPTYPE_NAN:
-      WriteSuperString(adr, "#NAN");
-      rd[0] = 4;
-      break;
-  }
 }
 
 /*
@@ -1681,44 +1291,6 @@ static void Cddiv(Long adr) {
   for (i = 0; i < 8; i++) mem_set(adr + 7 - i, a.c[i], S_BYTE);
 }
 
-/*
- 　機能：数字文字列の数字以外の部分までの長さを求める
- 戻り値：長さ
-*/
-static int Strl(char *p, int base) {
-  int l;
-
-  for (l = 0; p[l] == ' '; l++)
-    ;
-  switch (base) {
-    case 10:
-      for (; p[l] != '\0'; l++) {
-        if (p[l] >= '0' && p[l] <= '9') continue;
-        if (p[l] == '.') continue;
-        break;
-      }
-      break;
-    case 2:
-      for (; p[l] != '\0'; l++) {
-        if (p[l] != '0' && p[l] != '1') break;
-      }
-      break;
-    case 8:
-      for (; p[l] != '\0'; l++) {
-        if (p[l] < '0' || p[l] > '7') break;
-      }
-      break;
-    case 16:
-      for (; p[l] != '\0'; l++) {
-        if (p[l] >= '0' && p[l] <= '9') continue;
-        if (p[l] >= 'A' && p[l] <= 'F') continue;
-        break;
-      }
-      break;
-  }
-  return (l);
-}
-
 static void Pow(Long d0, Long d1, Long d2, Long d3) {
   DBL arg0, arg1;
   DBL ans;
@@ -1730,6 +1302,253 @@ static void Pow(Long d0, Long d1, Long d2, Long d3) {
   CCR_C_OFF();
 
   From_dbl(&ans, 0);
+}
+
+/*
+ 　機能：FLOAT CALLを実行する
+ 戻り値： true = 実行終了
+         false = 実行継続
+*/
+static bool fefunc(UByte code) {
+  Long adr;
+  short save_s;
+
+  /* F系列のベクタが書き換えられているかどうか検査 */
+  save_s = SR_S_REF();
+  SR_S_ON();
+  adr = mem_get(0x2C, S_LONG);
+  if (adr != HUMAN_WORK) {
+    ra[7] -= 4;
+    mem_set(ra[7], pc - 2, S_LONG);
+    ra[7] -= 2;
+    mem_set(ra[7], sr, S_WORD);
+    pc = adr;
+    return false;
+  }
+  if (save_s == 0) SR_S_OFF();
+
+#ifdef TRACE
+  printf("trace: FEFUNC   0xFE%02X PC=%06lX\n", code, pc);
+#endif
+  switch (code) {
+    case 0x00:
+      rd[0] = Lmul(rd[0], rd[1]);
+      break;
+    case 0x01:
+      rd[0] = Ldiv(rd[0], rd[1]);
+      break;
+    case 0x02:
+      rd[0] = Lmod(rd[0], rd[1]);
+      break;
+    case 0x04:
+      rd[0] = Umul((ULong)rd[0], (ULong)rd[1]);
+      break;
+    case 0x05:
+      rd[0] = Udiv((ULong)rd[0], (ULong)rd[1]);
+      break;
+    case 0x06:
+      rd[0] = Umod((ULong)rd[0], (ULong)rd[1]);
+      break;
+    case 0x08: /* _IMUL */
+      rd[1] = (ULong)rd[0] * (ULong)rd[1];
+      if (rd[1] < 0)
+        rd[0] = -1; /* 本当は上位4バイトが入る */
+      else
+        rd[0] = 0; /* 本当は上位4バイトが入る */
+      break;
+    case 0x09: /* _IDIV */ /* unsigned int 除算 d0..d1 d0/d1 */
+    {
+      ULong d0;
+      ULong d1;
+
+      d0 = (ULong)rd[0];
+      d1 = (ULong)rd[1];
+
+      rd[0] = Udiv(d0, d1);
+      rd[1] = Umod(d0, d1);
+    } break;
+    case 0x0C: /* _RANDOMIZE */
+      if (rd[0] >= -32768 && rd[0] <= 32767) srand(rd[0] + 32768);
+      break;
+    case 0x0D: /* _SRAND */
+      if (rd[0] >= 0 && rd[0] <= 65535) srand(rd[0]);
+      break;
+    case 0x0E: /* _RAND */
+      rd[0] = ((unsigned)(rand()) % 32768);
+      break;
+    case 0x10:
+      rd[0] = Stol(ra[0]);
+      break;
+    case 0x11:
+      Ltos(rd[0], ra[0]);
+      break;
+    case 0x12:
+      rd[0] = FefuncStoh(&ra[0]);
+      break;
+    case 0x13:
+      Htos(rd[0], ra[0]);
+      break;
+    case 0x15:
+      Otos(rd[0], ra[0]);
+      break;
+    case 0x17:
+      Btos(rd[0], ra[0]);
+      break;
+    case 0x18:
+      Iusing(rd[0], rd[1], ra[0]);
+      break;
+    case 0x1A:
+      Ltod(rd[0]);
+      break;
+    case 0x1B:
+      rd[0] = Dtol(rd[0], rd[1]);
+      break;
+    case 0x1C:
+      rd[0] = Ltof(rd[0]);
+      break;
+    case 0x1D:
+      rd[0] = Ftol(rd[0]);
+      break;
+    case 0x1E:
+      Ftod(rd[0]);
+      break;
+    case 0x20:
+      Val(ra[0]);
+      break;
+    case 0x21:
+      Using(rd[0], rd[1], rd[2], rd[3], rd[4], ra[0]);
+      break;
+    case 0x22:
+      Stod(ra[0]);
+      break;
+    case 0x23:
+      Dtos(rd[0], rd[1], ra[0]);
+      break;
+    case 0x25:
+      FefuncFcvt(&rd[0], &rd[1], rd[2], ra[0]);
+      break;
+    case 0x28:
+      Dtst(rd[0], rd[1]);
+      break;
+    case 0x29:
+      Dcmp(rd[0], rd[1], rd[2], rd[3]);
+      break;
+    case 0x2A:
+      Dneg(rd[0], rd[1]);
+      break;
+    case 0x2B:
+      Dadd(rd[0], rd[1], rd[2], rd[3]);
+      break;
+    case 0x2C:
+      Dsub(rd[0], rd[1], rd[2], rd[3]);
+      break;
+    case 0x2D:
+      Dmul(rd[0], rd[1], rd[2], rd[3]);
+      break;
+    case 0x2E:
+      Ddiv(rd[0], rd[1], rd[2], rd[3]);
+      break;
+    case 0x2F:
+      Dmod(rd[0], rd[1], rd[2], rd[3]);
+      break;
+    case 0x30:
+      Dabs(rd[0], rd[1]);
+      break;
+    case 0x33:
+      Dfloor(rd[0], rd[1]);
+      break;
+    case 0x36:
+      Sin(rd[0], rd[1]);
+      break;
+    case 0x37:
+      Cos(rd[0], rd[1]);
+      break;
+    case 0x38:
+      Tan(rd[0], rd[1]);
+      break;
+    case 0x39:
+      Atan(rd[0], rd[1]);
+      break;
+    case 0x3A:
+      Log(rd[0], rd[1]);
+      break;
+    case 0x3B:
+      Exp(rd[0], rd[1]);
+      break;
+    case 0x3C:
+      Sqr(rd[0], rd[1]);
+      break;
+    case 0x3F:
+      Pow(rd[0], rd[1], rd[2], rd[3]);
+      break;
+    case 0x40: /* _RND */
+      rd[0] = rand() * rand() * 4;
+      rd[1] = rand() * rand() * 4;
+      break;
+    case 0x58:
+      Ftst(rd[0]);
+      break;
+    case 0x5D:
+      rd[0] = Fmul(rd[0], rd[1]);
+      break;
+    case 0x5E:
+      rd[0] = Fdiv(rd[0], rd[1]);
+      break;
+    // case 0x6C:
+    //   rd[0] = Fsqr(rd[0]);
+    //   break;
+    case 0xE0: /* __CLMUL : signed int 乗算 */
+      Clmul(ra[7]);
+      break;
+    case 0xE1: /* __CLDIV : signed int 除算 */
+      Cldiv(ra[7]);
+      break;
+    case 0xE2: /* __CLMOD : signed int 除算の剰余 */
+      Clmod(ra[7]);
+      break;
+    case 0xE3: /* __CUMUL : unsigned int 乗算 */
+      Cumul(ra[7]);
+      break;
+    case 0xE4: /* __CUDIV : unsigned int 除算 */
+      Cudiv(ra[7]);
+      break;
+    case 0xE5: /* __CUMOD : unsigned int 除算の剰余 */
+      Cumod(ra[7]);
+      break;
+    case 0xE6:
+      Cltod(ra[7]);
+      break;
+    case 0xE7:
+      Cdtol(ra[7]);
+      break;
+    case 0xEA:
+      Cftod(ra[7]);
+      break;
+    case 0xEB:
+      Cdtof(ra[7]);
+      break;
+    case 0xEC:
+      Cdcmp(ra[7]);
+      break;
+    case 0xED:
+      Cdadd(ra[7]);
+      break;
+    case 0xEE:
+      Cdsub(ra[7]);
+      break;
+    case 0xEF:
+      Cdmul(ra[7]);
+      break;
+    case 0xF0:
+      Cddiv(ra[7]);
+      break;
+    default:
+      printf("0x%X\n", code);
+      err68a("未登録のFEファンクションコールを実行しました", __FILE__,
+             __LINE__);
+  }
+
+  return false;
 }
 
 /*
