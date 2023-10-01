@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "1.2.0"
+#define RUN68X_VERSION "1.3.0-beta.1"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if defined(__GNUC__)
@@ -38,35 +38,21 @@
 #include <limits.h>
 #include <setjmp.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "human68k.h"
+#include "m68k.h"
+
 #ifdef _WIN32
 #include <windows.h>
+#else
+#define MAX_PATH PATH_MAX
+#define _stricmp strcasecmp
 #endif
-
-#include "human68k.h"
 
 #if CHAR_MIN != 0
 #error "plain 'char' type must be unsigned."
-#endif
-
-// M680x0 データ型
-typedef int8_t Byte;
-typedef uint8_t UByte;
-typedef int16_t Word;
-typedef uint16_t UWord;
-typedef int32_t Long;
-typedef uint32_t ULong;
-
-typedef struct {
-  ULong r0, r1;
-} RegPair;
-
-#ifndef _WIN32
-#define MAX_PATH PATH_MAX
-#define _stricmp strcasecmp
 #endif
 
 #define DEFAULT_MAIN_MEMORY_SIZE (12 * 1024 * 1024)
@@ -156,8 +142,6 @@ typedef struct {
 #define SR_S_OFF() sr &= 0xDFFF
 #define SR_S_REF() (sr & 0x2000)
 #define SR_T_REF() (sr & 0x8000)
-
-#define ADDRESS_MASK 0x00ffffff
 
 #ifdef _WIN32
 typedef struct {

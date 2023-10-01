@@ -30,10 +30,6 @@
 #include "hupair.h"
 #include "mem.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 EXEC_INSTRUCTION_INFO OP_info;
 FILEINFO finfo[FILE_MAX];
 INI_INFO ini_info;
@@ -126,6 +122,25 @@ static void trap_table_make(void) {
   }
 
   SR_S_OFF();
+}
+
+// 指定したデバイスヘッダをメモリに書き込む
+static void WriteDrviceHeader(ULong adr, const DeviceHeader dev) {
+  WriteSuperULong(adr + DEVHEAD_NEXT, dev.next);
+  WriteSuperUWord(adr + DEVHEAD_ATTRIBUTE, dev.attribute);
+  WriteSuperULong(adr + DEVHEAD_STRATEGY, dev.strategy);
+  WriteSuperULong(adr + DEVHEAD_INTERRUPT, dev.interrupt_);
+
+  MemoryRange mem;
+  if (GetWritableMemoryRange(adr + DEVHEAD_NAME, sizeof(dev.name), &mem))
+    memcpy(mem.bufptr, dev.name, mem.length);
+}
+
+// 全てのデバイスヘッダをメモリに書き込む
+//   ダミーのNULデバイスのみ実装している。
+static void WriteDrviceHeaders(void) {
+  static const DeviceHeader nuldev = {0xffffffff, 0x8024, 0, 0, "NUL     "};
+  WriteDrviceHeader(NUL_DEVICE_HEADER, nuldev);
 }
 
 /*
@@ -481,7 +496,7 @@ Restart:
     printFmt("メモリが確保できません\n");
     return EXIT_FAILURE;
   }
-  memset(&prog_ptr[OSWORK_TOP], 0, SIZEOF_OSWORK);
+  memset(prog_ptr, 0, HUMAN_TAIL);
   WriteSuperULong(OSWORK_MEMORY_END, mem_aloc);
 
   trap_table_make();
@@ -495,6 +510,8 @@ Restart:
   BuildPsp(humanPsp, -1, 0, 0x2000, humanPsp, &humanSpec, &humanName);
   WriteSuperULong(OSWORK_ROOT_PSP, humanPsp);
   nest_cnt = 0;
+
+  WriteDrviceHeaders();
 
   // メインメモリの0番地からHuman68kの末尾までをスーパーバイザ領域に設定する。
   // エリアセットレジスタの仕様上は8KB単位。

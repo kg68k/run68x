@@ -73,7 +73,7 @@ char* GetMemoryBufferString(ULong adr) {
 }
 
 // メモリに文字列(ASCIIZ)を書き込む
-//   読み込み不可能ならエラー終了する
+//   書き込み不可能ならエラー終了する
 void WriteSuperString(ULong adr, const char* s) {
   ULong len = strlen(s) + 1;
 

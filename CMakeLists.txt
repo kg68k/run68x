@@ -41,6 +41,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/linee.c
   src/linef.c
   src/load.c
+  src/m68k.h
   src/mem.c
   src/mem.h
   src/run68.c

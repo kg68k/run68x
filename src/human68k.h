@@ -20,11 +20,30 @@
 
 #include <stddef.h>
 
+#include "m68k.h"
+
 // ワークエリア
 #define OSWORK_TOP 0x1c00
 #define OSWORK_MEMORY_END 0x1c00
 #define OSWORK_ROOT_PSP 0x1c04
 #define SIZEOF_OSWORK 1024
+
+// デバイスドライバ
+typedef struct {
+  ULong next;
+  UWord attribute;
+  ULong strategy;
+  ULong interrupt_;
+  char name[8];
+} DeviceHeader;
+
+#define DEVHEAD_NEXT 0
+#define DEVHEAD_ATTRIBUTE 4
+#define DEVHEAD_STRATEGY 6
+#define DEVHEAD_INTERRUPT 10
+#define DEVHEAD_NAME 14
+
+#define NUL_DEVICE_HEADER 0xfa50
 
 // DOSコールエラー番号
 #define DOSE_SUCCESS 0
