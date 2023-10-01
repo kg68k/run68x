@@ -411,15 +411,11 @@ static bool Move_f_sr(char code) {
          false = 実行継続
 */
 static bool Move_t_sr(char code) {
-  char mode;
-  char reg;
-  Long data;
 #ifdef TRACE
   Long save_pc = pc;
 #endif
-
-  mode = ((code & 0x38) >> 3);
-  reg = (code & 0x07);
+  int mode = ((code & 0x38) >> 3);
+  int reg = (code & 0x07);
 
   if (SR_S_REF() == 0) {
     err68a("特権命令を実行しました", __FILE__, __LINE__);
@@ -427,11 +423,11 @@ static bool Move_t_sr(char code) {
 
   /* ソースのアドレッシングモードに応じた処理 */
   // ※アクセス権限がEA_ALLになっているが、これは後でチェックの必要がある
+  Long data;
   if (get_data_at_ea(EA_All, mode, reg, S_WORD, &data)) {
     return true;
   }
-
-  sr = (short)data;
+  sr = data & (SR_MASK | CCR_MASK);
 
 #ifdef TRACE
   printf("trace: move_t_sr PC=%06lX\n", save_pc);
@@ -492,23 +488,19 @@ static bool Move_t_usp(char code) {
          false = 実行継続
 */
 static bool Move_t_ccr(char code) {
-  char mode;
-  char reg;
-  Long data;
 #ifdef TRACE
   Long save_pc = pc;
 #endif
-
-  mode = ((code & 0x38) >> 3);
-  reg = (code & 0x07);
+  int mode = ((code & 0x38) >> 3);
+  int reg = (code & 0x07);
 
   /* ソースのアドレッシングモードに応じた処理 */
   // ※アクセス権限がEA_ALLになっているが、これは後でチェックの必要がある
+  Long data;
   if (get_data_at_ea(EA_All, mode, reg, S_WORD, &data)) {
     return true;
   }
-
-  sr = ((sr & 0xFF00) | ((short)data & 0xFF));
+  sr = (sr & ~CCR_MASK) | (data & CCR_MASK);
 
 #ifdef TRACE
   printf("trace: move_t_ccr PC=%06lX\n", save_pc);
@@ -908,7 +900,7 @@ static bool Rte() {
   if (SR_S_REF() == 0) {
     err68a("特権命令を実行しました", __FILE__, __LINE__);
   }
-  sr = (short)mem_get(ra[7], S_WORD);
+  sr = mem_get(ra[7], S_WORD) & (SR_MASK | CCR_MASK);
   ra[7] += 2;
   pc = mem_get(ra[7], S_LONG);
   ra[7] += 4;
