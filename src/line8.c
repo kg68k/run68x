@@ -272,11 +272,9 @@ bool line8(char *pc_ptr) {
     if ((dst_data & 0x0f) < ((src_data & 0x0f) + X)) kekka -= 0x06;
 
     if ((dst_data ^ kekka) & 0x100) {
-      CCR_X_ON();
-      CCR_C_ON();
+      CCR_X_C_ON();
     } else {
-      CCR_X_OFF();
-      CCR_C_OFF();
+      CCR_X_C_OFF();
     }
 
     kekka &= 0xff;

@@ -311,11 +311,9 @@ bool linec(char *pc_ptr) {
       }
 
       if (high >= 0x100) {
-        CCR_X_ON();
-        CCR_C_ON();
+        CCR_X_C_ON();
       } else {
-        CCR_X_OFF();
-        CCR_C_OFF();
+        CCR_X_C_OFF();
       }
 
       kekka = (high & 0xf0) | (low & 0x0f);

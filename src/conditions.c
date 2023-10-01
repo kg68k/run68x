@@ -17,15 +17,14 @@
 
 #include "run68.h"
 
-static void ccr2bitmap(short ccr, char *bitmap) {
+static void ccr2bitmap(UWord ccr, char *bitmap) {
   int i;
-  int flag;
   int j = 0;
 
-  ccr &= 0x1f;
+  ccr &= CCR_MASK;
 
   for (i = 6; i >= 0; i--) {
-    flag = (ccr >> i) & 1;
+    int flag = (ccr >> i) & 1;
     if (flag == 1) {
       bitmap[j++] = '1';
     } else {
@@ -40,8 +39,8 @@ void check(char *mode, Long src, Long dest, Long result, int size,
   char befstr[9];
   char aftstr[9];
 
-  ccr2bitmap((short)(before & 0x1f), befstr);
-  ccr2bitmap((short)(sr & 0x1f), aftstr);
+  ccr2bitmap(before, befstr);
+  ccr2bitmap(sr, aftstr);
 
   printf("%s: 0x%08x 0x%08x 0x%08x %1d %8s %8s\n", mode, src, dest, result,
          size, befstr, aftstr);
@@ -162,11 +161,9 @@ void add_conditions(Long src, Long dest, Long result, int size,
 
   /* Carry Flag & Extend Flag */
   if ((Sm && Dm) || (Dm && !Rm) || (Sm && !Rm)) {
-    CCR_C_ON();
-    CCR_X_ON();
+    CCR_X_C_ON();
   } else {
-    CCR_C_OFF();
-    CCR_X_OFF();
+    CCR_X_C_OFF();
   }
 
   /* Zero Flag */
@@ -310,11 +307,9 @@ void neg_conditions(Long dest, Long result, int size, bool zero_flag) {
 
   /* Carry Flag & Extend Flag */
   if (Dm || Rm) {
-    CCR_C_ON();
-    CCR_X_ON();
+    CCR_X_C_ON();
   } else {
-    CCR_C_OFF();
-    CCR_X_OFF();
+    CCR_X_C_OFF();
   }
 
   /* Zero Flag */

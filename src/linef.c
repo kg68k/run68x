@@ -27,6 +27,11 @@
 #include "mem.h"
 #include "run68.h"
 
+#define CCR_N_C_ON() (sr |= (CCR_N | CCR_C))
+#define CCR_N_C_OFF() (sr &= ~(CCR_N | CCR_C))
+#define CCR_V_C_ON() (sr |= (CCR_V | CCR_C))
+#define CCR_Z_C_ON() (sr |= (CCR_Z | CCR_C))
+
 typedef union {
   double dbl;
   ULong l[2];
@@ -550,8 +555,7 @@ static Long Stol(Long adr) {
   ret = strtol(p, NULL, 10);
   if (ret == 0) {
     if (errno == EINVAL) {
-      CCR_C_ON();
-      CCR_N_ON();
+      CCR_N_C_ON();
       CCR_V_OFF();
     } else {
       CCR_C_OFF();
@@ -559,9 +563,8 @@ static Long Stol(Long adr) {
     }
   } else {
     if (errno == ERANGE) {
-      CCR_C_ON();
+      CCR_V_C_ON();
       CCR_N_OFF();
-      CCR_V_ON();
     } else {
       CCR_C_OFF();
       ra[0] += Strl(p, 10);
@@ -582,9 +585,8 @@ static void Stod(Long adr) {
   errno = 0;
   ret.dbl = atof(p);
   if (errno == ERANGE) {
-    CCR_C_ON();
+    CCR_V_C_ON();
     CCR_N_OFF();
-    CCR_V_ON();
   } else {
     CCR_C_OFF();
     ra[0] += Strl(p, 10);
@@ -702,17 +704,15 @@ static void Val(Long str) {
     else if (c == 'B')
       base = 2;
     else {
-      CCR_C_ON();
-      CCR_N_ON();
+      CCR_N_C_ON();
       CCR_V_OFF();
       return;
     }
     errno = 0;
     unsigned long ul = strtoul(p + 2, NULL, base);
     if (ul == ULONG_MAX && errno == ERANGE) {
-      CCR_C_ON();
+      CCR_V_C_ON();
       CCR_N_OFF();
-      CCR_V_ON();
       return;
     }
     ret.dbl = (double)ul;
@@ -720,9 +720,8 @@ static void Val(Long str) {
     errno = 0;
     ret.dbl = strtod(p, NULL);
     if (errno != 0) {
-      CCR_C_ON();
+      CCR_V_C_ON();
       CCR_N_OFF();
-      CCR_V_ON();
       return;
     }
   }
@@ -910,17 +909,14 @@ static void Dcmp(Long d0, Long d1, Long d2, Long d3) {
   arg1.dbl = arg1.dbl - arg2.dbl;
 
   if (arg1.dbl < 0) {
-    CCR_C_ON();
+    CCR_N_C_ON();
     CCR_Z_OFF();
-    CCR_N_ON();
   } else if (arg1.dbl > 0) {
-    CCR_C_OFF();
+    CCR_N_C_OFF();
     CCR_Z_OFF();
-    CCR_N_OFF();
   } else {
-    CCR_C_OFF();
+    CCR_N_C_OFF();
     CCR_Z_ON();
-    CCR_N_OFF();
   }
 }
 
@@ -1001,8 +997,7 @@ static void Ddiv(Long d0, Long d1, Long d2, Long d3) {
   To_dbl(&arg2, d2, d3);
 
   if (arg2.dbl == 0) {
-    CCR_C_ON();
-    CCR_Z_ON();
+    CCR_Z_C_ON();
     return;
   }
 
@@ -1024,8 +1019,7 @@ static void Dmod(Long d0, Long d1, Long d2, Long d3) {
   To_dbl(&arg2, d2, d3);
 
   if (arg2.dbl == 0) {
-    CCR_C_ON();
-    CCR_Z_ON();
+    CCR_Z_C_ON();
     return;
   }
 
@@ -1213,8 +1207,7 @@ static void Log(Long d0, Long d1) {
   To_dbl(&arg, d0, d1);
 
   if (arg.dbl == 0) {
-    CCR_C_ON();
-    CCR_Z_ON();
+    CCR_Z_C_ON();
     return;
   }
 
@@ -1235,9 +1228,8 @@ static void Exp(Long d0, Long d1) {
   To_dbl(&arg, d0, d1);
 
   if (arg.dbl > 709.782712893) {
-    CCR_C_ON();
+    CCR_V_C_ON();
     CCR_Z_OFF();
-    CCR_V_ON();
     return;
   }
 
@@ -1340,8 +1332,7 @@ static Long Fdiv(Long d0, Long d1) {
   arg2.c[3] = ((d1 >> 24) & 0xFF);
 
   if (arg2.flt == 0) {
-    CCR_C_ON();
-    CCR_Z_ON();
+    CCR_Z_C_ON();
     return (0);
   }
 
@@ -1597,17 +1588,14 @@ static void Cdcmp(Long adr) {
   arg1.dbl = arg1.dbl - arg2.dbl;
 
   if (arg1.dbl < 0) {
-    CCR_C_ON();
+    CCR_N_C_ON();
     CCR_Z_OFF();
-    CCR_N_ON();
   } else if (arg1.dbl > 0) {
-    CCR_C_OFF();
+    CCR_N_C_OFF();
     CCR_Z_OFF();
-    CCR_N_OFF();
   } else {
-    CCR_C_OFF();
+    CCR_N_C_OFF();
     CCR_Z_ON();
-    CCR_N_OFF();
   }
 }
 
@@ -1683,8 +1671,7 @@ static void Cddiv(Long adr) {
   }
 
   if (b.dbl == 0) {
-    CCR_C_ON();
-    CCR_Z_ON();
+    CCR_Z_C_ON();
     return;
   }
 

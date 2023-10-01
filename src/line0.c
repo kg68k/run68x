@@ -79,21 +79,12 @@ static bool Ori(char code) {
          false = 実行継続
 */
 static bool Ori_t_ccr() {
-  char data;
-
-  data = (char)imi_get(S_BYTE);
+  UByte data = imi_get(S_BYTE);
 
 #ifdef TRACE
   printf("trace: ori_t_ccr src=0x%02X PC=%06lX\n", data, pc - 2);
 #endif
-
-  /* CCRをセット */
-  if ((data & 0x10) != 0) CCR_X_ON();
-  if ((data & 0x08) != 0) CCR_N_ON();
-  if ((data & 0x04) != 0) CCR_Z_ON();
-  if ((data & 0x02) != 0) CCR_V_ON();
-  if ((data & 0x01) != 0) CCR_C_ON();
-
+  sr |= (data & CCR_MASK);
   return false;
 }
 
@@ -180,21 +171,12 @@ static bool Andi(char code) {
          false = 実行継続
 */
 static bool Andi_t_ccr() {
-  char data;
-
-  data = (char)imi_get(S_BYTE);
+  UByte data = (char)imi_get(S_BYTE);
 
 #ifdef TRACE
   printf("trace: andi_t_ccr src=0x%02X PC=%06lX\n", data, pc - 2);
 #endif
-
-  /* CCRをセット */
-  if ((data & 0x10) == 0) CCR_X_OFF();
-  if ((data & 0x08) == 0) CCR_N_OFF();
-  if ((data & 0x04) == 0) CCR_Z_OFF();
-  if ((data & 0x02) == 0) CCR_V_OFF();
-  if ((data & 0x01) == 0) CCR_C_OFF();
-
+  sr &= (data | ~CCR_MASK);
   return false;
 }
 
@@ -416,46 +398,12 @@ static bool Eori(char code) {
          false = 実行継続
 */
 static bool Eori_t_ccr() {
-  char data;
-
-  data = (char)imi_get(S_BYTE);
+  UByte data = imi_get(S_BYTE);
 
 #ifdef TRACE
   printf("trace: eori_t_ccr src=0x%02X PC=%06lX\n", data, pc - 2);
 #endif
-
-  /* CCRをセット */
-  if ((data & 0x10) != 0) {
-    if (CCR_X_REF() == 0)
-      CCR_X_ON();
-    else
-      CCR_X_OFF();
-  }
-  if ((data & 0x08) != 0) {
-    if (CCR_N_REF() == 0)
-      CCR_N_ON();
-    else
-      CCR_N_OFF();
-  }
-  if ((data & 0x04) != 0) {
-    if (CCR_Z_REF() == 0)
-      CCR_Z_ON();
-    else
-      CCR_Z_OFF();
-  }
-  if ((data & 0x02) != 0) {
-    if (CCR_V_REF() == 0)
-      CCR_V_ON();
-    else
-      CCR_V_OFF();
-  }
-  if ((data & 0x01) != 0) {
-    if (CCR_C_REF() == 0)
-      CCR_C_ON();
-    else
-      CCR_C_OFF();
-  }
-
+  sr ^= (data & CCR_MASK);
   return false;
 }
 

@@ -64,11 +64,9 @@ static bool Asl(char code1, char code2) {
   for (; cnt > 0; cnt--) {
     src <<= 1;
     if (top != 0) {
-      CCR_X_ON();
-      CCR_C_ON();
+      CCR_X_C_ON();
     } else {
-      CCR_X_OFF();
-      CCR_C_OFF();
+      CCR_X_C_OFF();
     }
     top = (src & mask);
     if (top != flag) CCR_V_ON();
@@ -152,11 +150,9 @@ static bool Asl2(char code2) {
 
   /* C および X フラグはシフト前の最上位ビット値を取る */
   if (msb) {
-    CCR_X_ON();
-    CCR_C_ON();
+    CCR_X_C_ON();
   } else {
-    CCR_X_OFF();
-    CCR_C_OFF();
+    CCR_X_C_OFF();
   }
 
   /* V フラグはシフト前の最上位ビットと */
@@ -221,11 +217,9 @@ static bool Asr(char code1, char code2) {
     btm = (char)(src & 0x01);
     src >>= 1;
     if (btm != 0) {
-      CCR_X_ON();
-      CCR_C_ON();
+      CCR_X_C_ON();
     } else {
-      CCR_X_OFF();
-      CCR_C_OFF();
+      CCR_X_C_OFF();
     }
     src |= flag;
   }
@@ -311,11 +305,9 @@ static bool Asr2(char code2) {
 
   /* C および X フラグはシフト前の最下位ビット値を取る */
   if (lsb) {
-    CCR_X_ON();
-    CCR_C_ON();
+    CCR_X_C_ON();
   } else {
-    CCR_X_OFF();
-    CCR_C_OFF();
+    CCR_X_C_OFF();
   }
 
   /* V フラグは常に0 */
@@ -362,11 +354,9 @@ static bool Lsl(char code1, char code2) {
   CCR_C_OFF();
   for (; cnt > 0; cnt--) {
     if ((src & mask) != 0) {
-      CCR_X_ON();
-      CCR_C_ON();
+      CCR_X_C_ON();
     } else {
-      CCR_X_OFF();
-      CCR_C_OFF();
+      CCR_X_C_OFF();
     }
     src <<= 1;
   }
@@ -450,11 +440,9 @@ static bool Lsl2(char code2) {
 
   /* C および X フラグはシフト前の最上位ビット値を取る */
   if (msb) {
-    CCR_X_ON();
-    CCR_C_ON();
+    CCR_X_C_ON();
   } else {
-    CCR_X_OFF();
-    CCR_C_OFF();
+    CCR_X_C_OFF();
   }
 
   return false;
@@ -506,11 +494,9 @@ static bool Lsr(char code1, char code2) {
   CCR_C_OFF();
   for (; cnt > 0; cnt--) {
     if ((src & 0x01) != 0) {
-      CCR_X_ON();
-      CCR_C_ON();
+      CCR_X_C_ON();
     } else {
-      CCR_X_OFF();
-      CCR_C_OFF();
+      CCR_X_C_OFF();
     }
     src >>= 1;
   }
@@ -592,11 +578,9 @@ static bool Lsr2(char code2) {
 
   /* C および X フラグはシフト前の最下位ビット値を取る */
   if (lsb) {
-    CCR_X_ON();
-    CCR_C_ON();
+    CCR_X_C_ON();
   } else {
-    CCR_X_OFF();
-    CCR_C_OFF();
+    CCR_X_C_OFF();
   }
 
   return false;
@@ -786,11 +770,9 @@ static bool Roxl(char code1, char code2) {
     src <<= 1;
     if (CCR_X_REF() != 0) src |= 0x01;
     if (top != 0) {
-      CCR_C_ON();
-      CCR_X_ON();
+      CCR_X_C_ON();
     } else {
-      CCR_C_OFF();
-      CCR_X_OFF();
+      CCR_X_C_OFF();
     }
   }
 
@@ -1086,11 +1068,9 @@ static bool Roxr(char code1, char code2) {
     src >>= 1;
     if (CCR_X_REF() != 0) src |= mask;
     if (btm != 0) {
-      CCR_C_ON();
-      CCR_X_ON();
+      CCR_X_C_ON();
     } else {
-      CCR_C_OFF();
-      CCR_X_OFF();
+      CCR_X_C_OFF();
     }
   }
 

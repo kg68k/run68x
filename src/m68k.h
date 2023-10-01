@@ -34,4 +34,22 @@ typedef struct {
 
 #define ADDRESS_MASK 0x00ffffff
 
+// ステータスレジスタ
+#define SR_T1 0x8000
+// #define SR_T0 0x4000
+#define SR_S 0x2000
+// #define SR_M 0x1000
+#define SR_I2 0x0400
+#define SR_I1 0x0200
+#define SR_I0 0x0100
+#define SR_MASK 0xa700
+
+// コンディションコードレジスタ
+#define CCR_X 0x0010
+#define CCR_N 0x0008
+#define CCR_Z 0x0004
+#define CCR_V 0x0002
+#define CCR_C 0x0001
+#define CCR_MASK 0x001f
+
 #endif

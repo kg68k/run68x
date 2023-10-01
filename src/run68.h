@@ -123,25 +123,28 @@
 #define EA_Variable 0x01ff       /* 0000 0001 1111 1111 */
 #define EA_VariableMemory 0x01fc /* 0000 0001 1111 1100 */
 
-#define CCR_X_ON() sr |= 0x0010
-#define CCR_X_OFF() sr &= 0xFFEF
-#define CCR_X_REF() (sr & 0x0010)
-#define CCR_N_ON() sr |= 0x0008
-#define CCR_N_OFF() sr &= 0xFFF7
-#define CCR_N_REF() (sr & 0x0008)
-#define CCR_Z_ON() sr |= 0x0004
-#define CCR_Z_OFF() sr &= 0xFFFB
-#define CCR_Z_REF() (sr & 0x0004)
-#define CCR_V_ON() sr |= 0x0002
-#define CCR_V_OFF() sr &= 0xFFFD
-#define CCR_V_REF() (sr & 0x0002)
-#define CCR_C_ON() sr |= 0x0001
-#define CCR_C_OFF() sr &= 0xFFFE
-#define CCR_C_REF() (sr & 0x0001)
-#define SR_S_ON() sr |= 0x2000
-#define SR_S_OFF() sr &= 0xDFFF
-#define SR_S_REF() (sr & 0x2000)
-#define SR_T_REF() (sr & 0x8000)
+#define CCR_X_ON() (sr |= CCR_X)
+#define CCR_X_OFF() (sr &= ~CCR_X)
+#define CCR_X_REF() (sr & CCR_X)
+#define CCR_N_ON() (sr |= CCR_N)
+#define CCR_N_OFF() (sr &= ~CCR_N)
+#define CCR_N_REF() (sr & CCR_N)
+#define CCR_Z_ON() (sr |= CCR_Z)
+#define CCR_Z_OFF() (sr &= ~CCR_Z)
+#define CCR_Z_REF() (sr & CCR_Z)
+#define CCR_V_ON() (sr |= CCR_V)
+#define CCR_V_OFF() (sr &= ~CCR_V)
+#define CCR_V_REF() (sr & CCR_V)
+#define CCR_C_ON() (sr |= CCR_C)
+#define CCR_C_OFF() (sr &= ~CCR_C)
+#define CCR_C_REF() (sr & CCR_C)
+#define SR_S_ON() (sr |= SR_S)
+#define SR_S_OFF() (sr &= ~SR_S)
+#define SR_S_REF() (sr & SR_S)
+#define SR_T_REF() (sr & SR_T1)
+
+#define CCR_X_C_ON() (sr |= (CCR_X | CCR_C))
+#define CCR_X_C_OFF() (sr &= ~(CCR_X | CCR_C))
 
 #ifdef _WIN32
 typedef struct {
