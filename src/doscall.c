@@ -47,6 +47,7 @@
 #include "ansicolor-w32.h"
 #include "dos_file.h"
 #include "dos_memory.h"
+#include "dostrace.h"
 #include "host.h"
 #include "human68k.h"
 #include "mem.h"
@@ -251,10 +252,7 @@ void close_all_files(void) {
 }
 
 // DOS _EXIT、DOS _EXIT2
-static bool Exit2(const char *name, Long exit_code) {
-  if (func_trace_f) {
-    printf("%-10s\n", name);
-  }
+static bool Exit2(Long exit_code) {
   Mfree(0);
   close_all_files();
   rd[0] = exit_code;
@@ -269,41 +267,6 @@ static bool Exit2(const char *name, Long exit_code) {
   return false;
 }
 
-// DOSコール名を表示する
-//   function call trace用
-static void print_doscall_name(const char *name) { printf("%-10s ", name); }
-
-// DOSコールの引数のドライブ名を表示する
-//   function call trace用
-static void print_drive_param(const char *prefix, UWord drive,
-                              const char *suffix) {
-  printf("%s", prefix);
-  if (drive == 0) {
-    printf("current drive");
-  } else if (1 <= drive && drive <= 26) {
-    printf("%c:\n", (drive - 1) + 'A');
-    return;
-  } else {
-    printf("%d(\?\?))", drive);
-  }
-  printf("%s", suffix);
-}
-
-// -fオプション用のメモリダンプ
-static void dump_memory(ULong adr, ULong length) {
-  const ULong max = 32;
-  const int len = (int)((length < max) ? length : max);
-
-  const char *p = prog_ptr + adr;
-  for (int i = 0; i < len; ++i) {
-    char c = *p++;
-    // マルチバイト文字、1バイト半角カタカナには未対応
-    printFmt((0x20 <= c && c <= 0x7e) ? "%c" : "\\x%02x", c);
-  }
-  if (length > max) print("...");
-  print("\n");
-}
-
 /*
  　機能：DOSCALLを実行する
  戻り値： true = 実行終了
@@ -311,7 +274,6 @@ static void dump_memory(ULong adr, ULong length) {
  */
 bool dos_call(UByte code) {
   char *data_ptr = 0;
-  Long stack_adr;
   Long data;
   Long env;
   Long buf;
@@ -322,21 +284,19 @@ bool dos_call(UByte code) {
 #ifdef _WIN32
   DWORD st;
 #endif
+  Long stack_adr = ra[7];
+
   if (func_trace_f) {
-    printf("$%06x FUNC(%02X):", pc - 2, code);
+    PrintDosCall(code, pc - 2, stack_adr);
   }
-  stack_adr = ra[7];
-  if (code >= 0x80 && code <= 0xAF) code -= 0x30;
 
 #ifdef TRACE
   printf("trace: DOSCALL  0xFF%02X PC=%06lX\n", code, pc);
 #endif
+  if (code >= 0x80 && code <= 0xAF) code -= 0x30;
 
   switch (code) {
     case 0x01: /* GETCHAR */
-      if (func_trace_f) {
-        printf("%-10s\n", "GETCHAR");
-      }
 #ifdef _WIN32
       FlushFileBuffers(finfo[1].host.handle);
 #endif
@@ -344,9 +304,6 @@ bool dos_call(UByte code) {
       break;
     case 0x02:                              /* PUTCHAR */
       data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s char='%c'\n", "PUTCHAR", *(unsigned char *)data_ptr);
-      }
 #ifdef _WIN32
       {
         FILEINFO *finfop = &finfo[1];
@@ -364,10 +321,7 @@ bool dos_call(UByte code) {
 #endif
       rd[0] = 0;
       break;
-    case 0x06: /* KBHIT */
-      if (func_trace_f) {
-        printf("%-10s\n", "KBHIT");
-      }
+    case 0x06: /* INPOUT */
       srt = (short)mem_get(stack_adr, S_WORD);
       srt &= 0xFF;
       if (srt >= 0xFE) {
@@ -409,9 +363,6 @@ bool dos_call(UByte code) {
       break;
     case 0x07: /* INKEY */
     case 0x08: /* GETC */
-      if (func_trace_f) {
-        printf("%-10s\n", code == 0x07 ? "INKEY" : "GETC");
-      }
 #ifdef _WIN32
       FlushFileBuffers(finfo[1].host.handle);
 #endif
@@ -426,9 +377,6 @@ bool dos_call(UByte code) {
       data = mem_get(stack_adr, S_LONG);
       data_ptr = prog_ptr + data;
       len = strlen(data_ptr);
-      if (func_trace_f) {
-        printf("%-10s str=%s\n", "PRINT", data_ptr);
-      }
 #ifdef _WIN32
       {
         FILEINFO *finfop = &finfo[1];
@@ -444,20 +392,13 @@ bool dos_call(UByte code) {
 #else
       Write_conv(1, data_ptr, (unsigned)len);
 #endif
-      /* printf( "%s", data_ptr ); */
       rd[0] = 0;
       break;
     case 0x0A: /* GETS */
       buf = mem_get(stack_adr, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s\n", "GETS");
-      }
       rd[0] = Gets(buf);
       break;
     case 0x0B: /* KEYSNS */
-      if (func_trace_f) {
-        printf("%-10s\n", "KEYSNS");
-      }
       if (_kbhit() != 0)
         rd[0] = -1;
       else
@@ -465,15 +406,9 @@ bool dos_call(UByte code) {
       break;
     case 0x0C: /* KFLUSH */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s mode=%d\n", "KFLUSH", srt);
-      }
       rd[0] = Kflush(srt);
       break;
     case 0x0D: /* FFLUSH */
-      if (func_trace_f) {
-        printf("%-10s\n", "FFLUSH");
-      }
 #ifdef _WIN32
       /* オープン中の全てのファイルをフラッシュする。*/
       for (int i = 5; i < FILE_MAX; i++) {
@@ -486,9 +421,6 @@ bool dos_call(UByte code) {
       break;
     case 0x0E: /* CHGDRV */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s drv=%c:\n", "CHGDRV", srt + 'A');
-      }
 #ifdef _WIN32
       {
         char drv[3];
@@ -524,55 +456,38 @@ bool dos_call(UByte code) {
       break;
     case 0x0F: /* DRVCTRL(何もしない) */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s drv=%c:\n", "DRVCTRL", srt);
-      }
       if (srt > 26 && srt < 256)
         rd[0] = -15; /* ドライブ指定誤り */
       else
         rd[0] = 0x02; /* READY */
       break;
     case 0x10: /* CONSNS */
-      if (func_trace_f) {
-        printf("%-10s\n", "CONSNS");
-      }
       _flushall();
       rd[0] = -1;
       break;
     case 0x11: /* PRNSNS */
     case 0x12: /* CINSNS */
     case 0x13: /* COUTSNS */
-      if (func_trace_f) {
-        printf("%-10s\n", code == 0x11   ? "PRNSNS"
-                          : code == 0x12 ? "CINSNS"
-                                         : "COUTSNS");
-      }
       _flushall();
       rd[0] = 0;
       break;
     case 0x19: /* CURDRV */
-      if (func_trace_f) {
-        printf("%-10s\n", "CURDRV");
-      }
 #ifdef _WIN32
-      {
-        char path[512];
-        BOOL b = GetCurrentDirectory(sizeof(path), path);
-        if (b && strlen(path) != 0) {
-          rd[0] = path[0] - 'A';
-        } else {
-          rd[0] = -15; /* ドライブ指定誤り */
-        }
+    {
+      char path[512];
+      BOOL b = GetCurrentDirectory(sizeof(path), path);
+      if (b && strlen(path) != 0) {
+        rd[0] = path[0] - 'A';
+      } else {
+        rd[0] = -15; /* ドライブ指定誤り */
       }
+    }
 #else
       dos_getdrive(&drv);
       rd[0] = drv - 1;
 #endif
-      break;
+    break;
     case 0x1B: /* FGETC */
-      if (func_trace_f) {
-        printf("%-10s\n", "FGETC");
-      }
       fhdl = (short)mem_get(stack_adr, S_WORD);
       if (finfo[fhdl].mode == 1) {
         rd[0] = -1;
@@ -610,18 +525,11 @@ bool dos_call(UByte code) {
     case 0x1C: /* FGETS */
       data = mem_get(stack_adr, S_LONG);
       fhdl = (short)mem_get(stack_adr + 4, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s file_no=%d\n", "FGETS", fhdl);
-      }
       rd[0] = Fgets(data, fhdl);
       break;
     case 0x1D:                              /* FPUTC */
       data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
       fhdl = (short)mem_get(stack_adr + 2, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s file_no=%d char=0x%02X\n", "FPUTC", fhdl,
-               *(unsigned char *)data_ptr);
-      }
 #ifdef _WIN32
       {
         FILEINFO *finfop = &finfo[fhdl];
@@ -649,9 +557,6 @@ bool dos_call(UByte code) {
       data = mem_get(stack_adr, S_LONG);
       fhdl = (short)mem_get(stack_adr + 4, S_WORD);
       data_ptr = prog_ptr + data;
-      if (func_trace_f) {
-        printf("%-10s file_no=%d str=\"%s\"\n", "FPUTS", fhdl, data_ptr);
-      }
 #ifdef _WIN32
       if ((fhdl == 1 || fhdl == 2) &&
           GetConsoleMode(finfo[1].host.handle, &st) != FALSE) {
@@ -672,17 +577,11 @@ bool dos_call(UByte code) {
 #endif
       break;
     case 0x1F: /* ALLCLOSE */
-      if (func_trace_f) {
-        printf("%-10s\n", "ALLCLOSE");
-      }
       close_all_files();
       rd[0] = 0;
       break;
     case 0x20: /* SUPER */
       data = mem_get(stack_adr, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s data=%d\n", "SUPER", data);
-      }
       if (data == 0) {
         /* user -> super */
         if (SR_S_REF() != 0) {
@@ -703,201 +602,111 @@ bool dos_call(UByte code) {
     case 0x21: /* FNCKEY */
       srt = (short)mem_get(stack_adr, S_WORD);
       buf = mem_get(stack_adr + 2, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s mode=%d\n", "FNCKEY", srt);
-      }
       Fnckey(srt, buf);
       rd[0] = 0;
       break;
     case 0x23: /* CONCTRL */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s mode=%d\n", "CONCTRL", srt);
-      }
       rd[0] = Conctrl(srt, stack_adr + 2);
       break;
     case 0x24: /* KEYCTRL */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s mode=%d\n", "KEYCTRL", srt);
-      }
       rd[0] = Keyctrl(srt, stack_adr + 2);
       break;
     case 0x25: /* INTVCS */
       srt = (short)mem_get(stack_adr, S_WORD);
       data = mem_get(stack_adr + 2, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s intno=%d vec=%X\n", "INTVCS", srt, data);
-      }
       rd[0] = Intvcs(srt, data);
       break;
     case 0x27: /* GETTIM2 */
-      if (func_trace_f) {
-        printf("%-10s\n", "GETTIM2");
-      }
       rd[0] = Gettime(1);
       break;
     case 0x28: /* SETTIM2 */
       data = mem_get(stack_adr, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s %X\n", "SETTIM2", data);
-      }
       rd[0] = Settim2(data);
       break;
     case 0x29: /* NAMESTS */
       data = mem_get(stack_adr, S_LONG);
       buf = mem_get(stack_adr + 4, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s fname=%s\n", "NAMESTS", prog_ptr + data);
-      }
       rd[0] = Namests(data, buf);
       break;
     case 0x2A: /* GETDATE */
-      if (func_trace_f) {
-        printf("%-10s", "GETDATE");
-      }
       rd[0] = Getdate();
-      if (func_trace_f) {
-        printf("date=%X\n", rd[0]);
-      }
       break;
     case 0x2B: /* SETDATE */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s date=%X\n", "SETDATE", srt);
-      }
       rd[0] = Setdate(srt);
       break;
     case 0x2C: /* GETTIME */
-      if (func_trace_f) {
-        printf("%-10s flag=0\n", "GETTIME");
-      }
       rd[0] = Gettime(0);
       break;
     case 0x30: /* VERNUM */
-      if (func_trace_f) {
-        printf("%-10s\n", "VERNUM");
-      }
       rd[0] = 0x36380302;
       break;
     case 0x32: /* GETDPB */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s: drive=%d. Not supported, returns -1.\n", "GETDPB", srt);
-      }
       rd[0] = -1;
       break;
     case 0x33: /* BREAKCK */
-      if (func_trace_f) {
-        printf("%-10s\n", "BREAKCK");
-      }
       rd[0] = 1;
       break;
-    case 0x34: /* DRVXCHG */
-      if (func_trace_f) {
-        printf("%-10s\n", "DRVXCHG");
-      }
+    case 0x34:     /* DRVXCHG */
       rd[0] = -15; /* ドライブ指定誤り */
       break;
     case 0x35: /* INTVCG */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s intno=%d", "INTVCG", srt);
-      }
       rd[0] = Intvcg(srt);
-      if (func_trace_f) {
-        printf(" vec=%X\n", rd[0]);
-      }
       break;
     case 0x36: /* DSKFRE */
       srt = (short)mem_get(stack_adr, S_WORD);
       buf = mem_get(stack_adr + 2, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s drv=%c:\n", "DISKFRE", srt);
-      }
       rd[0] = Dskfre(srt, buf);
       break;
     case 0x37: /* NAMECK */
       data = mem_get(stack_adr, S_LONG);
       buf = mem_get(stack_adr + 4, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s fname=%s\n", "NAMECK", prog_ptr + data);
-      }
       rd[0] = Nameck(data, buf);
       break;
     case 0x39: /* MKDIR */
       data = mem_get(stack_adr, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s dname=%s\n", "MKDIR", prog_ptr + data);
-      }
       rd[0] = Mkdir(data);
       break;
     case 0x3A: /* RMDIR */
       data = mem_get(stack_adr, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s dname=%s\n", "RMDIR", prog_ptr + data);
-      }
       rd[0] = Rmdir(data);
       break;
     case 0x3B: /* CHDIR */
       data = mem_get(stack_adr, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s dname=%s\n", "CHDIR", prog_ptr + data);
-      }
       rd[0] = Chdir(data);
       break;
     case 0x3C: /* CREATE */
       data = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
       data_ptr = prog_ptr + data;
-      if (func_trace_f) {
-        printf("%-10s fname=%s attr=%d\n", "CREATE", data_ptr, srt);
-      }
       rd[0] = Create(data_ptr, srt);
       break;
     case 0x3D: /* OPEN */
       data = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
       data_ptr = prog_ptr + data;
-      if (func_trace_f) {
-        printf("%-10s fname=%s mode=%d\n", "OPEN", data_ptr, srt);
-      }
       rd[0] = Open(data_ptr, srt);
       break;
     case 0x3E: /* CLOSE */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s file_no=%d\n", "CLOSE", srt);
-      }
       rd[0] = Close(srt);
       break;
     case 0x3F: /* READ */
       rd[0] = DosRead(stack_adr);
-      if (func_trace_f) {
-        ULong adr = mem_get(stack_adr + 2, S_LONG);
-        ULong len = mem_get(stack_adr + 6, S_LONG);
-        printf("%-10s file_no=%d size=%d ret=%d str=", "READ",
-               mem_get(stack_adr, S_WORD), len, rd[0]);
-        dump_memory(adr, len);
-      }
       break;
     case 0x40: /* WRITE */
       srt = (short)mem_get(stack_adr, S_WORD);
       data = mem_get(stack_adr + 2, S_LONG);
       len = mem_get(stack_adr + 6, S_LONG);
       rd[0] = Write(srt, data, len);
-      if (func_trace_f) {
-        printf("%-10s file_no=%d size=%d ret=%d str=", "WRITE", srt, len,
-               rd[0]);
-        dump_memory(data, len);
-      }
       break;
     case 0x41: /* DELETE */
       data = mem_get(stack_adr, S_LONG);
       data_ptr = prog_ptr + data;
-      if (func_trace_f) {
-        printf("%-10s fname=%s\n", "DELETE", data_ptr);
-      }
       rd[0] = Delete(data_ptr);
       break;
     case 0x42: /* SEEK */
@@ -905,66 +714,37 @@ bool dos_call(UByte code) {
       data = mem_get(stack_adr + 2, S_LONG);
       srt = (short)mem_get(stack_adr + 6, S_WORD);
       rd[0] = Seek(fhdl, data, srt);
-      if (func_trace_f) {
-        printf("%-10s file_no=%d offset=%d mode=%d ret=%d\n", "SEEK", fhdl,
-               data, srt, rd[0]);
-      }
       break;
     case 0x43: /* CHMOD */
       data = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s name=%s attr=%02X\n", "CHMOD", prog_ptr + data, srt);
-      }
       rd[0] = Chmod(data, srt);
       break;
     case 0x44: /* IOCTRL */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s mode=%d stack=%08X\n", "IOCTRL", srt, stack_adr + 2);
-      }
       rd[0] = Ioctrl(srt, stack_adr + 2);
       break;
     case 0x45: /* DUP */
       fhdl = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s org-handle=%d\n", "DUP", fhdl);
-      }
       rd[0] = Dup(fhdl);
       break;
     case 0x46: /* DUP2 */
       srt = (short)mem_get(stack_adr, S_WORD);
       fhdl = (short)mem_get(stack_adr + 2, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s org-handle=%d new-handle=%d\n", "DUP", srt, fhdl);
-      }
       rd[0] = Dup2(srt, fhdl);
       break;
     case 0x47: /* CURDIR */
       srt = (short)mem_get(stack_adr, S_WORD);
       data = mem_get(stack_adr + 2, S_LONG);
-      if (func_trace_f) {
-        print_doscall_name("CURDIR");
-        print_drive_param("drv=", srt, "\n");
-      }
       rd[0] = Curdir(srt, prog_ptr + data);
       break;
     case 0x48: /* MALLOC */
-      if (func_trace_f) {
-        printf("%-10s len=%d\n", "MALLOC", mem_get(stack_adr, S_LONG));
-      }
       rd[0] = DosMalloc(stack_adr);
       break;
     case 0x49: /* MFREE */
-      if (func_trace_f) {
-        printf("%-10s addr=%08X\n", "MFREE", mem_get(stack_adr, S_LONG));
-      }
       rd[0] = DosMfree(stack_adr);
       break;
     case 0x4A: /* SETBLOCK */
-      if (func_trace_f) {
-        printf("%-10s size=%d\n", "SETBLOCK", mem_get(stack_adr + 4, S_LONG));
-      }
       rd[0] = DosSetblock(stack_adr);
       break;
     case 0x4B: /* EXEC */
@@ -974,9 +754,6 @@ bool dos_call(UByte code) {
       if (srt < 4) {
         buf = mem_get(stack_adr + 6, S_LONG);
         len = mem_get(stack_adr + 10, S_LONG);
-      }
-      if (func_trace_f) {
-        printf("%-10s md=%d cmd=%s\n", "EXEC", srt, prog_ptr + data);
       }
       switch (srt) {
         case 0:
@@ -1003,98 +780,53 @@ bool dos_call(UByte code) {
       buf = mem_get(stack_adr, S_LONG);
       data = mem_get(stack_adr + 4, S_LONG);
       srt = (short)mem_get(stack_adr + 8, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s fname=\"%s\" attr=%02X\n", "FILES", prog_ptr + data, srt);
-      }
       rd[0] = Files(buf, data, srt);
       break;
     case 0x4F: /* NFILES */
       buf = mem_get(stack_adr, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s\n", "NFILES");
-      }
       rd[0] = Nfiles(buf);
       break;
     case 0x51: /* GETPDB */
       rd[0] = psp[nest_cnt] + SIZEOF_MEMBLK;
-      if (func_trace_f) {
-        printf("%-10s\n", "GETPDB");
-      }
       break;
     case 0x53:  // GETENV
       data = mem_get(stack_adr, S_LONG);
       env = mem_get(stack_adr + 4, S_LONG);
       buf = mem_get(stack_adr + 8, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s env=%s\n", "GETENV", prog_ptr + data);
-      }
       rd[0] = Getenv(data, env, buf);
       break;
     case 0x54: /* VERIFYG */
-      if (func_trace_f) {
-        printf("%-10s\n", "VERIFYG");
-      }
       rd[0] = 1;
       break;
     case 0x56: /* RENAME */
       data = mem_get(stack_adr, S_LONG);
       buf = mem_get(stack_adr + 4, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s old=\"%s\" new=\"%s\"\n", "RENAME", prog_ptr + data,
-               prog_ptr + buf);
-      }
       rd[0] = Rename(data, buf);
       break;
     case 0x57:  // FILEDATE
-      if (func_trace_f) {
-        printf("%-10s file_no=%d datetime=%X\n", "FILEDATE",
-               mem_get(stack_adr, S_WORD), mem_get(stack_adr + 2, S_LONG));
-      }
       rd[0] = DosFiledate(stack_adr);
       break;
     case 0x58:  // MALLOC2
-      if (func_trace_f) {
-        printf("%-10s mode=%d, len=%d\n", "MALLOC2", mem_get(stack_adr, S_WORD),
-               mem_get(stack_adr + 2, S_LONG));
-      }
       rd[0] = DosMalloc2(stack_adr);
       break;
     case 0x5a:  // MAKETMP
-      if (func_trace_f) {
-        ULong path = mem_get(stack_adr, S_LONG);
-        UWord atr = mem_get(stack_adr + 4, S_WORD);
-        printf("%-10s name=\"%s\" attr=%d\n", "MAKETMP", prog_ptr + path, atr);
-      }
       rd[0] = DosMaketmp(stack_adr);
       break;
     case 0x5B: /* NEWFILE */
       data = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
-      data_ptr = prog_ptr + data;
-      if (func_trace_f) {
-        printf("%-10s name=\"%s\" attr=%d\n", "NEWFILE", data_ptr, srt);
-      }
-      rd[0] = Newfile(data_ptr, srt);
+      rd[0] = Newfile(prog_ptr + data, srt);
       break;
     case 0x5F: /* ASSIGN */
       srt = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s mode=%d", "ASSIGN", srt);
-      }
       rd[0] = Assign(srt, stack_adr + 2);
       break;
     case 0x7C: /* GETFCB */
       fhdl = (short)mem_get(stack_adr, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s file_no=%d\n", "GETFCB", fhdl);
-      }
       rd[0] = Getfcb(fhdl);
       break;
     case 0xF6: /* SUPER_JSR */
       data = mem_get(stack_adr, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s adr=$%08X\n", "SUPER_JSR", data);
-      }
       ra[7] -= 4;
       mem_set(ra[7], pc, S_LONG);
       if (SR_S_REF() == 0) {
@@ -1105,19 +837,16 @@ bool dos_call(UByte code) {
       break;
 
     case 0x4C: /* EXIT2 */
-      if (Exit2("EXIT2", mem_get(stack_adr, S_WORD))) return true;
+      if (Exit2(mem_get(stack_adr, S_WORD))) return true;
       break;
     case 0x00: /* EXIT */
-      if (Exit2("EXIT", 0)) return true;
+      if (Exit2(0)) return true;
       break;
 
     case 0x31: /* KEEPPR */
     {
       len = mem_get(stack_adr, S_LONG);
       UWord exit_code = mem_get(stack_adr + 4, S_WORD);
-      if (func_trace_f) {
-        printf("%-10s\n", "KEEPPR");
-      }
       Mfree(0);
       close_all_files();
       if (nest_cnt == 0) return true;
@@ -1133,20 +862,13 @@ bool dos_call(UByte code) {
 
     case 0xf7:  // BUS_ERR
     {
-      short size = (short)mem_get(stack_adr, S_WORD);  // アクセスサイズ
-      Long r_ptr = mem_get(stack_adr + 2, S_LONG);
-      Long w_ptr = mem_get(stack_adr + 6, S_LONG);
-      if (func_trace_f) {
-        printf("%-10s size=%d P1.l=%08X P2.l=%08X\n", "BUS_ERR", size, r_ptr,
-               w_ptr);
-      }
+      // short size = (short)mem_get(stack_adr, S_WORD); 
+      // Long r_ptr = mem_get(stack_adr + 2, S_LONG);
+      // Long w_ptr = mem_get(stack_adr + 6, S_LONG);
       rd[0] = 1;  // BusErr( buf, data, srt );
     } break;
 
     default:
-      if (func_trace_f) {
-        printf("%-10s code=0xFF%02X\n", "????????", code);
-      }
       rd[0] = DOSE_ILGFNC;
       break;
   }
@@ -2611,7 +2333,6 @@ static Long Assign(short mode, Long stack_adr) {
   Long drv;
   Long buf;
   char *drv_ptr;
-  char *buf_ptr;
 
   switch (mode) {
     case 0:
@@ -2622,10 +2343,6 @@ static Long Assign(short mode, Long stack_adr) {
       drv = toupper(drv_ptr[0]) - 'A' + 1;
       if (drv < 1 || drv > 26) return (-14);
       if (Curdir((short)drv, prog_ptr + buf) != 0) return (-14);
-      if (func_trace_f) {
-        buf_ptr = prog_ptr + buf;
-        printf(" drv=%s cudir=%s\n", drv_ptr, buf_ptr);
-      }
       return (0x40);
     default:
       return (-14);

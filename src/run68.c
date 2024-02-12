@@ -64,7 +64,7 @@ static void print_title(void) {
 #ifdef _DEBUG
       " (debug)"
 #endif
-      "  Copyright (C) 2023 TcbnErik\n"
+      "  Copyright (C) 2024 TcbnErik\n"
       "  based on X68000 console emulator Ver." RUN68VERSION
       "\n"
       "          Created in 1996 by Yokko\n"

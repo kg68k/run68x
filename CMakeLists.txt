@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 project(run68 C)
 
 if(NOT MSVC)
@@ -17,6 +17,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/dos_memory.c
   src/dos_memory.h
   src/doscall.c
+  src/dostrace.c
+  src/dostrace.h
   src/eaaccess.c
   src/exec.c
   src/fefunc.c
