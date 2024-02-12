@@ -1282,46 +1282,51 @@ static Long Close(short hdl) {
  */
 static Long Fgets(Long adr, short hdl) {
   char buf[257];
-  char *p;
   size_t len;
 
   if (!finfo[hdl].is_opened) return -6;  // オープンされていない
   if (finfo[hdl].mode == 1) return (-1);
 
-  UByte max = (unsigned char)mem_get(adr, S_BYTE);
+  UByte max = (UByte)mem_get(adr, S_BYTE);
 #ifdef _WIN32
   {
-    BOOL b = FALSE;
-    DWORD read_len;
-    char c;
-    int i;
-    for (i = 0; i < max; i++) {
-      b = ReadFile(finfo[hdl].host.handle, &c, 1, (LPDWORD)&read_len, NULL);
-      if (c == '\r') {
-        b = ReadFile(finfo[hdl].host.handle, &c, 1, (LPDWORD)&read_len, NULL);
-        if (c == 'n') {
-          buf[i] = '\0';
-          break;
-        } else {
-          buf[i] = '\r';
-        }
+    int i = 0;
+    while (i < max) {
+      DWORD read_len;
+      char c;
+
+      if (ReadFile(finfo[hdl].host.handle, &c, 1, (LPDWORD)&read_len, NULL) == FALSE)
+        return -1;
+      if (read_len == 0) {
+        if (i > 0) break;
+        return -1;
       }
+      if (c == '\r') continue;
+      if (c == '\n') break;
+
+      buf[i++] = c;
     }
-    if (b == FALSE) return -1;
+    buf[i] = '\0';
+    len = i;
   }
 #else
-  if (fgets(buf, max, finfo[hdl].host.fp) == NULL) return -1;
+  {
+    if (fgets(buf, max, finfo[hdl].host.fp) == NULL) return -1;
+    char* s = buf;
+    char* d = buf;
+    char c;
+    while ((c = *s++) != '\0') {
+      if (c != '\r' && c != '\n') *d++ = c;
+    }
+    *d = '\0';
+    len = strlen(buf);
+  }
 #endif
-  len = strlen(buf);
-  if (len < 2) return (-1);
 
-  len -= 2;
-  buf[len] = '\0';
   mem_set(adr + 1, len, S_BYTE);
-  p = prog_ptr + adr + 2;
-  strcpy(p, buf);
+  strcpy(prog_ptr + adr + 2, buf);
 
-  return (len);
+  return len;
 }
 
 /*
