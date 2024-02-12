@@ -17,6 +17,7 @@
 
 #include <direct.h>
 #include <shlwapi.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
@@ -134,10 +135,28 @@ Long DosChdir_win32(Long name) {
   return DOSE_SUCCESS;
 }
 
+static int getDriveNo(short drv) {
+  if (drv == 0) return _getdrive();
+  if (drv <= 26) return drv;
+  return 0;
+}
+
+static bool isValidDrive(int drive) {
+  if (drive <= 0) return false;
+
+  unsigned long mask = 1UL << (drive - 1);  // bit0=A: bit1=B: ...
+  return (_getdrives() & mask) ? true : false;
+}
+
 // DOS _CURDIR (0xff47)
 Long DosCurdir_win32(short drv, char* buf_ptr) {
+  // 無効なドライブに対して_getdcwd()を呼ぶとDebugビルドで
+  // ダイアログが表示されてしまうので、除外しておく。
+  int drive = getDriveNo(drv);
+  if (!isValidDrive(drive)) return DOSE_ILGDRV;
+
   char buf[HUMAN68K_DRV_DIR_MAX + 1] = {0};
-  const char* p = _getdcwd(drv, buf, sizeof(buf));
+  const char* p = _getdcwd(drive, buf, sizeof(buf));
 
   if (p == NULL) {
     // Human68kのDOS _CURDIRはエラーコードとして-15しか返さないので
