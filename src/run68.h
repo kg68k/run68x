@@ -168,8 +168,6 @@ typedef struct {
 } FILEINFO;
 
 typedef struct {
-  bool trap_emulate;
-  bool pc98_key;
   bool io_through;
 } INI_INFO;
 
@@ -203,7 +201,6 @@ extern Long usp;        // USP
 extern Long pc;         // プログラムカウンタ
 extern UWord sr;        // ステータスレジスタ
 extern char *prog_ptr;  // プログラムをロードしたメモリへのポインタ
-extern int trap_count;          // 割り込み処理中なら0
 extern Long superjsr_ret;       // DOSCALL SUPER_JSRの戻りアドレス
 extern Long psp[NEST_MAX];      // PSP
 extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保存

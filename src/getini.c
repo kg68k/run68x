@@ -37,8 +37,6 @@ void read_ini(char *path) {
   char *p;
 
   /* 情報構造体の初期化 */
-  ini_info.trap_emulate = false;
-  ini_info.pc98_key = false;
   ini_info.io_through = false;
   mem_aloc = DEFAULT_MAIN_MEMORY_SIZE;
 
@@ -81,19 +79,13 @@ void read_ini(char *path) {
     /* セクションを見る */
     if (buf[0] == '[') {
       section_match = false;
-      if (_stricmp(buf, "[all]") == 0)
-        section_match = true;
+      if (_stricmp(buf, "[all]") == 0) section_match = true;
       continue;
     }
 
     /* キーワードを見る */
     if (section_match) {
-      if (_stricmp(buf, "trapemulate") == 0)
-        ini_info.trap_emulate = true;
-      else if (_stricmp(buf, "pc98") == 0)
-        ini_info.pc98_key = true;
-      else if (_stricmp(buf, "iothrough") == 0)
-        ini_info.io_through = true;
+      if (_stricmp(buf, "iothrough") == 0) ini_info.io_through = true;
     }
   }
   fclose(fp);

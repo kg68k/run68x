@@ -341,9 +341,7 @@ bool dos_call(UByte code) {
           // 制限: この方法だと2バイト文字には対応できないので無視している
           if (read_len == 1 && ir[0].EventType == KEY_EVENT &&
               ir[0].Event.KeyEvent.bKeyDown) {
-            char c = ir[0].Event.KeyEvent.uChar.AsciiChar;
-            if (ini_info.pc98_key) c = cnv_key98(c);
-            rd[0] = c;
+            rd[0] = (UByte)ir[0].Event.KeyEvent.uChar.AsciiChar;
           }
         }
 #else
@@ -352,8 +350,6 @@ bool dos_call(UByte code) {
           c = _getch();
           if (c == 0x00) {
             c = _getch();
-          } else {
-            if (ini_info.pc98_key) c = cnv_key98(c);
           }
           if (srt == 0xFE) ungetch(c);
           rd[0] = c;
@@ -2245,8 +2241,6 @@ static Long Keyctrl(short mode, Long stack_adr) {
         c = _getch();
         if (c == 0x85) /* F11 */
           c = 0x03;    /* break */
-      } else {
-        if (ini_info.pc98_key) c = cnv_key98(c);
       }
       return (c);
 #ifdef _WIN32
@@ -2257,8 +2251,6 @@ static Long Keyctrl(short mode, Long stack_adr) {
         c = _getch();
         if (c == 0x85) /* F11 */
           c = 0x03;    /* break */
-      } else {
-        if (ini_info.pc98_key) c = cnv_key98(c);
       }
       _ungetch(c);
       return (c);

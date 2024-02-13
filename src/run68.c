@@ -40,7 +40,6 @@ Long usp;
 Long pc;
 UWord sr;
 char *prog_ptr;
-int trap_count;
 Long superjsr_ret;
 Long psp[NEST_MAX];
 Long nest_pc[NEST_MAX];
@@ -141,130 +140,6 @@ static void WriteDrviceHeader(ULong adr, const DeviceHeader dev) {
 static void WriteDrviceHeaders(void) {
   static const DeviceHeader nuldev = {0xffffffff, 0x8024, 0, 0, "NUL     "};
   WriteDrviceHeader(NUL_DEVICE_HEADER, nuldev);
-}
-
-/*
- 　機能：割り込みをエミュレートして実行する
- 戻り値：なし
-*/
-static int exec_trap(bool *restart) {
-  Long trap_adr;
-  static bool cont_flag = true;
-  static bool running = true;
-
-  trap_count = 1;
-  UByte *const trap_mem1 = (UByte *)prog_ptr + 0x118;
-  UByte *const trap_mem2 = (UByte *)prog_ptr + 0x138;
-  OPBuf_clear();
-  do {
-    /* 実行した命令の情報を保存しておく */
-    OP_info.pc = 0;
-    OP_info.code = 0;
-    OP_info.rmem = 0;
-    OP_info.rsize = 'N';
-    OP_info.wmem = 0;
-    OP_info.wsize = 'N';
-    OP_info.mnemonic[0] = 0;
-    if (superjsr_ret == pc) {
-      SR_S_OFF();
-      superjsr_ret = 0;
-    }
-    if (trap_count == 1) {
-      if (*((Long *)trap_mem1) != 0) {
-        trap_adr = *trap_mem1;
-        trap_adr = ((trap_adr << 8) | *(trap_mem1 + 1));
-        trap_adr = ((trap_adr << 8) | *(trap_mem1 + 2));
-        trap_adr = ((trap_adr << 8) | *(trap_mem1 + 3));
-        trap_count = 0;
-        ra[7] -= 4;
-        mem_set(ra[7], pc, S_LONG);
-        ra[7] -= 2;
-        mem_set(ra[7], sr, S_WORD);
-        pc = trap_adr;
-        SR_S_ON();
-      } else if (*((Long *)trap_mem2) != 0) {
-        trap_adr = *trap_mem2;
-        trap_adr = ((trap_adr << 8) | *(trap_mem2 + 1));
-        trap_adr = ((trap_adr << 8) | *(trap_mem2 + 2));
-        trap_adr = ((trap_adr << 8) | *(trap_mem2 + 3));
-        trap_count = 0;
-        ra[7] -= 4;
-        mem_set(ra[7], pc, S_LONG);
-        ra[7] -= 2;
-        mem_set(ra[7], sr, S_WORD);
-        pc = trap_adr;
-        SR_S_ON();
-      }
-    } else {
-      if (trap_count > 1) trap_count--;
-    }
-    if (trap_pc != 0 && pc == trap_pc) {
-      printFmt("(run68) trapped:MPUがアドレス$%06Xの命令を実行しました。\n",
-               pc);
-      debug_on = true;
-      if (stepcount != 0) {
-        printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
-        stepcount = 0;
-      }
-    } else if (cwatchpoint != 0x4afc && cwatchpoint == PeekW(pc)) {
-      printFmt("(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
-               cwatchpoint);
-      if (stepcount != 0) {
-        printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
-        stepcount = 0;
-      }
-    }
-    if (debug_on) {
-      debug_on = false;
-      debug_flag = false;
-      RUN68_COMMAND cmd = debugger(running);
-      switch (cmd) {
-        default:
-          break;
-        case RUN68_COMMAND_RUN:
-          *restart = true;
-          running = true;
-          goto EndOfFunc;
-        case RUN68_COMMAND_CONT:
-          goto NextInstruction;
-        case RUN68_COMMAND_STEP:
-        case RUN68_COMMAND_NEXT:
-          debug_on = true;
-          goto NextInstruction;
-        case RUN68_COMMAND_QUIT:
-          cont_flag = false;
-          goto NextInstruction;
-      }
-    } else if (stepcount != 0) {
-      stepcount--;
-      if (stepcount == 0) {
-        debug_on = true;
-      }
-    }
-    if ((pc & 0xFF000001) != 0) {
-      err68b("アドレスエラーが発生しました", pc, OPBuf_getentry(0)->pc);
-      break;
-    }
-  NextInstruction:
-    /* PCの値とニーモニックを保存する */
-    OP_info.pc = pc;
-    OP_info.code = *((unsigned short *)(prog_ptr + pc));
-    if (setjmp(jmp_when_abort) != 0) {
-      debug_on = true;
-      continue;
-    }
-    if (prog_exec()) {
-      running = false;
-      if (debug_flag) {
-        debug_on = true;
-      } else {
-        cont_flag = false;
-      }
-    }
-    OPBuf_insert(&OP_info);
-  } while (cont_flag);
-EndOfFunc:
-  return rd[0];
 }
 
 /*
@@ -602,7 +477,7 @@ Restart:
   psp[nest_cnt] = programPsp;
   superjsr_ret = 0;
   usp = 0;
-  int ret = ini_info.trap_emulate ? exec_trap(&restart) : exec_notrap(&restart);
+  int ret = exec_notrap(&restart);
 
   /* 終了 */
   if (trace_f || func_trace_f) {

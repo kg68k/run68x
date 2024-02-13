@@ -10,8 +10,6 @@ run68の改造版です。
 ### run68.ini
 
 * `[all]` セクション ... 各種設定
-  * `trapemulate`
-  * `pc98`
   * `iothrough`
 * `[environment]` セクション ... 環境変数の設定
   * `変数名=値`
@@ -19,7 +17,7 @@ run68の改造版です。
 
 
 ## Build
-Windows (Visual Studio 2022、x64)、WSL上のUbuntu 20.04でのみ確認しています。  
+Windows (Visual Studio 2022、x64)、WSL上のUbuntu 22.04でのみ確認しています。  
 なにか問題があれば報告してください。
 
 ### Visual Studio

@@ -904,7 +904,6 @@ static bool Rte() {
   ra[7] += 2;
   pc = mem_get(ra[7], S_LONG);
   ra[7] += 4;
-  trap_count = RAS_INTERVAL;
 
   return false;
 }
