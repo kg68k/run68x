@@ -327,21 +327,24 @@ bool dos_call(UByte code) {
       if (srt >= 0xFE) {
 #ifdef _WIN32
         FILEINFO *finfop = &finfo[0];
-        INPUT_RECORD ir;
+        INPUT_RECORD ir[3];
         DWORD read_len = 0;
         rd[0] = 0;
-        PeekConsoleInput(finfop->host.handle, &ir, 1, (LPDWORD)&read_len);
-        if (read_len == 0) {
-          /* Do nothing. */
-        } else if (ir.EventType != KEY_EVENT || !ir.Event.KeyEvent.bKeyDown ||
-                   c == 0x0) {
-          /* 不要なイベントは読み捨てる */
-          ReadConsoleInput(finfop->host.handle, &ir, 1, (LPDWORD)&read_len);
-        } else if (srt != 0xFE) {
-          ReadConsoleInput(finfop->host.handle, &ir, 1, (LPDWORD)&read_len);
-          c = ir.Event.KeyEvent.uChar.AsciiChar;
-          if (ini_info.pc98_key) c = cnv_key98(c);
-          rd[0] = c;
+        PeekConsoleInputA(finfop->host.handle, ir, 1, (LPDWORD)&read_len);
+        if (read_len != 0) {
+          int keydown =
+              ir[0].EventType == KEY_EVENT && ir[0].Event.KeyEvent.bKeyDown;
+          if (srt == 0xff || !keydown) {
+            ReadConsoleInputA(finfop->host.handle, ir, _countof(ir),
+                              (LPDWORD)&read_len);
+          }
+          // 制限: この方法だと2バイト文字には対応できないので無視している
+          if (read_len == 1 && ir[0].EventType == KEY_EVENT &&
+              ir[0].Event.KeyEvent.bKeyDown) {
+            char c = ir[0].Event.KeyEvent.uChar.AsciiChar;
+            if (ini_info.pc98_key) c = cnv_key98(c);
+            rd[0] = c;
+          }
         }
 #else
         rd[0] = 0;
@@ -862,7 +865,7 @@ bool dos_call(UByte code) {
 
     case 0xf7:  // BUS_ERR
     {
-      // short size = (short)mem_get(stack_adr, S_WORD); 
+      // short size = (short)mem_get(stack_adr, S_WORD);
       // Long r_ptr = mem_get(stack_adr + 2, S_LONG);
       // Long w_ptr = mem_get(stack_adr + 6, S_LONG);
       rd[0] = 1;  // BusErr( buf, data, srt );
@@ -1295,7 +1298,8 @@ static Long Fgets(Long adr, short hdl) {
       DWORD read_len;
       char c;
 
-      if (ReadFile(finfo[hdl].host.handle, &c, 1, (LPDWORD)&read_len, NULL) == FALSE)
+      if (ReadFile(finfo[hdl].host.handle, &c, 1, (LPDWORD)&read_len, NULL) ==
+          FALSE)
         return -1;
       if (read_len == 0) {
         if (i > 0) break;
@@ -1312,8 +1316,8 @@ static Long Fgets(Long adr, short hdl) {
 #else
   {
     if (fgets(buf, max, finfo[hdl].host.fp) == NULL) return -1;
-    char* s = buf;
-    char* d = buf;
+    char *s = buf;
+    char *d = buf;
     char c;
     while ((c = *s++) != '\0') {
       if (c != '\r' && c != '\n') *d++ = c;
