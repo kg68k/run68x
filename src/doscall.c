@@ -2568,30 +2568,6 @@ Long gets2(char *str, int max) {
   return (strlen(str));
 }
 
-/*
-        $fff7	_BUS_ERR	Check for bus errors
-
-                Arg	SIZE.w		アクセスサイズ(1:バイト 2:ワード
-   4:ロングワード) P1.l		読み込みポインタ P2.l		書き込みポインタ
-
-                Ret	d0.l =  0	読み書き可能
-                d0.l =  1	P2 に書き込んだ時にバスエラーが発生
-                d0.l =  2	P1 から読み込んだ時にバスエラーが発生
-                d0.l = -1	エラー(Argが異常)
-
-                SIZE で指定されたサイズで P1
-   で指定したアドレスから読み込み、そのデータ を P2
-   で指定したアドレスに書き込んでバスエラーが発生するかどうか調べる. SIZE
-   の値が異常な場合や SIZE = 2,4 で P1,P2 に奇数アドレスを指定した場 合はRetが
-   -1 になる.
-
-                move	SIZE,-(sp)
-                pea	(P2)
-                pea	(P1)
-                DOS	_BUS_ERR
-                lea	(10,sp),sp
-*/
-
 /* $Id: doscall.c,v 1.3 2009/08/08 06:49:44 masamic Exp $ */
 
 /*

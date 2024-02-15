@@ -41,7 +41,6 @@
  *   false: 正常
  *
  */
-
 bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data) {
   /* 操作しやすいようにモードを統合 */
   int gmode = (mode < 7) ? mode : (7 + reg); /* gmode = 0-11 */
@@ -80,8 +79,6 @@ bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data) {
   return false;
 }
 
-/* Get Data at Effective Address */
-
 /*
  * 【説明】
  *   実効アドレスで示された値を取得する。
@@ -100,7 +97,6 @@ bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data) {
  *   false: 正常
  *
  */
-
 bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data) {
   Long save_pc = pc;
 
@@ -207,7 +203,6 @@ bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data) {
  *   false: 正常
  *
  */
-
 bool set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data) {
   Long save_pc = pc;
 
@@ -314,7 +309,6 @@ bool set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data) {
  *   false: 正常
  *
  */
-
 bool get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size,
                           Long *data) {
   Long save_pc = pc;
@@ -350,6 +344,5 @@ bool get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size,
  *
  * Revision 1.1  1999/11/01  10:36:33  masamichi
  * Initial revision
- *
  *
  */

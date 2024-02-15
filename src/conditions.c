@@ -17,6 +17,7 @@
 
 #include "run68.h"
 
+#ifdef TEST_CCR
 static void ccr2bitmap(UWord ccr, char *bitmap) {
   int i;
   int j = 0;
@@ -45,8 +46,9 @@ void check(char *mode, Long src, Long dest, Long result, int size,
   printf("%s: 0x%08x 0x%08x 0x%08x %1d %8s %8s\n", mode, src, dest, result,
          size, befstr, aftstr);
 }
+#endif
 
-Long getMSB(Long num, int size) {
+static Long getMSB(Long num, int size) {
   switch (size) {
     case S_BYTE:
       return (num >> 7) & 1;
@@ -60,7 +62,7 @@ Long getMSB(Long num, int size) {
   }
 }
 
-Long getBitsByDataSize(Long num, int size) {
+static Long getBitsByDataSize(Long num, int size) {
   switch (size) {
     case S_BYTE:
       return num & 0xff;
@@ -96,7 +98,6 @@ Long getBitsByDataSize(Long num, int size) {
  *   なし
  *
  */
-
 void general_conditions(Long result, int size) {
   int Rm;
 
@@ -143,7 +144,6 @@ void general_conditions(Long result, int size) {
  *   なし
  *
  */
-
 void add_conditions(Long src, Long dest, Long result, int size,
                     bool zero_flag) {
   int Sm, Dm, Rm;
@@ -198,7 +198,6 @@ void add_conditions(Long src, Long dest, Long result, int size,
  *   なし
  *
  */
-
 void cmp_conditions(Long src, Long dest, Long result, int size) {
   int Sm, Dm, Rm;
 
@@ -254,7 +253,6 @@ void cmp_conditions(Long src, Long dest, Long result, int size) {
  *   なし
  *
  */
-
 void sub_conditions(Long src, Long dest, Long result, int size,
                     bool zero_flag) {
   cmp_conditions(src, dest, result, size);
@@ -291,7 +289,6 @@ void sub_conditions(Long src, Long dest, Long result, int size,
  *   なし
  *
  */
-
 void neg_conditions(Long dest, Long result, int size, bool zero_flag) {
   int Dm, Rm;
 
@@ -348,6 +345,5 @@ void neg_conditions(Long dest, Long result, int size, bool zero_flag) {
  *
  * Revision 1.2  1999/11/29  06:24:04  yfujii
  * Condition code operations are modified to be correct.
- *
  *
  */

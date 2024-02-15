@@ -316,6 +316,7 @@ Long get_locate() {
 static int num_entries;
 static int current_p;
 static EXEC_INSTRUCTION_INFO entry[MAX_OPBUF];
+
 /*
    機能：
      実行した命令の情報をリングバッファに保存する。
@@ -411,138 +412,6 @@ void OPBuf_display(int n) {
     }
     hex[j] = '\0';
     printFmt("%s%s\n", hex, s ? s : "\?\?\?\?");
-  }
-}
-
-/*
- 　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
- 　　　　の値を得る
- 戻り値：その値
-*/
-int get_idx(int *pc, char *regstr) {
-  char *mem;
-  char idx2;
-  char idx_reg;
-
-  mem = prog_ptr + (*pc);
-
-  idx2 = *(mem++);
-  idx_reg = ((idx2 >> 4) & 0x07);
-  if ((idx2 & 0x80) == 0) {
-    sprintf(regstr, "d%d", idx_reg);
-  } else {
-    sprintf(regstr, "d%d", idx_reg);
-  }
-  if ((idx2 & 0x08) == 0) { /* WORD */
-    strcat(regstr, ".w");
-  } else {
-    strcat(regstr, ".l");
-  }
-  (*pc) += 2;
-
-  return ((int)(*mem));
-}
-
-/*
- 　機能：PCの指すメモリから指定されたサイズのイミディエイトデータをゲットし、
- 　　　　サイズに応じてPCを進める
- 戻り値：データの値
-*/
-Long get_imi(int *pc, char size) {
-  ULong adr = (ULong)*pc;
-
-  switch (size) {
-    case S_BYTE:
-      (*pc) += 2;
-      return PeekB(adr + 1);
-    case S_WORD:
-      (*pc) += 2;
-      return PeekW(adr);
-    default:  // S_LONG
-      (*pc) += 4;
-      return PeekL(adr);
-  }
-}
-
-/*
-    機能：
-      オペランド文字列を生成する。
-    パラメータ：
-      char *buf           <out>    生成した文字列を格納する。
-      int  AddressingMode <in>     アドレッシングモード
-      int  RegisterNumber <in>     レジスタ番号（またはアドレッシングモード）
-      char *pc            <in/out> 拡張部取得用プログラムカウンタ
-    戻り値：
-      なし。
-*/
-
-void get_operand(char *buf, int *pc, int AddressingMode, int RegisterNumber,
-                 int size) {
-  char regstr[16];
-  int disp;
-
-  switch (AddressingMode) {
-    case 0:
-      sprintf(buf, "d%d", RegisterNumber);
-      break;
-    case 1:
-      sprintf(buf, "a%d", RegisterNumber);
-      break;
-    case 2:
-      sprintf(buf, "(a%d)", RegisterNumber);
-      break;
-    case 3:
-      sprintf(buf, "(a%d)+", RegisterNumber);
-      break;
-    case 4:
-      sprintf(buf, "-(a%d)", RegisterNumber);
-      break;
-    case 5:
-      disp = get_imi(pc, S_WORD);
-      sprintf(buf, "$%04x(a%d)", disp, RegisterNumber);
-      break;
-    case 6:
-      disp = get_idx(pc, regstr);
-      sprintf(buf, "%d(a%d,%s)", disp, RegisterNumber, regstr);
-      break;
-    case 7:
-      switch (RegisterNumber) {
-        case 0:
-          disp = get_imi(pc, S_WORD);
-          sprintf(buf, "$%04x", disp);
-          break;
-        case 1:
-          disp = get_imi(pc, S_LONG);
-          sprintf(buf, "$%08x", disp);
-          break;
-        case 2:
-          disp = get_imi(pc, S_WORD);
-          sprintf(buf, "$%04x(pc)", disp);
-          break;
-        case 3:
-          disp = get_idx(pc, regstr);
-          sprintf(buf, "%d(pc,%s)", disp, regstr);
-          break;
-        case 4:
-          disp = get_imi(pc, size);
-          switch (size) {
-            case S_BYTE:
-              sprintf(buf, "#$%02x", disp);
-              break;
-            case S_WORD:
-              sprintf(buf, "#$%04x", disp);
-              break;
-            case S_LONG:
-              sprintf(buf, "#$%08x", disp);
-              break;
-            default:
-              strcpy(buf, "????????");
-          }
-          break;
-        default:
-          strcpy(buf, "????????");
-      }
-      break;
   }
 }
 

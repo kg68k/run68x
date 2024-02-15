@@ -933,21 +933,18 @@ static bool Rts() {
   return false;
 }
 
-/*
-        Nbcd
-
-        4805		0100_1000_00 00_0 mmm	nbcd dm
-        4808 1234 5678	0100_1000_00 00_1 000	link.l a0,$12345678
-        4813		0100_1000_00 01_0 mmm	nbcd (am)
-        481c		0100_1000_00 01_1 mmm	nbcd (am)+
-        4824		0100_1000_00 10_0 mmm	nbcd -(am)
-        482c 000a	0100_1000_00 10_1 mmm	nbcd 10(am)
-        4834 3005	0100_1000_00 11_0 mmm	nbcd 5(am,d3.w)
-        4834 3805	0100_1000_00 11_0 mmm	nbcd 5(am,d3.l)
-        4839 1234 5678	0100_1000_00 11_1 001	nbcd $12345678
-*/
+// Nbcd
+//
+// 4805            0100_1000_00 00_0 mmm  nbcd dm
+// 4808 1234 5678  0100_1000_00 00_1 000  link.l a0,$12345678
+// 4813            0100_1000_00 01_0 mmm  nbcd (am)
+// 481c            0100_1000_00 01_1 mmm  nbcd (am)+
+// 4824            0100_1000_00 10_0 mmm  nbcd -(am)
+// 482c 000a       0100_1000_00 10_1 mmm  nbcd 10(am)
+// 4834 3005       0100_1000_00 11_0 mmm  nbcd 5(am,d3.w)
+// 4834 3805       0100_1000_00 11_0 mmm  nbcd 5(am,d3.l)
+// 4839 1234 5678  0100_1000_00 11_1 001  nbcd $12345678
 static bool Nbcd(char code2) {
-  /* nbcd */
   char src_reg = (code2 & 0x7);
   char mode = (code2 & 0x38) >> 3;
   char work_mode;
@@ -957,16 +954,14 @@ static bool Nbcd(char code2) {
   Long kekka;
   Long X;
 
-  /*
-          0: 2byte: dm
-          1: 6byte: Link命令
-          2: 2byte: (am)
-          3: 2byte: (am)+
-          4: 2byte: -(am)
-          5: 4byte: 10(am)
-          6: 4byte: 5(am,d3.w)  5(am,d3.l)
-          7: 6byte: 絶対アドレスロング
-  */
+  // 0: 2byte: dm
+  // 1: 6byte: Link命令
+  // 2: 2byte: (am)
+  // 3: 2byte: (am)+
+  // 4: 2byte: -(am)
+  // 5: 4byte: 10(am)
+  // 6: 4byte: 5(am,d3.w)  5(am,d3.l)
+  // 7: 6byte: 絶対アドレスロング
 
   /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
   if (mode == EA_AIPI) {

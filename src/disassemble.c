@@ -1358,7 +1358,6 @@ ErrorReturn:
      Long *next_addr <out> 次の命令のアドレス
    戻り値：
 */
-
 char *disassemble(Long addr, Long *next_addr) {
   static char mnemonic[128], *ptr;
 

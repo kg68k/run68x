@@ -311,8 +311,10 @@ void add_conditions(Long src, Long dest, Long result, int size, bool zero_flag);
 void cmp_conditions(Long src, Long dest, Long result, int size);
 void sub_conditions(Long src, Long dest, Long result, int size, bool zero_flag);
 void neg_conditions(Long dest, Long result, int size, bool zero_flag);
+#ifdef TEST_CCR
 void check(char *mode, Long src, Long dest, Long result, int size,
            short before);
+#endif
 
 // dissassemble.c
 char *disassemble(Long addr, Long *next_addr);
