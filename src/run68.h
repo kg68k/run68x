@@ -263,7 +263,6 @@ bool iocs_call(void);
 /* key.c */
 void get_fnckey(int, char *);
 void put_fnckey(int, char *);
-UByte cnv_key98(UByte);
 
 /* line?.c */
 bool line0(char *);

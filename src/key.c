@@ -138,28 +138,3 @@ void put_fnckey2(int no, char *p) {
     printf("%c[0;%d;\"%s\"p", 0x1B, kno, p);
   }
 }
-
-/*
- 　機能：キーコードを変換する
- 戻り値：変換後のキーコード
-*/
-UByte cnv_key98(UByte c) {
-  switch (c) {
-    case 0x0A: /* ↓ */
-      c = 0x1F;
-      break;
-    case 0x0B: /* ↑ */
-      c = 0x1E;
-      break;
-    case 0x0C: /* → */
-      c = 0x1C;
-      break;
-    case 0x1A: /* CLR */
-      c = 0x0C;
-      break;
-    case 0x1E: /* HOME */
-      c = 0x0B;
-      break;
-  }
-  return (c);
-}
