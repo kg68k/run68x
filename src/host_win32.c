@@ -24,6 +24,7 @@
 
 #include "host.h"
 #include "human68k.h"
+#include "mem.h"
 #include "run68.h"
 
 // パス名の正規化
@@ -104,7 +105,7 @@ Long ReadFileOrTty_win32(FILEINFO* finfop, char* buffer, ULong length) {
 
 // DOS _MKDIR (0xff39)
 Long DosMkdir_win32(Long name) {
-  char* name_ptr = prog_ptr + name;
+  char* const name_ptr = GetStringSuper(name);
 
   if (CreateDirectoryA(name_ptr, NULL) == FALSE) {
     if (errno == EACCES) return DOSE_EXISTDIR;  // ディレクトリは既に存在する
@@ -115,7 +116,7 @@ Long DosMkdir_win32(Long name) {
 
 // DOS _RMDIR (0xff3a)
 Long DosRmdir_win32(Long name) {
-  char* name_ptr = prog_ptr + name;
+  char* const name_ptr = GetStringSuper(name);
 
   errno = 0;
   if (RemoveDirectoryA(name_ptr) == FALSE) {
@@ -128,7 +129,7 @@ Long DosRmdir_win32(Long name) {
 
 // DOS _CHDIR (0xff3b)
 Long DosChdir_win32(Long name) {
-  char* name_ptr = prog_ptr + name;
+  char* const name_ptr = GetStringSuper(name);
 
   if (SetCurrentDirectoryA(name_ptr) == FALSE)
     return DOSE_NODIR;  // ディレクトリが見つからない

@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -77,7 +77,6 @@ static Long Getdate(void);
 static Long Setdate(short);
 static Long Gettime(int);
 static Long Settim2(Long);
-static Long Getenv(Long, Long, Long);
 static Long Namests(Long, Long);
 static Long Nameck(Long, Long);
 static Long Conctrl(short, Long);
@@ -196,6 +195,42 @@ static Long DosSetblock(ULong param) {
   return Setblock(adr, size);
 }
 
+// DOS _GETENV (0xff53, 0xff53)
+static Long DosGetenv(ULong param) {
+  ULong name = ReadParamULong(&param);
+  ULong env = ReadParamULong(&param);
+  ULong buf = ReadParamULong(&param);
+
+  const char *s = Getenv(GetStringSuper(name), env);
+  if (!s) return DOSE_ILGFNC;
+
+  WriteStringSuper(buf, s);
+  return DOSE_SUCCESS;
+}
+
+// 環境変数領域から環境変数を検索する。
+const char *Getenv(const char *name, ULong env) {
+  if (env == 0) {
+    env = ReadULongSuper(psp[nest_cnt] + PSP_ENV_PTR);
+  }
+  if (env == (ULong)-1) return NULL;
+
+  // 環境変数領域の先頭4バイトは領域サイズで、その次から文字列が並ぶ。
+  ULong kv = env + 4;
+  const size_t len = strlen(name);
+
+  for (;;) {
+    char *p = GetStringSuper(kv);
+    if (*p == '\0') break;
+
+    if (memcmp(p, name, len) == 0 && p[len] == '=') {
+      return p + len + strlen("=");
+    }
+    kv += strlen(p) + 1;
+  }
+  return NULL;
+}
+
 // DOS _FILEDATE (0xff57, 0xff87)
 static Long DosFiledate(ULong param) {
   UWord fileno = ReadParamUWord(&param);
@@ -275,7 +310,6 @@ static bool Exit2(Long exit_code) {
 bool dos_call(UByte code) {
   char *data_ptr = 0;
   Long data;
-  Long env;
   Long buf;
   Long len;
   short srt;
@@ -302,25 +336,27 @@ bool dos_call(UByte code) {
 #endif
       rd[0] = (_getche() & 0xFF);
       break;
-    case 0x02:                              /* PUTCHAR */
-      data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
+    case 0x02: /* PUTCHAR */
+    {
+      // WriteW32()が文字列長を無視して常に文字列末尾まで走査するので、
+      // 出力する1文字の直後に必ずNUL文字を置くこと。
+      char c[2] = {(char)ReadUWordSuper(stack_adr), '\0'};
 #ifdef _WIN32
-      {
-        FILEINFO *finfop = &finfo[1];
-        if (GetConsoleMode(finfop->host.handle, &st) != 0) {
-          // 非リダイレクト
-          WriteW32(1, finfop->host.handle, data_ptr, 1);
-        } else {
-          Long nwritten;
-          /* Win32API */
-          WriteFile(finfop->host.handle, data_ptr, 1, (LPDWORD)&nwritten, NULL);
-        }
+      FILEINFO *finfop = &finfo[1];
+      if (GetConsoleMode(finfop->host.handle, &st) != 0) {
+        // 非リダイレクト
+        WriteW32(1, finfop->host.handle, c, 1);
+      } else {
+        Long nwritten;
+        /* Win32API */
+        WriteFile(finfop->host.handle, c, 1, (LPDWORD)&nwritten, NULL);
       }
 #else
-      Write_conv(1, data_ptr, 1);
+      Write_conv(1, c, 1);
 #endif
       rd[0] = 0;
       break;
+    }
     case 0x06: /* INPOUT */
       srt = (short)mem_get(stack_adr, S_WORD);
       srt &= 0xFF;
@@ -373,8 +409,7 @@ bool dos_call(UByte code) {
       rd[0] = c;
       break;
     case 0x09: /* PRINT */
-      data = mem_get(stack_adr, S_LONG);
-      data_ptr = prog_ptr + data;
+      data_ptr = GetStringSuper(mem_get(stack_adr, S_LONG));
       len = strlen(data_ptr);
 #ifdef _WIN32
       {
@@ -526,36 +561,31 @@ bool dos_call(UByte code) {
       fhdl = (short)mem_get(stack_adr + 4, S_WORD);
       rd[0] = Fgets(data, fhdl);
       break;
-    case 0x1D:                              /* FPUTC */
-      data_ptr = prog_ptr + stack_adr + 1;  // mem_get(stack_adr, S_WORD);
+    case 0x1D: /* FPUTC */
+    {
+      char c[2] = {(char)ReadUWordSuper(stack_adr), '\0'};
       fhdl = (short)mem_get(stack_adr + 2, S_WORD);
 #ifdef _WIN32
-      {
-        FILEINFO *finfop = &finfo[fhdl];
-        if (GetConsoleMode(finfop->host.handle, &st) != 0 &&
-            (fhdl == 1 || fhdl == 2)) {
-          // 非リダイレクトで標準出力か標準エラー出力
-          WriteW32(fhdl, finfop->host.handle, data_ptr, 1);
-          rd[0] = 0;
-        } else {
-          if (WriteFile(finfop->host.handle, data_ptr, 1, (LPDWORD)&len,
-                        NULL) == FALSE)
-            rd[0] = 0;
-          else
-            rd[0] = 1;
-        }
+      FILEINFO *finfop = &finfo[fhdl];
+      if (GetConsoleMode(finfop->host.handle, &st) != 0 &&
+          (fhdl == 1 || fhdl == 2)) {
+        // 非リダイレクトで標準出力か標準エラー出力
+        WriteW32(fhdl, finfop->host.handle, c, 1);
+        rd[0] = 0;
+      } else {
+        int fail =
+            WriteFile(finfop->host.handle, c, 1, (LPDWORD)&len, NULL) == FALSE;
+        rd[0] = fail ? 0 : 1;
       }
 #else
-      if (Write_conv(fhdl, data_ptr, 1) == EOF)
-        rd[0] = 0;
-      else
-        rd[0] = 1;
+      rd[0] = (Write_conv(fhdl, c, 1) == EOF) ? 0 : 1;
 #endif
       break;
+    }
     case 0x1E: /* FPUTS */
       data = mem_get(stack_adr, S_LONG);
       fhdl = (short)mem_get(stack_adr + 4, S_WORD);
-      data_ptr = prog_ptr + data;
+      data_ptr = GetStringSuper(data);
 #ifdef _WIN32
       if ((fhdl == 1 || fhdl == 2) &&
           GetConsoleMode(finfo[1].host.handle, &st) != FALSE) {
@@ -681,14 +711,12 @@ bool dos_call(UByte code) {
     case 0x3C: /* CREATE */
       data = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
-      data_ptr = prog_ptr + data;
-      rd[0] = Create(data_ptr, srt);
+      rd[0] = Create(GetStringSuper(data), srt);
       break;
     case 0x3D: /* OPEN */
       data = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
-      data_ptr = prog_ptr + data;
-      rd[0] = Open(data_ptr, srt);
+      rd[0] = Open(GetStringSuper(data), srt);
       break;
     case 0x3E: /* CLOSE */
       srt = (short)mem_get(stack_adr, S_WORD);
@@ -705,8 +733,7 @@ bool dos_call(UByte code) {
       break;
     case 0x41: /* DELETE */
       data = mem_get(stack_adr, S_LONG);
-      data_ptr = prog_ptr + data;
-      rd[0] = Delete(data_ptr);
+      rd[0] = Delete(GetStringSuper(data));
       break;
     case 0x42: /* SEEK */
       fhdl = (short)mem_get(stack_adr, S_WORD);
@@ -735,7 +762,7 @@ bool dos_call(UByte code) {
     case 0x47: /* CURDIR */
       srt = (short)mem_get(stack_adr, S_WORD);
       data = mem_get(stack_adr + 2, S_LONG);
-      rd[0] = Curdir(srt, prog_ptr + data);
+      rd[0] = Curdir(srt, GetStringSuper(data));
       break;
     case 0x48: /* MALLOC */
       rd[0] = DosMalloc(stack_adr);
@@ -789,10 +816,7 @@ bool dos_call(UByte code) {
       rd[0] = psp[nest_cnt] + SIZEOF_MEMBLK;
       break;
     case 0x53:  // GETENV
-      data = mem_get(stack_adr, S_LONG);
-      env = mem_get(stack_adr + 4, S_LONG);
-      buf = mem_get(stack_adr + 8, S_LONG);
-      rd[0] = Getenv(data, env, buf);
+      rd[0] = DosGetenv(stack_adr);
       break;
     case 0x54: /* VERIFYG */
       rd[0] = 1;
@@ -814,7 +838,7 @@ bool dos_call(UByte code) {
     case 0x5B: /* NEWFILE */
       data = mem_get(stack_adr, S_LONG);
       srt = (short)mem_get(stack_adr + 4, S_WORD);
-      rd[0] = Newfile(prog_ptr + data, srt);
+      rd[0] = Newfile(GetStringSuper(data), srt);
       break;
     case 0x5F: /* ASSIGN */
       srt = (short)mem_get(stack_adr, S_WORD);
@@ -885,12 +909,11 @@ bool dos_call(UByte code) {
 static Long Gets(Long buf) {
   char str[256];
 
-  char *buf_ptr = prog_ptr + buf;
-  UByte max = buf_ptr[0];
+  UByte max = ReadUByteSuper(buf);
   Long len = gets2(str, max);
-  buf_ptr[1] = len;
-  strcpy(&(buf_ptr[2]), str);
-  return (len);
+  WriteUByteSuper(buf + 1, len);
+  WriteStringSuper(buf + 2, str);
+  return len;
 }
 
 /*
@@ -1286,7 +1309,7 @@ static Long Fgets(Long adr, short hdl) {
   if (!finfo[hdl].is_opened) return -6;  // オープンされていない
   if (finfo[hdl].mode == 1) return (-1);
 
-  UByte max = (UByte)mem_get(adr, S_BYTE);
+  UByte max = ReadUByteSuper(adr);
 #ifdef _WIN32
   {
     int i = 0;
@@ -1323,8 +1346,8 @@ static Long Fgets(Long adr, short hdl) {
   }
 #endif
 
-  mem_set(adr + 1, len, S_BYTE);
-  strcpy(prog_ptr + adr + 2, buf);
+  WriteUByteSuper(adr + 1, len);
+  WriteStringSuper(adr + 2, buf);
 
   return len;
 }
@@ -1334,25 +1357,30 @@ static Long Fgets(Long adr, short hdl) {
  戻り値：書き込んだバイト数(負ならエラーコード)
  */
 static Long Write(short hdl, Long buf, Long len) {
-  char *write_buf;
   Long write_len = 0;
 
   if (!finfo[hdl].is_opened) return -6;  // オープンされていない
+  if (len == 0) return 0;
 
-  if (len == 0) return (0);
-
-  write_buf = prog_ptr + buf;
+  MemoryRange mem;
+  if (GetReadableMemoryRangeSuper(buf, len, &mem)) {
 #ifdef _WIN32
-  unsigned len2;
-  WriteFile(finfo[hdl].host.handle, (LPCVOID)write_buf, len, &len2, NULL);
-  write_len = len2;
-  if (finfo[hdl].host.handle == GetStdHandle(STD_OUTPUT_HANDLE))
-    FlushFileBuffers(finfo[hdl].host.handle);
+    unsigned len2;
+    WriteFile(finfo[hdl].host.handle, mem.bufptr, mem.length, &len2, NULL);
+    write_len = len2;
+    if (finfo[hdl].host.handle == GetStdHandle(STD_OUTPUT_HANDLE))
+      FlushFileBuffers(finfo[hdl].host.handle);
 #else
-  write_len = Write_conv(hdl, write_buf, len);
+    write_len = Write_conv(hdl, mem.bufptr, mem.length);
 #endif
+  }
 
-  return (write_len);
+  if ((ULong)len != mem.length) {
+    // 有効なアドレス末尾まで書き込んだあとにバスエラー発生
+    throwBusErrorOnRead(mem.address + mem.length);
+  }
+
+  return write_len;
 }
 
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
@@ -1512,11 +1540,9 @@ static Long Seek(short hdl, Long offset, short mode) {
  戻り値：エラーコード
  */
 static Long Rename(Long old, Long new1) {
-  char *old_ptr;
-  char *new_ptr;
+  char *old_ptr = GetStringSuper(old);
+  char *new_ptr = GetStringSuper(new1);
 
-  old_ptr = prog_ptr + old;
-  new_ptr = prog_ptr + new1;
   errno = 0;
   if (rename(old_ptr, new_ptr) != 0) {
     if (errno == EACCES)
@@ -1533,12 +1559,11 @@ static Long Rename(Long old, Long new1) {
  戻り値：エラーコード
  */
 static Long Chmod(Long adr, short atr) {
-  char *name_ptr;
-  ULong ret;
+  char *name_ptr = GetStringSuper(adr);
 
-  name_ptr = prog_ptr + adr;
   if (atr == -1) {
     /* 読み出し */
+    ULong ret;
 #ifdef _WIN32
     if ((ret = GetFileAttributesA(name_ptr)) == 0xFFFFFFFF) return -2;
 #else
@@ -1573,25 +1598,33 @@ static Long Chmod(Long adr, short atr) {
      エラーコード
  */
 static Long Files(Long buf, Long name, short atr) {
-#ifdef _WIN32
+  char *name_ptr = GetStringSuper(name);
 
+  ULong bufSize = 53;
+  bool exMode = (buf & 0x80000000) ? true : false;
+  if (exMode) {
+    // buf &= ~0x80000000;
+    // bufSize = 141;
+    return DOSE_ILGFNC;
+  }
+
+  MemoryRange mem;
+  if (!GetWritableMemoryRangeSuper(buf, bufSize, &mem) ||
+      mem.length != bufSize) {
+    throwBusErrorOnWrite(mem.address + mem.length);
+  }
+  char *buf_ptr = mem.bufptr;
+
+#ifdef _WIN32
   WIN32_FIND_DATA f_data;
   HANDLE handle;
-  char *name_ptr;
-  char *buf_ptr;
-  name_ptr = prog_ptr + name;
-  buf_ptr = prog_ptr + buf;
 
   /* 最初にマッチするファイルを探す。*/
   /* FindFirstFileEx()はWindowsNTにしかないのでボツ
-handle = FindFirstFileEx
-             (name_ptr,
-              FindExInfoStandard,
-              (LPVOID)&f_data,
-              FindExSearchNameMatch,
-              NULL,
-              0);
-   */
+     handle = FindFirstFileEx(name_ptr, FindExInfoStandard,
+              (LPVOID)&f_data, FindExSearchNameMatch, NULL, 0);
+  */
+
   /* 最初のファイルを検索する。*/
   handle = FindFirstFile(name_ptr, &f_data);
   /* 予約領域をセット */
@@ -1643,11 +1676,6 @@ handle = FindFirstFileEx
   return 0;
 
 #else
-  char *name_ptr;
-  char *buf_ptr;
-  name_ptr = prog_ptr + name;
-  buf_ptr = prog_ptr + buf;
-
   char slbuf[89];
   name_ptr = to_slash(sizeof(slbuf), slbuf, name_ptr);
   if (name_ptr == NULL) return DOSE_ILGFNAME;
@@ -1716,15 +1744,18 @@ handle = FindFirstFileEx
  戻り値：エラーコード
  */
 static Long Nfiles(Long buf) {
+  ULong bufSize = 53;
+  MemoryRange mem;
+  if (!GetWritableMemoryRangeSuper(buf, bufSize, &mem) ||
+      mem.length != bufSize) {
+    throwBusErrorOnWrite(mem.address + mem.length);
+  }
+
 #ifdef _WIN32
   WIN32_FIND_DATA f_data;
-  HANDLE handle;
-  unsigned int i;
-  char *buf_ptr;
-  short atr;
+  char *buf_ptr = mem.bufptr;
+  short atr = buf_ptr[0]; /* 検索すべきファイルの属性 */
 
-  buf_ptr = prog_ptr + buf;
-  atr = buf_ptr[0]; /* 検索すべきファイルの属性 */
   {
     /* todo:buf_ptrの指す領域から必要な情報を取り出して、f_dataにコピーする。*/
     /* 2秒→100nsに変換する。*/
@@ -1745,7 +1776,7 @@ static Long Nfiles(Long buf) {
     f_data.nFileSizeHigh = 0;
     f_data.nFileSizeLow = *((ULong *)&buf_ptr[29]);
     /* ファイルのハンドルをバッファから取得する。*/
-    handle = *((HANDLE *)&buf_ptr[2]);
+    HANDLE handle = *((HANDLE *)&buf_ptr[2]);
     bool b = FindNextFile(handle, &f_data) != FALSE;
     /* 属性の一致するファイルが見つかるまで繰返し検索する。*/
     while (b) {
@@ -1905,44 +1936,6 @@ static Long Settim2(Long tim) {
 }
 
 /*
- 　機能：DOSCALL GETENVを実行する
- 戻り値：エラーコード
- */
-static Long Getenv(Long name, Long env, Long buf) {
-  return Getenv_common(prog_ptr + name, prog_ptr + buf, env);
-}
-
-Long Getenv_common(const char *name_p, char *buf_p, ULong envptr) {
-  if (envptr == 0) {
-    envptr = ReadSuperULong(psp[nest_cnt] + PSP_ENV_PTR);
-  }
-  if (envptr == (ULong)-1) return DOSE_ILGFNC;
-
-  // 環境エリアの先頭から順に環境変数名を検索する。
-  char *mem_ptr = prog_ptr + envptr + 4;
-  for (; *mem_ptr != 0; mem_ptr++) {
-    char ename[256];
-    int i;
-    /* 環境変数名を取得する。*/
-    for (i = 0; *mem_ptr != '\0' && *mem_ptr != '='; i++) {
-      ename[i] = *(mem_ptr++);
-    }
-    ename[i] = '\0';
-    if (*mem_ptr == '=' && strcmp(name_p, ename) == 0) {
-      // 環境変数が見つかった。
-      strcpy(buf_p, mem_ptr + 1);
-      return 0;
-    }
-    /* 変数名が一致しなかったら、変数の値をスキップする。*/
-    while (*mem_ptr) mem_ptr++;
-    /* '\0'の後にもう一つ'\0'が続く場合は、環境変数領域の終りである。*/
-  }
-  /* 変数が見つからなかったらNULLポインタを返す。*/
-  (*buf_p) = 0;
-  return DOSE_ILGFNC;
-}
-
-/*
    機能：
      DOSCALL NAMESTSを実行する
    戻り値：
@@ -1950,20 +1943,24 @@ Long Getenv_common(const char *name_p, char *buf_p, ULong envptr) {
  */
 static Long Namests(Long name, Long buf) {
   char nbuf[256];
-  char cud[67];
-  char *name_ptr;
-  char *buf_ptr;
   int wild = 0;
-  int len;
-  int i;
 
-  name_ptr = prog_ptr + name;
-  buf_ptr = prog_ptr + buf;
-  memset(buf_ptr, 0x00, 88);
-  if ((len = strlen(name_ptr)) > 88) return (-13); /* ファイル名の指定誤り */
+  const char *name_ptr = GetStringSuper(name);
+
+  MemoryRange mem;
+  if (!GetWritableMemoryRangeSuper(buf, SIZEOF_NAMESTS, &mem) ||
+      mem.length != SIZEOF_NAMESTS) {
+    throwBusErrorOnWrite(mem.address + mem.length);
+  }
+  char *buf_ptr = mem.bufptr;
+  memset(buf_ptr, 0x00, SIZEOF_NAMESTS);
+
+  int len = strlen(name_ptr);
+  if (len > 88) return (-13); /* ファイル名の指定誤り */
   strcpy(nbuf, name_ptr);
 
   /* 拡張子をセット */
+  int i;
   for (i = len - 1; i >= 0 && nbuf[i] != '.'; i--) {
     if (nbuf[i] == '*' || nbuf[i] == '?') wild = 1;
   }
@@ -1995,11 +1992,9 @@ static Long Namests(Long name, Long buf) {
   /* パス名をセット */
   if (i == 0) {
     /* カレントディレクトリをセット */
-    if (Curdir(0, cud) != 0) return (13);
-    strcpy(buf_ptr + 2, &(cud[2]));
-    if (cud[strlen(cud) - 1] != '\\') strcat(buf_ptr + 2, "\\");
-    nbuf[0] = cud[0];
-    i = 1;
+    char cud[67];
+    if (Curdir(0, cud) != 0) return DOSE_ILGFNAME;
+    strcat(strcpy(buf_ptr + 2, cud), "\\");
   } else {
     for (i--; i >= 0; i--) {
       if (nbuf[i] == ':') break;
@@ -2010,18 +2005,18 @@ static Long Namests(Long name, Long buf) {
   }
 
   /* ドライブ名をセット */
-  if (i == 0) {
-    /* カレントドライブをセット */
+  UByte drv = 0;
+  if (isalpha(nbuf[0]) && nbuf[1] == ':') {
+    mem_set(buf + 1, toupper(nbuf[0]) - 'A', S_BYTE);
+  }
 #ifdef _WIN32
+  else {
     char path[MAX_PATH];
     GetCurrentDirectory(strlen(path), path);
-    mem_set(buf + 1, path[0] - 'A', S_BYTE);
-#endif
-  } else {
-    UByte drv = toupper(nbuf[0]) - 'A';
-    if (drv >= 26) return (-13);
-    mem_set(buf + 1, drv, S_BYTE);
+    UByte drv = path[0] - 'A';
   }
+#endif
+  mem_set(buf + 1, drv, S_BYTE);
 
   return (0);
 }
@@ -2053,19 +2048,24 @@ static Long Namests(Long name, Long buf) {
  */
 static Long Nameck(Long name, Long buf) {
   char nbuf[89];
-  char *name_ptr;
-  char *buf_ptr;
   int ret = 0;
-  int len;
-  int i;
 
-  name_ptr = prog_ptr + name;
-  buf_ptr = prog_ptr + buf;
-  memset(buf_ptr, 0x00, 91);
-  if ((len = strlen(name_ptr)) > 88) return (-13); /* ファイル名の指定誤り */
+  char *name_ptr = GetStringSuper(name);
+
+  MemoryRange mem;
+  if (!GetWritableMemoryRangeSuper(buf, SIZEOF_NAMECK, &mem) ||
+      mem.length != SIZEOF_NAMECK) {
+    throwBusErrorOnWrite(mem.address + mem.length);
+  }
+  char *buf_ptr = mem.bufptr;
+  memset(buf_ptr, 0x00, SIZEOF_NAMECK);
+
+  int len = strlen(name_ptr);
+  if (len > 88) return (-13); /* ファイル名の指定誤り */
   strcpy(nbuf, name_ptr);
 
   /* 拡張子をセット */
+  int i;
   for (i = len - 1; i >= 0 && nbuf[i] != '.'; i--) {
     if (nbuf[i] == '*' || nbuf[i] == '?') ret = 1;
   }
@@ -2125,8 +2125,6 @@ static Long Nameck(Long name, Long buf) {
  戻り値：modeによって異なる
  */
 static Long Conctrl(short mode, Long adr) {
-  char *p;
-  Long mes;
   short srt;
   short x, y;
 
@@ -2142,9 +2140,7 @@ static Long Conctrl(short mode, Long adr) {
 #endif
     } break;
     case 1:
-      mes = mem_get(adr, S_LONG);
-      p = prog_ptr + mes;
-      printf("%s", p);
+      printf("%s", GetStringSuper(mem_get(adr, S_LONG)));
       break;
     case 2: /* 属性 */
       srt = (short)mem_get(adr, S_WORD);
@@ -2265,14 +2261,21 @@ static Long Keyctrl(short mode, Long stack_adr) {
  戻り値：なし
  */
 static void Fnckey(short mode, Long buf) {
-  char *buf_ptr;
+  int fno = mode & 0xff;
+  ULong len = (fno >= 21) ? 6 : (fno >= 1) ? 32 : 712;
+  MemoryRange mem;
 
-  buf_ptr = prog_ptr + buf;
-
-  if (mode < 256)
-    get_fnckey(mode, buf_ptr);
-  else
-    put_fnckey(mode - 256, buf_ptr);
+  if ((mode & 0xff00) == 0) {
+    if (!GetWritableMemoryRangeSuper(buf, len, &mem) || mem.length != len) {
+      throwBusErrorOnWrite(mem.address + mem.length);
+    }
+    get_fnckey(fno, mem.bufptr);
+  } else {
+    if (!GetReadableMemoryRangeSuper(buf, len, &mem) || mem.length != len) {
+      throwBusErrorOnRead(mem.address + mem.length);
+    }
+    put_fnckey(fno, mem.bufptr);
+  }
 }
 
 /*
@@ -2331,23 +2334,23 @@ static Long Intvcs(UWord intno, Long adr) {
  戻り値：エラーコード他
  */
 static Long Assign(short mode, Long stack_adr) {
-  Long drv;
-  Long buf;
-  char *drv_ptr;
+  Long drv = mem_get(stack_adr, S_LONG);
+  Long buf = mem_get(stack_adr + 4, S_LONG);
 
-  switch (mode) {
-    case 0:
-      drv = mem_get(stack_adr, S_LONG);
-      buf = mem_get(stack_adr + 4, S_LONG);
-      drv_ptr = prog_ptr + drv;
-      if (drv_ptr[1] != ':' || drv_ptr[2] != '\0') return (-14);
-      drv = toupper(drv_ptr[0]) - 'A' + 1;
-      if (drv < 1 || drv > 26) return (-14);
-      if (Curdir((short)drv, prog_ptr + buf) != 0) return (-14);
-      return (0x40);
-    default:
-      return (-14);
+  if (mode == 0) {
+    const char *drv_ptr = GetStringSuper(drv);
+
+    if (drv_ptr[1] != ':' || drv_ptr[2] != '\0') return DOSE_ILGPARM;
+    short d = toupper(drv_ptr[0]) - 'A' + 1;
+    if (d < 1 || d > 26) return DOSE_ILGPARM;
+
+    char dir[HUMAN68K_DIR_MAX + 1];
+    if (Curdir(d, dir) != 0) return DOSE_ILGPARM;
+    WriteStringSuper(buf, dir);
+    return 0x40;
   }
+
+  return DOSE_ILGPARM;
 }
 
 /*
@@ -2388,18 +2391,25 @@ static Long Getfcb(short fhdl) {
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
-  char *fcb_ptr;
-  fcb_ptr = prog_ptr + FCB_WORK;
+
+  ULong adr = FCB_WORK;
+  ULong len = 0x60;
+
+  MemoryRange mem;
+  if (!GetWritableMemoryRangeSuper(adr, len, &mem) || mem.length != len) {
+    throwBusErrorOnWrite(mem.address + mem.length);
+  }
+
   switch (fhdl) {
     case 0:
     case 1:
     case 2:
-      memcpy(fcb_ptr, fcb[fhdl], 0x60);
-      return (FCB_WORK);
+      memcpy(mem.bufptr, fcb[fhdl], len);
+      return adr;
     default:
       fcb[3][14] = (unsigned char)fhdl;
-      memcpy(fcb_ptr, fcb[3], 0x60);
-      return (FCB_WORK);
+      memcpy(mem.bufptr, fcb[3], len);
+      return adr;
   }
 }
 
@@ -2413,7 +2423,7 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
 
   int loadmode = ((nm >> 24) & 0x03);
   nm &= 0x00ffffff;
-  char *name_ptr = prog_ptr + nm;
+  char *name_ptr = GetStringSuper(nm);
   if (strlen(name_ptr) > 88) return DOSE_ILGFNAME;  // ファイル名指定誤り
 
   strcpy(fname, name_ptr);
@@ -2473,26 +2483,20 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
  戻り値：エラーコード
  */
 static Long Exec2(Long nm, Long cmd, Long env) {
-  FILE *fp;
-  char *name_ptr;
-  char *cmd_ptr;
-  char *p;
-  int len;
+  char *name_ptr = GetStringSuper(nm);
+  char *cmd_ptr = GetStringSuper(cmd);
 
-  name_ptr = prog_ptr + nm;
-  cmd_ptr = prog_ptr + cmd;
-  p = name_ptr;
+  char *p = name_ptr;
   while (*p != '\0' && *p != ' ') p++;
   if (*p != '\0') { /* コマンドラインあり */
     *p = '\0';
     p++;
-    len = strlen(p);
-    *cmd_ptr = len;
+    *cmd_ptr = strlen(p);
     strcpy(cmd_ptr + 1, p);
   }
 
   /* 環境変数pathに従ってファイルを検索し、オープンする。*/
-  fp = prog_open(name_ptr, env, print);
+  FILE *fp = prog_open(name_ptr, env, print);
   if (fp == NULL) {
     return 0;
   } else {
@@ -2507,7 +2511,6 @@ static Long Exec2(Long nm, Long cmd, Long env) {
  */
 static Long Exec3(Long nm, Long adr1, Long adr2) {
   char fname[89];
-  char *name_ptr;
   int loadmode;
   Long ret;
   Long prog_size;
@@ -2517,7 +2520,7 @@ static Long Exec3(Long nm, Long adr1, Long adr2) {
   nm &= 0xFFFFFF;
   adr1 &= 0xFFFFFF;
   adr2 &= 0xFFFFFF;
-  name_ptr = prog_ptr + nm;
+  char *name_ptr = GetStringSuper(nm);
   if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
   strcpy(fname, name_ptr);

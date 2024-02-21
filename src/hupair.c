@@ -21,6 +21,7 @@
 
 #include "dos_memory.h"
 #include "host.h"
+#include "mem.h"
 #include "run68.h"
 
 static const char hupairMark[] = "#HUPAIR";
@@ -105,7 +106,10 @@ static inline void free_iconv_buf(IconvBufPtr* ibp) {
 
 static ULong encodeHupair(int argc, char* argv[], const char* argv0, ULong adr,
                           ULong size, bool* hupair) {
-  char* p = prog_ptr + adr;
+  MemoryRange mem;
+  if (!GetWritableMemoryRangeSuper(adr, size, &mem)) return 0;
+
+  char* p = mem.bufptr;
   const char* const buffer_top = p;
 
   // コマンドラインの手前にHUPAIR識別子
@@ -207,11 +211,13 @@ ULong EncodeHupair(int argc, char* argv[], const char* argv0, ULong parent,
 
 bool IsCompliantWithHupair(ULong base, ULong size, ULong entry) {
   ULong mark = entry + 2;
-  ULong markEnd = mark + (ULong)sizeof(hupairMark);
 
+  ULong markEnd = mark + (ULong)sizeof(hupairMark);
   if (markEnd > (base + size)) return false;
-  if (memcmp(prog_ptr + mark, hupairMark, sizeof(hupairMark)) != 0)
-    return false;
+
+  MemoryRange mem;
+  if (!GetReadableMemoryRangeSuper(mark, sizeof(hupairMark), &mem)) return false;
+  if (memcmp(mem.bufptr, hupairMark, sizeof(hupairMark)) != 0) return false;
 
   return true;
 }

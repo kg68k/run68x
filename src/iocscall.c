@@ -69,7 +69,7 @@ bool iocs_call() {
       break;
     case 0x21: /* B_PRINT */
     {
-      char *p = prog_ptr + ra[1];
+      char *p = GetStringSuper(ra[1]);
 #if defined(USE_ICONV)
       // SJIS to UTF-8
       char utf8_buf[8192];
@@ -252,7 +252,6 @@ static Long Color(short arg) {
 */
 static void Putmes() {
   char temp[97];
-  char *p;
   int x, y;
   int keta;
   int len;
@@ -261,7 +260,7 @@ static void Putmes() {
   y = (rd[3] & 0xFFFF) + 1;
   keta = (rd[4] & 0xFFFF) + 1;
 
-  p = prog_ptr + ra[1];
+  char *p = GetStringSuper(ra[1]);
   len = strlen(p);
   if (keta > 96) keta = 96;
   memcpy(temp, p, keta);
@@ -371,44 +370,24 @@ static Long Timebin(Long bcd) {
  戻り値：-1のときエラー
 */
 static Long Dateasc(Long data, Long adr) {
-  char *data_ptr;
-  unsigned int year;
-  unsigned int month;
-  unsigned int day;
-  int form;
-
-  data_ptr = prog_ptr + adr;
-
-  form = data >> 28;
-  year = ((data >> 16) & 0xFFF);
+  unsigned int year = ((data >> 16) & 0xFFF);
   if (year < 1980 || year > 2079) return (-1);
-  month = ((data >> 8) & 0xFF);
+  unsigned int month = ((data >> 8) & 0xFF);
   if (month < 1 || month > 12) return (-1);
-  day = (data & 0xFF);
+  unsigned int day = (data & 0xFF);
   if (day < 1 || day > 31) return (-1);
 
-  switch (form) {
-    case 0:
-      sprintf(data_ptr, "%04d/%02d/%02d", year, month, day);
-      ra[1] += 10;
-      break;
-    case 1:
-      sprintf(data_ptr, "%04d-%02d-%02d", year, month, day);
-      ra[1] += 10;
-      break;
-    case 2:
-      sprintf(data_ptr, "%02d/%02d/%02d", year % 100, month, day);
-      ra[1] += 8;
-      break;
-    case 3:
-      sprintf(data_ptr, "%02d-%02d-%02d", year % 100, month, day);
-      ra[1] += 8;
-      break;
-    default:
-      return (-1);
-  }
+  int sep = (data & (1 << 28)) ? '-' : '/';
+  int yearLen = (data & (1 << 29)) ? 2 : 4;
+  if (yearLen == 2) year %= 100;
 
-  return (0);
+  static const char fmt[] = "%0*d%c%02d%c%02d";
+  char buf[16];
+  snprintf(buf, sizeof(buf), fmt, yearLen, year, sep, month, sep, day);
+  WriteStringSuper(adr, buf);
+  ra[1] += strlen(buf);
+
+  return 0;
 }
 
 /*
@@ -416,24 +395,19 @@ static Long Dateasc(Long data, Long adr) {
  戻り値：-1のときエラー
 */
 static Long Timeasc(Long data, Long adr) {
-  char *data_ptr;
-  unsigned int hh;
-  unsigned int mm;
-  unsigned int ss;
-
-  data_ptr = prog_ptr + adr;
-
-  hh = ((data >> 16) & 0xFF);
+  unsigned int hh = ((data >> 16) & 0xFF);
   if (hh > 23) return (-1);
-  mm = ((data >> 8) & 0xFF);
+  unsigned int mm = ((data >> 8) & 0xFF);
   if (mm > 59) return (-1);
-  ss = (data & 0xFF);
+  unsigned int ss = (data & 0xFF);
   if (ss > 59) return (-1);
 
-  sprintf(data_ptr, "%02d:%02d:%02d", hh, mm, ss);
-  ra[1] += 8;
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%02d:%02d:%02d", hh, mm, ss);
+  WriteStringSuper(adr, buf);
+  ra[1] += strlen(buf);
 
-  return (0);
+  return 0;
 }
 
 /*
@@ -441,9 +415,7 @@ static Long Timeasc(Long data, Long adr) {
  戻り値：なし
 */
 static void Dayasc(Long data, Long adr) {
-  char *data_ptr;
-
-  data_ptr = prog_ptr + adr;
+  char data_ptr[16];
 
   switch (data) {
     case 0:
@@ -468,10 +440,10 @@ static void Dayasc(Long data, Long adr) {
       strcpy(data_ptr, "土");
       break;
     default:
-      ra[1] -= 2;
-      break;
+      return;
   }
-  ra[1] += 2;
+  WriteStringSuper(adr, data_ptr);
+  ra[1] += strlen(data_ptr);
 }
 
 /*
@@ -499,13 +471,9 @@ static Long Intvcs(Long no, Long adr) {
  戻り値：設定前の処理アドレス
 */
 static void Dmamove(Long md, Long size, Long adr1, Long adr2) {
-  char *p1;
-  char *p2;
-  Long tmp;
-
   if ((md & 0x80) != 0) {
     /* adr1 -> adr2転送にする */
-    tmp = adr1;
+    Long tmp = adr1;
     adr1 = adr2;
     adr2 = tmp;
   }
@@ -513,9 +481,10 @@ static void Dmamove(Long md, Long size, Long adr1, Long adr2) {
   /* adr1,adr2共にインクリメントモードでない場合は未サポート */
   if ((md & 0x0F) != 5) return;
 
-  p1 = prog_ptr + adr1;
-  p2 = prog_ptr + adr2;
-  memcpy(p2, p1, size);
+  MemoryRange r, w;
+  if (!GetReadableMemoryRangeSuper(adr1, size, &r)) return;
+  if (!GetWritableMemoryRangeSuper(adr2, r.length, &w)) return;
+  memcpy(w.bufptr, r.bufptr, w.length);
 }
 
 /* $Id: iocscall.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */

@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -37,10 +37,9 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
   // オープンモードは確認しない
 
   MemoryRange mem;
-  if (!GetWritableMemoryRange(buffer, length, &mem)) {
+  if (!GetWritableMemoryRangeSuper(buffer, length, &mem)) {
     // バッファアドレスが不正
-    mem_wrt_chk(buffer & ADDRESS_MASK);
-    return DOSE_ILGFNC;  // 戻ってこないはずだが念のため
+    throwBusErrorOnWrite(mem.address);
   }
 
   Long result = HOST_READ_FILE_OR_TTY(finfop, mem.bufptr, mem.length);
@@ -65,8 +64,7 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
   if (result2 == 0) return result;
 
   // 追加で読めてしまったらバスエラー発生
-  mem_wrt_chk((buffer & ADDRESS_MASK) + mem.length);
-  return DOSE_ILGFNC;
+  throwBusErrorOnWrite(mem.address + mem.length);
 }
 
 // Human68kにおける2バイト文字の1バイト目の文字コードか
@@ -106,7 +104,7 @@ static void replace_char(char* s, char from, char to) {
 
 // DOS _MAKETMP
 Long Maketmp(ULong path, UWord atr) {
-  char* const path_buf = GetMemoryBufferString(path);
+  char* const path_buf = GetStringSuper(path);
 
   char* const filename = get_filename(path_buf);
   const size_t len = strlen(filename);

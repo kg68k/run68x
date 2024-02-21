@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,10 +26,33 @@ typedef struct {
   ULong length;
 } MemoryRange;
 
+extern char* mainMemoryPtr;
+
+bool AllocateMachineMemory(size_t main_size);
+void FreeMachineMemory(void);
+
 void SetSupervisorArea(ULong adr);
-bool GetWritableMemoryRange(ULong adr, ULong len, MemoryRange* result);
-char* GetMemoryBufferString(ULong adr);
-void WriteSuperString(ULong adr, const char* s);
+
+bool GetAccessibleMemoryRangeSuper(ULong adr, ULong len, MemoryRange* result);
+static inline bool GetReadableMemoryRangeSuper(ULong adr, ULong len,
+                                               MemoryRange* result) {
+  return GetAccessibleMemoryRangeSuper(adr, len, result);
+}
+static inline bool GetWritableMemoryRangeSuper(ULong adr, ULong len,
+                                               MemoryRange* result) {
+  return GetAccessibleMemoryRangeSuper(adr, len, result);
+}
+
+char* GetStringSuper(ULong adr);
+void WriteStringSuper(ULong adr, const char* s);
+
+NORETURN void throwBusError(ULong adr, bool onWrite);
+NORETURN static inline void throwBusErrorOnRead(ULong adr) {
+  throwBusError(adr, false);
+}
+NORETURN static inline void throwBusErrorOnWrite(ULong adr) {
+  throwBusError(adr, true);
+}
 
 Long idx_get(void);
 Long imi_get(char size);
@@ -52,11 +75,11 @@ bool mem_wrt_chk(ULong adr);
 #endif
 
 // メインメモリから1バイト読み込む(ビッグエンディアン)
-static inline UByte PeekB(ULong adr) { return *(UByte*)(prog_ptr + adr); }
+static inline UByte PeekB(ULong adr) { return *(UByte*)(mainMemoryPtr + adr); }
 
 // メインメモリから1ワード読み込む(ビッグエンディアン)
 static inline UWord PeekW(ULong adr) {
-  UByte* p = (UByte*)(prog_ptr + adr);
+  UByte* p = (UByte*)(mainMemoryPtr + adr);
 #ifdef BYTESWAP16
   return BYTESWAP16(*(UWord*)p);
 #else
@@ -66,7 +89,7 @@ static inline UWord PeekW(ULong adr) {
 
 // メインメモリから1ロングワード読み込む(ビッグエンディアン)
 static inline ULong PeekL(ULong adr) {
-  UByte* p = (UByte*)(prog_ptr + adr);
+  UByte* p = (UByte*)(mainMemoryPtr + adr);
 #ifdef BYTESWAP32
   return BYTESWAP32(*(ULong*)p);
 #else
@@ -75,11 +98,11 @@ static inline ULong PeekL(ULong adr) {
 }
 
 // メインメモリに1バイト書き込む(ビッグエンディアン)
-static inline void PokeB(ULong adr, UByte n) { *(UByte*)(prog_ptr + adr) = n; }
+static inline void PokeB(ULong adr, UByte n) { *(UByte*)(mainMemoryPtr + adr) = n; }
 
 // メインメモリに1ワード書き込む(ビッグエンディアン)
 static inline void PokeW(ULong adr, UWord n) {
-  UByte* p = (UByte*)(prog_ptr + adr);
+  UByte* p = (UByte*)(mainMemoryPtr + adr);
 #ifdef BYTESWAP16
   *(UWord*)p = BYTESWAP16(n);
 #else
@@ -90,7 +113,7 @@ static inline void PokeW(ULong adr, UWord n) {
 
 // メインメモリに1ロングワード書き込む(ビッグエンディアン)
 static inline void PokeL(ULong adr, ULong n) {
-  UByte* p = (UByte*)(prog_ptr + adr);
+  UByte* p = (UByte*)(mainMemoryPtr + adr);
 #ifdef BYTESWAP32
   *(ULong*)p = BYTESWAP32(n);
 #else
@@ -108,7 +131,7 @@ static inline Word imi_get_word(void) {
 }
 
 // スーパーバイザモードで1バイトのメモリを読む
-static inline UWord ReadSuperUByte(ULong adr) {
+static inline UWord ReadUByteSuper(ULong adr) {
   adr &= ADDRESS_MASK;
   if (mem_aloc <= adr) {
     if (!mem_red_chk(adr)) return 0;
@@ -118,7 +141,7 @@ static inline UWord ReadSuperUByte(ULong adr) {
 }
 
 // スーパーバイザモードで1ワードのメモリを読む
-static inline UWord ReadSuperUWord(ULong adr) {
+static inline UWord ReadUWordSuper(ULong adr) {
   adr &= ADDRESS_MASK;
   if ((mem_aloc - 2) < adr) {
     if (!mem_red_chk(adr)) return 0;
@@ -128,7 +151,7 @@ static inline UWord ReadSuperUWord(ULong adr) {
 }
 
 // スーパーバイザモードで1ロングワードのメモリを読む
-static inline ULong ReadSuperULong(ULong adr) {
+static inline ULong ReadULongSuper(ULong adr) {
   adr &= ADDRESS_MASK;
   if ((mem_aloc - 4) < adr) {
     if (!mem_red_chk(adr)) return 0;
@@ -138,7 +161,7 @@ static inline ULong ReadSuperULong(ULong adr) {
 }
 
 // スーパーバイザモードで1バイトのメモリを書く
-static inline void WriteSuperUByte(ULong adr, UByte n) {
+static inline void WriteUByteSuper(ULong adr, UByte n) {
   adr &= ADDRESS_MASK;
   if ((mem_aloc - 1) < adr) {
     if (!mem_wrt_chk(adr)) return;
@@ -148,7 +171,7 @@ static inline void WriteSuperUByte(ULong adr, UByte n) {
 }
 
 // スーパーバイザモードで1ワードのメモリを書く
-static inline void WriteSuperUWord(ULong adr, UWord n) {
+static inline void WriteUWordSuper(ULong adr, UWord n) {
   adr &= ADDRESS_MASK;
   if ((mem_aloc - 2) < adr) {
     if (!mem_wrt_chk(adr)) return;
@@ -158,7 +181,7 @@ static inline void WriteSuperUWord(ULong adr, UWord n) {
 }
 
 // スーパーバイザモードで1ロングワードのメモリを書く
-static inline void WriteSuperULong(ULong adr, ULong n) {
+static inline void WriteULongSuper(ULong adr, ULong n) {
   adr &= ADDRESS_MASK;
   if ((mem_aloc - 4) < adr) {
     if (!mem_wrt_chk(adr)) return;
@@ -167,18 +190,25 @@ static inline void WriteSuperULong(ULong adr, ULong n) {
   PokeL(adr, n);
 }
 
+// スタックに積まれたUByte引数を読む(DOSCALLトレース用)
+static inline UByte ReadParamUByte(ULong* refParam) {
+  UWord v = ReadUByteSuper(*refParam);
+  *refParam += 1;
+  return v;
+}
+
 // スタックに積まれたUWord引数を読む(DOSCALL、FEFUNC用)
-static inline ULong ReadParamUWord(ULong* paramptr) {
-  ULong adr = *paramptr;
-  *paramptr += 2;
-  return ReadSuperUWord(adr);
+static inline ULong ReadParamUWord(ULong* refParam) {
+  UWord v = ReadUWordSuper(*refParam);
+  *refParam += 2;
+  return v;
 }
 
 // スタックに積まれたULong引数を読む(DOSCALL、FEFUNC用)
-static inline ULong ReadParamULong(ULong* paramptr) {
-  ULong adr = *paramptr;
-  *paramptr += 4;
-  return ReadSuperULong(adr);
+static inline ULong ReadParamULong(ULong* refParam) {
+  ULong v = ReadULongSuper(*refParam);
+  *refParam += 4;
+  return v;
 }
 
 #endif

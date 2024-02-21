@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -175,8 +175,8 @@ typedef struct {
 typedef struct {
   Long pc;
   /* 本当は全レジスタを保存しておきたい。*/
-  unsigned short code; /* OPコード */
-  Long rmem;           /* READしたメモリ */
+  // オペコードも保存すべき(ただし先頭ワードだけでは不十分)。
+  Long rmem;  /* READしたメモリ */
   char rsize; /* B/W/L or N(READなし) movemの場合は最後の一つ */
   Long wmem;  /* WRITEしたメモリ */
   char wsize; /* B/W/L or N(WRITEなし) movemの場合は最後の一つ */
@@ -195,12 +195,11 @@ extern EXEC_INSTRUCTION_INFO OP_info;  // 命令実行情報
 extern FILEINFO finfo[FILE_MAX];       // ファイル管理テーブル
 extern INI_INFO ini_info;              // iniファイルの内容
 extern const char size_char[3];
-extern Long ra[8];      // アドレスレジスタ
-extern Long rd[8 + 1];  // データレジスタ
-extern Long usp;        // USP
-extern Long pc;         // プログラムカウンタ
-extern UWord sr;        // ステータスレジスタ
-extern char *prog_ptr;  // プログラムをロードしたメモリへのポインタ
+extern Long ra[8];              // アドレスレジスタ
+extern Long rd[8 + 1];          // データレジスタ
+extern Long usp;                // USP
+extern Long pc;                 // プログラムカウンタ
+extern UWord sr;                // ステータスレジスタ
 extern Long superjsr_ret;       // DOSCALL SUPER_JSRの戻りアドレス
 extern Long psp[NEST_MAX];      // PSP
 extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保存
@@ -254,7 +253,7 @@ Long sub_long(Long src, Long dest, int size);
 /* doscall.c */
 void close_all_files(void);
 bool dos_call(UByte);
-Long Getenv_common(const char *name_p, char *buf_p, ULong envptr);
+const char *Getenv(const char *name, ULong env);
 Long gets2(char *str, int max);
 Long Newfile(char *, short);
 

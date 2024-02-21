@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -116,6 +116,10 @@ typedef struct {
   char name[HUMAN68K_FILENAME_MAX + 1];
   size_t nameLen, extLen;
 } Human68kPathName;
+
+// DOSコール関係の定数
+#define SIZEOF_NAMESTS 88
+#define SIZEOF_NAMECK 91
 
 // FEFUNC (FLOAT*.X)
 #define FEFUNC_FCVT_INT_MAXLEN 255

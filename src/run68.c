@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -39,7 +39,6 @@ Long rd[8 + 1];
 Long usp;
 Long pc;
 UWord sr;
-char *prog_ptr;
 Long superjsr_ret;
 Long psp[NEST_MAX];
 Long nest_pc[NEST_MAX];
@@ -125,13 +124,13 @@ static void trap_table_make(void) {
 
 // 指定したデバイスヘッダをメモリに書き込む
 static void WriteDrviceHeader(ULong adr, const DeviceHeader dev) {
-  WriteSuperULong(adr + DEVHEAD_NEXT, dev.next);
-  WriteSuperUWord(adr + DEVHEAD_ATTRIBUTE, dev.attribute);
-  WriteSuperULong(adr + DEVHEAD_STRATEGY, dev.strategy);
-  WriteSuperULong(adr + DEVHEAD_INTERRUPT, dev.interrupt_);
+  WriteULongSuper(adr + DEVHEAD_NEXT, dev.next);
+  WriteUWordSuper(adr + DEVHEAD_ATTRIBUTE, dev.attribute);
+  WriteULongSuper(adr + DEVHEAD_STRATEGY, dev.strategy);
+  WriteULongSuper(adr + DEVHEAD_INTERRUPT, dev.interrupt_);
 
   MemoryRange mem;
-  if (GetWritableMemoryRange(adr + DEVHEAD_NAME, sizeof(dev.name), &mem))
+  if (GetWritableMemoryRangeSuper(adr + DEVHEAD_NAME, sizeof(dev.name), &mem))
     memcpy(mem.bufptr, dev.name, mem.length);
 }
 
@@ -157,7 +156,6 @@ static int exec_notrap(bool *restart) {
   do {
     /* 実行した命令の情報を保存しておく */
     OP_info.pc = 0;
-    OP_info.code = 0;
     OP_info.rmem = 0;
     OP_info.rsize = 'N';
     OP_info.wmem = 0;
@@ -216,9 +214,8 @@ static int exec_notrap(bool *restart) {
       break;
     }
   NextInstruction:
-    /* PCの値とニーモニックを保存する */
+    /* PCの値を保存する */
     OP_info.pc = pc;
-    OP_info.code = *((unsigned short *)(prog_ptr + pc));
     if (setjmp(jmp_when_abort) != 0) {
       debug_on = true;
       continue;
@@ -274,8 +271,8 @@ static ULong malloc_for_child(ULong parent) {
 static ULong init_env(ULong size, ULong parent) {
   Long buf = Malloc(MALLOC_FROM_LOWER, size, parent);
   if (buf != 0) {
-    WriteSuperULong(buf, size);
-    WriteSuperUByte(buf + 4, 0);
+    WriteULongSuper(buf, size);
+    WriteUByteSuper(buf + 4, 0);
     readenv_from_ini(ini_file_name, buf);
   }
   return buf;
@@ -367,12 +364,11 @@ Restart:
   read_ini(ini_file_name);
 
   /* メインメモリ(1～12MB)を確保する */
-  if ((prog_ptr = malloc(mem_aloc)) == NULL) {
+  if (!AllocateMachineMemory(mem_aloc)) {
     printFmt("メモリが確保できません\n");
     return EXIT_FAILURE;
   }
-  memset(prog_ptr, 0, HUMAN_TAIL);
-  WriteSuperULong(OSWORK_MEMORY_END, mem_aloc);
+  WriteULongSuper(OSWORK_MEMORY_END, mem_aloc);
 
   trap_table_make();
 
@@ -383,7 +379,7 @@ Restart:
   const ProgramSpec humanSpec = {humanCodeSize, 0};
   const Human68kPathName humanName = {"A:\\", "HUMAN.SYS", 0, 0};
   BuildPsp(humanPsp, -1, 0, 0x2000, humanPsp, &humanSpec, &humanName);
-  WriteSuperULong(OSWORK_ROOT_PSP, humanPsp);
+  WriteULongSuper(OSWORK_ROOT_PSP, humanPsp);
   nest_cnt = 0;
 
   WriteDrviceHeaders();
@@ -444,7 +440,7 @@ Restart:
   const Long entryAddress = prog_read(fp, fname, programPsp + SIZEOF_PSP,
                                       &prog_size, &prog_size2, print);
   if (entryAddress < 0) {
-    free(prog_ptr);
+    FreeMachineMemory();
     return EXIT_FAILURE;
   }
 
@@ -494,8 +490,7 @@ Restart:
     printf("  pc=%08x    sr=%04x\n", pc, sr);
   }
 
-  free(prog_ptr);
-  prog_ptr = NULL;
+  FreeMachineMemory();
 
   if (restart) goto Restart;
   return ret;

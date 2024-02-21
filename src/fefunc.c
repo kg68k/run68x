@@ -78,7 +78,7 @@ ULong FefuncStoh(Long *pA0) {
   bool nodigit = true;
   ULong c;
 
-  while (isxdigit(c = ReadSuperUByte(*pA0))) {
+  while (isxdigit(c = ReadUByteSuper(*pA0))) {
     if (result > 0x0fffffff) {
       SetCcr(CCR_V | CCR_C);
       return c;
@@ -104,7 +104,7 @@ static int fconvert(double d, ULong adr, int ndigit, size_t maxlen) {
   int precision = (d < 1.0) ? 307 : ndigit;
   int n = snprintf(fmt, sizeof(fmt), "%.*f", precision, d);
   if (n < 0) {
-    WriteSuperString(adr, "");
+    WriteStringSuper(adr, "");
     return 0;
   }
 
@@ -115,7 +115,7 @@ static int fconvert(double d, ULong adr, int ndigit, size_t maxlen) {
     while (*p == '0') p += 1;  // "0."と小数部先頭の"0"を取り除く
     char *eos = decpart + ndigit;
     *eos = '\0';
-    WriteSuperString(adr, (p < eos) ? p : eos);
+    WriteStringSuper(adr, (p < eos) ? p : eos);
     return decpart - p;
   }
 
@@ -125,7 +125,7 @@ static int fconvert(double d, ULong adr, int ndigit, size_t maxlen) {
     point[ndigit + 1] = '\0';
     memmove(point, point + 1, strlen(point + 1) + 1);  // 小数点"."を取り除く
     fmt[FEFUNC_FCVT_INT_MAXLEN] = '\0';
-    WriteSuperString(adr, fmt);
+    WriteStringSuper(adr, fmt);
     return point - fmt;
   }
 
@@ -133,7 +133,7 @@ static int fconvert(double d, ULong adr, int ndigit, size_t maxlen) {
   {
     int decpt = strlen(fmt);
     fmt[FEFUNC_FCVT_INT_MAXLEN] = '\0';
-    WriteSuperString(adr, fmt);
+    WriteStringSuper(adr, fmt);
     return decpt;
   }
 }
@@ -156,17 +156,17 @@ void FefuncFcvt(Long *pD0, Long *pD1, ULong ndigit, ULong adr) {
       size_t len = ndigit & 0xff;
       memset(buf, '0', len);
       buf[len] = '\0';
-      WriteSuperString(adr, buf);
+      WriteStringSuper(adr, buf);
       *pD0 = 0;
     } break;
 
     case FPTYPE_INFINITE:
-      WriteSuperString(adr, "#INF");
+      WriteStringSuper(adr, "#INF");
       *pD0 = 4;
       break;
 
     case FPTYPE_NAN:
-      WriteSuperString(adr, "#NAN");
+      WriteStringSuper(adr, "#NAN");
       *pD0 = 4;
       break;
   }

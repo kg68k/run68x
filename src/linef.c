@@ -235,12 +235,10 @@ static int Strl(char *p, int base) {
  戻り値：変換された整数
 */
 static Long Stol(Long adr) {
-  char *p;
-  Long ret;
+  char *p = GetStringSuper(adr);
 
-  p = prog_ptr + adr;
   errno = 0;
-  ret = strtol(p, NULL, 10);
+  Long ret = strtol(p, NULL, 10);
   if (ret == 0) {
     if (errno == EINVAL) {
       CCR_N_C_ON();
@@ -266,10 +264,9 @@ static Long Stol(Long adr) {
  戻り値：なし
 */
 static void Stod(Long adr) {
-  char *p;
+  char *p = GetStringSuper(adr);
   DBL ret;
 
-  p = prog_ptr + adr;
   errno = 0;
   ret.dbl = atof(p);
   if (errno == ERANGE) {
@@ -308,11 +305,12 @@ static void Ltod(Long num) {
 */
 static void Dtos(Long d0, Long d1, Long a0) {
   DBL arg1;
-
   To_dbl(&arg1, d0, d1);
-  char *p = prog_ptr + a0;
-  sprintf(p, "%.14g", arg1.dbl);
-  ra[0] += strlen(p);
+
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%.14g", arg1.dbl);
+  WriteStringSuper(a0, buf);
+  ra[0] += strlen(buf);
 }
 
 /*
@@ -320,11 +318,10 @@ static void Dtos(Long d0, Long d1, Long a0) {
  戻り値：なし
 */
 static void Ltos(Long num, Long adr) {
-  char *p;
-
-  p = prog_ptr + adr;
-  sprintf(p, "%d", num);
-  ra[0] += strlen(p);
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%d", num);
+  WriteStringSuper(adr, buf);
+  ra[0] += strlen(buf);
 }
 
 /*
@@ -332,11 +329,10 @@ static void Ltos(Long num, Long adr) {
  戻り値：なし
 */
 static void Htos(Long num, Long adr) {
-  char *p;
-
-  p = prog_ptr + adr;
-  sprintf(p, "%X", num);
-  ra[0] += strlen(p);
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%X", num);
+  WriteStringSuper(adr, buf);
+  ra[0] += strlen(buf);
 }
 
 /*
@@ -344,11 +340,10 @@ static void Htos(Long num, Long adr) {
  戻り値：なし
 */
 static void Otos(Long num, Long adr) {
-  char *p;
-
-  p = prog_ptr + adr;
-  sprintf(p, "%o", num);
-  ra[0] += strlen(p);
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%o", num);
+  WriteStringSuper(adr, buf);
+  ra[0] += strlen(buf);
 }
 
 /*
@@ -356,8 +351,8 @@ static void Otos(Long num, Long adr) {
  戻り値：なし
 */
 static void Btos(Long num, Long adr) {
-  char *const buffer = prog_ptr + adr;
-  char *p = buffer;
+  char buf[48];
+  char *p = buf;
 
   if (num == 0) {
     *p++ = '0';
@@ -371,7 +366,9 @@ static void Btos(Long num, Long adr) {
     }
   }
   *p = '\0';
-  ra[0] += buffer - p;  // a0は出力文字列末尾の\0を指す
+
+  WriteStringSuper(adr, buf);
+  ra[0] += strlen(buf);
 }
 
 /*
@@ -380,7 +377,7 @@ static void Btos(Long num, Long adr) {
 */
 static void Val(Long str) {
   DBL ret;
-  char *p = prog_ptr + str;
+  char *p = GetStringSuper(str);
   int base = 10;
 
   if (p[0] == '&') {
@@ -431,23 +428,13 @@ static void Val(Long str) {
  戻り値：なし
 */
 static void Iusing(Long num, Long keta, Long adr) {
-  char form1[] = {"%1d"};
-  char form2[] = {"%10d"};
-  char *p;
-
-  p = prog_ptr + adr;
   keta = (ULong)keta % 100;
   if (keta == 0) return;
 
-  if (keta < 10) {
-    form1[1] = keta + '0';
-    sprintf(p, form1, num);
-  } else {
-    form2[1] = keta / 10 + '0';
-    form2[2] = keta % 10 + '0';
-    sprintf(p, form2, num);
-  }
-  ra[0] += strlen(p);
+  char buf[256];
+  snprintf(buf, sizeof(buf), "%*d", keta, num);
+  WriteStringSuper(adr, buf);
+  ra[0] += strlen(buf);
 }
 
 /*
@@ -455,15 +442,7 @@ static void Iusing(Long num, Long keta, Long adr) {
  戻り値：なし
 */
 static void Using(Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0) {
-  char str[128];
   DBL arg1;
-  char form1[] = {"%1.1f"};
-  char form2[] = {"%1.10f"};
-  char form3[] = {"%10.1f"};
-  char form4[] = {"%10.10f"};
-  char *p;
-  char *p2;
-
   To_dbl(&arg1, d0, d1);
 
   isz = (ULong)isz % 100;
@@ -478,32 +457,9 @@ static void Using(Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0) {
     if (isz == 0) return;
   }
 
-  p = prog_ptr + a0;
-  if (isz < 10) {
-    if (dsz < 10) {
-      form1[1] = isz + '0';
-      form1[3] = dsz + '0';
-      sprintf(p, form1, arg1.dbl);
-    } else {
-      form2[1] = isz + '0';
-      form2[3] = dsz / 10 + '0';
-      form2[4] = dsz % 10 + '0';
-      sprintf(p, form2, arg1.dbl);
-    }
-  } else {
-    if (dsz < 10) {
-      form3[1] = isz / 10 + '0';
-      form3[2] = isz % 10 + '0';
-      form3[4] = dsz + '0';
-      sprintf(p, form3, arg1.dbl);
-    } else {
-      form4[1] = isz / 10 + '0';
-      form4[2] = isz % 10 + '0';
-      form4[4] = dsz / 10 + '0';
-      form4[5] = dsz % 10 + '0';
-      sprintf(p, form4, arg1.dbl);
-    }
-  }
+  char buf[384], str[384];
+  snprintf(buf, 256, "%*.*f", isz, dsz, arg1.dbl);
+  char *p = buf;
 
   /* bit5or6が立っていたら'-'を取る */
   if ((atr & 0x60) != 0 && arg1.dbl < 0) {
@@ -511,7 +467,7 @@ static void Using(Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0) {
       strcpy(str, p + 1);
       strcpy(p, str);
     } else {
-      p2 = p;
+      char *p2 = p;
       while (*p2 == ' ') p2++;
       if (*p2 == '-') /* 念のため */
         *p2 = ' ';
@@ -520,7 +476,7 @@ static void Using(Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0) {
 
   /* '\'を先頭に付加 */
   if ((atr & 0x02) != 0) {
-    p2 = p;
+    char *p2 = p;
     str[0] = '\0';
     while (*p2 == ' ') {
       if (p2 != p) strcat(str, " ");
@@ -559,7 +515,8 @@ static void Using(Long d0, Long d1, Long isz, Long dsz, Long atr, Long a0) {
       strcat(p, " ");
   }
 
-  ra[0] += strlen(p);
+  WriteStringSuper(a0, buf);
+  ra[0] += strlen(buf);
 }
 
 /*

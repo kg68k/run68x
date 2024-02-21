@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,73 +23,93 @@
 
 #include "run68.h"
 
-NORETURN static void read_invalid_memory(ULong adr);
-
 enum {
   GVRAM = 0x00c00000,
+  TVRAM = 0x00e00000,
+  IOPORT = 0x00e80000,
+  CGROM = 0x00f00000,
+  IOCSROM = 0x00fc0000,
 };
+
+// メインメモリの配列(1～12MB)
+char* mainMemoryPtr;
+
+// メインメモリの終端(+1)アドレス、容量に等しい
+static ULong mainMemoryEnd;
 
 // メインメモリの0番地からsupervisorEndまでがスーパーバイザ領域
 static ULong supervisorEnd;
+
+// メインメモリを確保する
+bool AllocateMachineMemory(size_t main_size) {
+  mainMemoryEnd = main_size;
+  mainMemoryPtr = calloc(1, main_size);
+  if (mainMemoryPtr == NULL) return false;
+
+  return true;
+}
+
+// メインメモリを解放する
+void FreeMachineMemory(void) {
+  free(mainMemoryPtr);
+  mainMemoryPtr = NULL;
+}
 
 // メインメモリをスーパーバイザ領域として設定する
 void SetSupervisorArea(ULong adr) { supervisorEnd = adr; }
 
 static inline ULong ulmin(ULong a, ULong b) { return (a < b) ? a : b; }
 
-// 書き込み可能なメモリ範囲を調べる
-bool GetWritableMemoryRange(ULong adr, ULong len, MemoryRange* result) {
+// アクセス可能なメモリ範囲を調べる
+//   現在のところ読み書きを区別しない。
+bool GetAccessibleMemoryRangeSuper(ULong adr, ULong len, MemoryRange* result) {
   const ULong end = mem_aloc;
-  *result = (MemoryRange){NULL, 0, 0};
   adr &= ADDRESS_MASK;
 
   if (end <= adr) {
-    // メインメモリ外は全て書き込み不可能
-    // 実機の仕様としてはGVRAM等は書き込みできるが、run68では実装していない
+    // メインメモリ外は全て読み書き不可能
+    // 実機の仕様としてはGVRAM等は読み書きできるが、run68では実装していない
+    *result = (MemoryRange){NULL, adr, 0};
     return false;
   }
 
-  // メインメモリ末尾まで書き込み可能
-  *result = (MemoryRange){prog_ptr + adr, adr, ulmin(len, end - adr)};
+  // メインメモリ末尾まで読み書き可能
+  *result = (MemoryRange){mainMemoryPtr + adr, adr, ulmin(len, end - adr)};
   return true;
 }
 
 // 文字列(ASCIIZ)として読み込み可能なメモリか調べ、バッファへのポインタを返す
 //   読み込み不可能ならエラー終了する
-char* GetMemoryBufferString(ULong adr) {
+char* GetStringSuper(ULong adr) {
   const ULong end = mem_aloc;  // メインメモリ外は全て読み込み不可能
   adr &= ADDRESS_MASK;
 
   ULong n;
   for (n = adr; n < end; ++n) {
-    if (prog_ptr[n] == '\0') {
+    if (mainMemoryPtr[n] == '\0') {
       // メモリ内にNUL文字があれば、文字列は問題なく読み込み可能
-      return prog_ptr + adr;
+      return mainMemoryPtr + adr;
     }
   }
 
   // メモリ末尾までNUL文字がなければ不正なメモリを参照してバスエラーになる
-  read_invalid_memory(n);
+  throwBusErrorOnRead(n);
 }
 
 // メモリに文字列(ASCIIZ)を書き込む
 //   書き込み不可能ならエラー終了する
-void WriteSuperString(ULong adr, const char* s) {
+void WriteStringSuper(ULong adr, const char* s) {
   ULong len = strlen(s) + 1;
 
   MemoryRange mem;
-  if (!GetWritableMemoryRange(adr, len, &mem)) {
-    // メモリアドレスが不正
-    mem_wrt_chk(adr & ADDRESS_MASK);
-    return;  // 戻ってこないはずだが念のため
+  if (GetWritableMemoryRangeSuper(adr, len, &mem)) {
+    // 書き込めるところまで(または可能なら全部)書き込む
+    memcpy(mem.bufptr, s, mem.length);
   }
-
-  // 書き込めるところまで(または可能なら全部)書き込む
-  memcpy(mem.bufptr, s, mem.length);
 
   if (mem.length < len) {
     // 不正なアドレスまで到達したらバスエラー
-    mem_wrt_chk((adr & ADDRESS_MASK) + mem.length);
+    throwBusErrorOnWrite(mem.address + mem.length);
   }
 }
 
@@ -99,7 +119,7 @@ void WriteSuperString(ULong adr, const char* s) {
  戻り値：その値
 */
 Long idx_get(void) {
-  char* mem = prog_ptr + pc;
+  char* mem = mainMemoryPtr + pc;
 
   // Brief Extension Word Format
   //   D/A | REG | REG | REG | W/L | SCALE | SCALE | 0
@@ -246,9 +266,23 @@ void run68_abort(Long adr) {
   longjmp(jmp_when_abort, 2);
 }
 
-static void read_invalid_memory(ULong adr) {
+static const char* getAddressSpaceName(ULong adr) {
+  if (adr < mainMemoryEnd) return "メインメモリ(スーパーバイザ領域)";
+  if (adr < GVRAM) return "メインメモリ(未搭載)";
+  if (adr < TVRAM) return "GVRAM";
+  if (adr < IOPORT) return "TVRAM";
+  if (adr < CGROM) return "I/Oポート";
+  if (adr < IOCSROM) return "CGROM";
+  if (adr < 0x01000000) return "IOCS ROM";
+  return "不正なアドレス";
+}
+
+void throwBusError(ULong adr, bool onWrite) {
   char buf[256];
-  snprintf(buf, sizeof(buf), "不正アドレス($%08x)からの読み込みです。", adr);
+  const char* dir = onWrite ? "への書き込み" : "からの読み込み";
+
+  snprintf(buf, sizeof(buf), "%s($%08x)%sでバスエラーが発生しました。",
+           getAddressSpaceName(adr), adr, dir);
   err68(buf);
 }
 

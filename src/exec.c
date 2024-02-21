@@ -23,18 +23,41 @@
 #include "mem.h"
 #include "run68.h"
 
+static bool linea(char *pc_ptr) {
+  short save_s = SR_S_REF();
+  SR_S_ON();
+
+  Long adr = mem_get(0x28, S_LONG);
+  if (adr != HUMAN_WORK) {
+    ra[7] -= 4;
+    mem_set(ra[7], pc, S_LONG);
+    ra[7] -= 2;
+    mem_set(ra[7], sr, S_WORD);
+    pc = adr;
+    return false;
+  }
+
+  if (save_s == 0) SR_S_OFF();
+  pc += 2;
+  err68("A系列割り込みを実行しました");
+}
+
 /*
  　機能：1命令実行する
  戻り値： true = 実行終了
          false = 実行継続
 */
 bool prog_exec() {
-  char *pc_ptr;
-  Long adr;
-  short save_s;
+  // 現状では、ユーザーモードのときにPCがスーパーバイザ領域を
+  // 指していてもバスエラーが発生しない。
+  MemoryRange mem;
+  if (!GetReadableMemoryRangeSuper(pc, 2, &mem)) {
+    err68("命令読み込み時にバスエラーが発生しました");
+    return true;
+  }
+  char* pc_ptr = mem.bufptr;
 
   /* 上位4ビットで命令を振り分ける */
-  pc_ptr = prog_ptr + pc;
   switch (*pc_ptr & 0xF0) {
     case 0x00:
       return (line0(pc_ptr));
@@ -54,6 +77,8 @@ bool prog_exec() {
       return (line8(pc_ptr));
     case 0x90:
       return (line9(pc_ptr));
+    case 0xA0:
+      return (linea(pc_ptr));
     case 0xB0:
       return (lineb(pc_ptr));
     case 0xC0:
@@ -64,21 +89,7 @@ bool prog_exec() {
       return (linee(pc_ptr));
     case 0xF0:
       return (linef(pc_ptr));
-    case 0xA0:
-      save_s = SR_S_REF();
-      SR_S_ON();
-      adr = mem_get(0x28, S_LONG);
-      if (adr != HUMAN_WORK) {
-        ra[7] -= 4;
-        mem_set(ra[7], pc, S_LONG);
-        ra[7] -= 2;
-        mem_set(ra[7], sr, S_WORD);
-        pc = adr;
-        return false;
-      }
-      if (save_s == 0) SR_S_OFF();
-      pc += 2;
-      err68("A系列割り込みを実行しました");
+
     default:
       pc += 2;
       err68("おかしな命令を実行しました");

@@ -40,7 +40,7 @@ static Long xhead_getl(int);
 #define PATH_DELIMITER ':'
 #endif
 
-static char *GetAPath(char **path_p, size_t bufSize, char *buf) {
+static char *GetAPath(const char **path_p, size_t bufSize, char *buf) {
   unsigned int i;
   *buf = '\0';
 
@@ -90,7 +90,6 @@ FILE *prog_open(char *fname, ULong envptr, void (*err)(const char *)) {
   char dir[MAX_PATH], fullname[MAX_PATH], cwd[MAX_PATH];
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
-  char *p;
   void (*onError)(const char *) = err ? err : onErrorDummy;
 
   if (!HOST_PATH_IS_FILE_SPEC(fname)) {
@@ -117,18 +116,15 @@ FILE *prog_open(char *fname, ULong envptr, void (*err)(const char *)) {
   }
 #endif
   HOST_ADD_LAST_SEPARATOR(cwd);
+
   /* PATH環境変数を取得する */
-  char env_p[4096];
 #ifdef _WIN32
-  Getenv_common("path", env_p, envptr);
-  p = env_p;
+  const char *env_p = Getenv("path", envptr);
 #else
-  p = getenv("PATH");
-  strncpy(env_p, (p == NULL) ? "" : p, sizeof(env_p));
-  env_p[sizeof(env_p) - 1] = '\0';
-  p = env_p;
+  // 現在の実装ではHuman68kの環境変数ではなく、ホスト(Linux等)の環境変数を読み込んでいる。
+  const char *env_p = getenv("PATH");
 #endif
-  for (strcpy(dir, cwd); strlen(dir) != 0; GetAPath(&p, sizeof(dir), dir)) {
+  for (strcpy(dir, cwd); strlen(dir) != 0; GetAPath(&env_p, sizeof(dir), dir)) {
     size_t len = strlen(dir) + strlen("/") + strlen(fname) + strlen(".x");
     if (len >= 89) {
       // printf("too long path: %s\n", dir);
@@ -196,21 +192,16 @@ static bool xrelocate(Long reloc_adr, Long reloc_size, Long read_top) {
 */
 static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
                       void (*onError)(const char *)) {
-  Long pc_begin;
-  Long code_size;
-  Long data_size;
-  Long bss_size;
-  Long reloc_size;
-
   if (xhead_getl(0x3C) != 0) {
     onError("BINDされているファイルです\n");
     return (0);
   }
-  pc_begin = xhead_getl(0x08);
-  code_size = xhead_getl(0x0C);
-  data_size = xhead_getl(0x10);
-  bss_size = xhead_getl(0x14);
-  reloc_size = xhead_getl(0x18);
+
+  Long pc_begin = xhead_getl(0x08);
+  Long code_size = xhead_getl(0x0C);
+  Long data_size = xhead_getl(0x10);
+  Long bss_size = xhead_getl(0x14);
+  Long reloc_size = xhead_getl(0x18);
 
   if (reloc_size != 0) {
     if (!xrelocate(code_size + data_size, reloc_size, read_top)) {
@@ -219,7 +210,11 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
     }
   }
 
-  memset(prog_ptr + read_top + code_size + data_size, 0, bss_size);
+  ULong bss_top = read_top + code_size + data_size;
+  MemoryRange mem;
+  if (GetWritableMemoryRangeSuper(bss_top, bss_size, &mem)) {
+    memset(mem.bufptr, 0, bss_size);
+  }
   *prog_size = code_size + data_size + bss_size;
   *prog_sz2 = code_size + data_size;
 
@@ -235,9 +230,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
                Long *prog_sz2, void (*err)(const char *))
 /* prog_sz2はロードモード＋リミットアドレスの役割も果たす */
 {
-  char *read_ptr;
   Long read_sz;
-  Long pc_begin;
   bool x_file = false;
   int loadmode;
   int i;
@@ -268,8 +261,12 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
   }
 
   read_sz = *prog_sz;
-  read_ptr = prog_ptr + read_top;
-  pc_begin = read_top;
+
+  MemoryRange mem;
+  if (!GetWritableMemoryRangeSuper(read_top, read_sz, &mem)) {
+    return -8;  // ポインタ取得しているだけなので、エラーにはならない
+  }
+  char *read_ptr = mem.bufptr;
 
   /* XHEAD_SIZEバイト読み込む */
   if (*prog_sz >= XHEAD_SIZE) {
@@ -293,7 +290,11 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
         *prog_sz = read_sz;
       }
     }
-    if (!x_file) read_ptr += XHEAD_SIZE;
+    if (!x_file) {
+      // R形式実行ファイルなら最初に読み込んだ64バイトはヘッダではないので、
+      // バッファの続きにファイルの続きを読み込む。
+      read_ptr += XHEAD_SIZE;
+    }
   }
 
   if (fread(read_ptr, 1, read_sz, fp) != (size_t)read_sz) {
@@ -306,6 +307,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
   fclose(fp);
 
   /* Xファイルの処理 */
+  Long pc_begin = read_top;
   *prog_sz2 = *prog_sz;
   if (x_file) {
     if ((pc_begin = xfile_cnv(prog_sz, prog_sz2, read_top, onError)) == 0)
@@ -336,20 +338,23 @@ static Long xhead_getl(int adr) {
 void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
               ULong parentSsp, const ProgramSpec *progSpec,
               const Human68kPathName *pathname) {
-  memset(&prog_ptr[psp + SIZEOF_MEMBLK], 0, SIZEOF_PSP - SIZEOF_MEMBLK);
+  MemoryRange mem;
+  if (GetWritableMemoryRangeSuper(psp, SIZEOF_PSP, &mem)) {
+    memset(mem.bufptr + SIZEOF_MEMBLK, 0, SIZEOF_PSP - SIZEOF_MEMBLK);
+  }
 
-  WriteSuperULong(psp + PSP_ENV_PTR, envptr);
-  WriteSuperULong(psp + PSP_CMDLINE, cmdline);
+  WriteULongSuper(psp + PSP_ENV_PTR, envptr);
+  WriteULongSuper(psp + PSP_CMDLINE, cmdline);
   ULong bssTop = psp + SIZEOF_PSP + progSpec->codeSize;
-  WriteSuperULong(psp + PSP_BSS_PTR, bssTop);
-  WriteSuperULong(psp + PSP_HEAP_PTR, bssTop);
-  WriteSuperULong(psp + PSP_STACK_PTR, bssTop + progSpec->bssSize);
+  WriteULongSuper(psp + PSP_BSS_PTR, bssTop);
+  WriteULongSuper(psp + PSP_HEAP_PTR, bssTop);
+  WriteULongSuper(psp + PSP_STACK_PTR, bssTop + progSpec->bssSize);
 
-  WriteSuperULong(psp + PSP_PARENT_SSP, parentSsp);
-  WriteSuperUWord(psp + PSP_PARENT_SR, parentSr);
+  WriteULongSuper(psp + PSP_PARENT_SSP, parentSsp);
+  WriteUWordSuper(psp + PSP_PARENT_SR, parentSr);
 
-  strcpy(&prog_ptr[psp + PSP_EXEFILE_PATH], pathname->path);
-  strcpy(&prog_ptr[psp + PSP_EXEFILE_NAME], pathname->name);
+  strcpy(mem.bufptr + PSP_EXEFILE_PATH, pathname->path);
+  strcpy(mem.bufptr + PSP_EXEFILE_NAME, pathname->name);
 }
 
 /* $Id: load.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */

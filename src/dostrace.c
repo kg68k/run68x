@@ -15,13 +15,14 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
+#include "dostrace.h"
+
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "dostrace.h"
 #include "mem.h"
 
 // _countof()
@@ -474,37 +475,19 @@ static const char* getDriveName(UWord d) {
   return drive[(d <= 26) ? d : 0];
 }
 
-static UByte getUByte(ULong* refParam) {
-  UWord v = ReadSuperUByte(*refParam);
-  *refParam += 1;
-  return v;
-}
-
-static UWord getUWord(ULong* refParam) {
-  UWord v = ReadSuperUWord(*refParam);
-  *refParam += 2;
-  return v;
-}
-
-static ULong getULong(ULong* refParam) {
-  ULong v = ReadSuperULong(*refParam);
-  *refParam += 4;
-  return v;
-}
-
 // {b} ... UByte 16進数
 static void printUByteHex(ULong* refParam) {
-  printf("$%02x", (int)getUByte(refParam));
+  printf("$%02x", (int)ReadParamUByte(refParam));
 }
 
 // {w} ... UWord 16進数
 static void printUWordHex(ULong* refParam) {
-  printf("$%04x", (int)getUWord(refParam));
+  printf("$%04x", (int)ReadParamUWord(refParam));
 }
 
 // {c} ... UWord 16進数 + 下位バイトを文字として表示
 static void printUWordChar(ULong* refParam) {
-  UWord w = getUWord(refParam);
+  UWord w = ReadParamUWord(refParam);
 
   int x = (int)w;
   int c = x & 0xff;
@@ -525,7 +508,7 @@ static void printUWordFileNo(ULong* refParam) {
   static const char stdfiles[][8] = {
       "stdin", "stdout", "stderr", "stdaux", "stdprn"  //
   };
-  UWord w = getUWord(refParam);
+  UWord w = ReadParamUWord(refParam);
 
   if (w < C(stdfiles))
     printf("$%04x(%s)", (int)w, stdfiles[w]);
@@ -535,34 +518,34 @@ static void printUWordFileNo(ULong* refParam) {
 
 // {d} ... UWord 16進数 + ドライブ番号(0=カレントドライブ 1=A:)
 static void printUWordDrive(ULong* refParam) {
-  UWord w = getUWord(refParam);
+  UWord w = ReadParamUWord(refParam);
   printf("$%04x(%s:)", (int)w, getDriveName(w));
 }
 
 // {r} ... UWord 16進数 + モード&ドライブ番号(1=A:)
 //   DOS _DRVCTRL用
 static void printUWordDrvctrlMode(ULong* refParam) {
-  UWord w = getUWord(refParam);
+  UWord w = ReadParamUWord(refParam);
   printf("$%04x(md=%d,drive=%s:)", (int)w, w >> 8, getDriveName(w));
 }
 
 // {D} ... UWord 16進数 + ドライブ番号(0=A:)
 //   DOS _CHGDRV用
 static void printUWordDrive0(ULong* refParam) {
-  UWord w = getUWord(refParam);
+  UWord w = ReadParamUWord(refParam);
   printf("$%04x(%c:)", (int)w, (w <= 25) ? w + 'A' : '?');
 }
 
 // {l} ... ULong 16進数
 // {p} ... ULong ポインタ
 static void printULongHex(ULong* refParam) {
-  printf("$%08x", (int)getULong(refParam));
+  printf("$%08x", (int)ReadParamULong(refParam));
 }
 
 // {s} ... ULong 文字列ポインタ + 文字列の内容
 static void printULongString(ULong* refParam) {
-  ULong ptr = getULong(refParam);
-  const char* str = GetMemoryBufferString(ptr);
+  ULong ptr = ReadParamULong(refParam);
+  const char* str = GetStringSuper(ptr);
 
   printf("$%08x(\"", (int)ptr);
   dumpString(str);
@@ -665,7 +648,7 @@ void PrintDosCall(UByte code, ULong pc, ULong a6) {
     return;
   }
 
-  UWord mode = dos->subCommand ? ReadSuperUWord(a6) : 0;
+  UWord mode = dos->subCommand ? ReadUWordSuper(a6) : 0;
 
   // スタックに積まれた引数を表示する
   const char* footer = printFormat(format, &a6);

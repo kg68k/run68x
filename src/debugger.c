@@ -361,14 +361,15 @@ static void run68_dump(int argc, char **argv) {
     return;
   }
 
-  if ((dump_addr + size) > mem_aloc) {
+  MemoryRange mem;
+  if (!GetWritableMemoryRangeSuper(dump_addr, size, &mem) || (int)mem.length < size) {
     // ダンプ対象がメインメモリ外ならエラー
     debuggerError("dump:Address range error.\n");
     return;
   }
 
   for (i = 0; i < size; i++) {
-    ULong d = prog_ptr[dump_addr + i];
+    ULong d = mem.bufptr[i];
     if (i % 16 == 0) {
       printFmt("%06X:", dump_addr + i);
     } else {
@@ -383,7 +384,7 @@ static void run68_dump(int argc, char **argv) {
       }
       print(":");
       for (j = i & 0xfffffff0; j <= i; j++) {
-        d = prog_ptr[dump_addr + j];
+        d = mem.bufptr[j];
         printFmt("%c", (' ' <= d && d <= 0x7e) ? d : '.');
       }
       print("\n");
