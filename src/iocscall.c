@@ -38,7 +38,7 @@ static Long Datebin(Long);
 static Long Timebin(Long);
 static Long Dateasc(Long, Long);
 static Long Timeasc(Long, Long);
-static void Dayasc(Long, Long);
+static Long Dayasc(Long, Long);
 static Long Intvcs(Long, Long);
 static void Dmamove(Long, Long, Long, Long);
 
@@ -124,7 +124,7 @@ bool iocs_call() {
       rd[0] = Timeasc(rd[1], ra[1]);
       break;
     case 0x5C: /* DAYASC */
-      Dayasc(rd[1], ra[1]);
+      rd[0] = Dayasc(rd[1], ra[1]);
       break;
     case 0x6C: /* VDISPST */
       save_s = SR_S_REF();
@@ -385,36 +385,23 @@ static Long Timeasc(Long data, Long adr) {
  　機能：曜日番号から文字列を得る
  戻り値：なし
 */
-static void Dayasc(Long data, Long adr) {
-  char data_ptr[16];
+static Long Dayasc(Long data, Long adr) {
+  // 実行環境やソースコードのエンコーディングに左右されないように、
+  // シフトJISの文字コードを直接埋め込んでいる。
+  static const char days[8][4] = {
+    { "\x93\xfa" },  // 0: 日
+    { "\x8c\x8e" },  // 1: 月
+    { "\x89\xce" },  // 2: 火
+    { "\x90\x85" },  // 3: 水
+    { "\x96\xd8" },  // 4: 木
+    { "\x8b\xe0" },  // 5: 金
+    { "\x93\x79" },  // 6: 土
+    { "\x81\x48" },  // 7: ？
+  };
 
-  switch (data) {
-    case 0:
-      strcpy(data_ptr, "日");
-      break;
-    case 1:
-      strcpy(data_ptr, "月");
-      break;
-    case 2:
-      strcpy(data_ptr, "火");
-      break;
-    case 3:
-      strcpy(data_ptr, "水");
-      break;
-    case 4:
-      strcpy(data_ptr, "木");
-      break;
-    case 5:
-      strcpy(data_ptr, "金");
-      break;
-    case 6:
-      strcpy(data_ptr, "土");
-      break;
-    default:
-      return;
-  }
-  WriteStringSuper(adr, data_ptr);
-  ra[1] += strlen(data_ptr);
+  WriteStringSuper(adr, days[data & 7]);
+  ra[1] += 2;
+  return 0;
 }
 
 /*
