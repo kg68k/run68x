@@ -114,28 +114,6 @@ void WriteStringSuper(ULong adr, const char* s) {
 }
 
 /*
- 　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
- 　　　　の値を得る
- 戻り値：その値
-*/
-Long idx_get(void) {
-  char* mem = mainMemoryPtr + pc;
-
-  // Brief Extension Word Format
-  //   D/A | REG | REG | REG | W/L | SCALE | SCALE | 0
-  //   M68000ではSCALEは無効、最下位ビットが1でもBrief Formatとして解釈される。
-  UByte ext = *mem++;
-  Byte disp8 = *mem;
-  pc += 2;
-
-  int idx_reg = ((ext >> 4) & 0x07);
-  Long idx = (ext & 0x80) ? ra[idx_reg] : rd[idx_reg];
-  if ((ext & 0x08) == 0) idx = extl((Word)idx);  // Sign-Extended Word
-
-  return idx + extbl(disp8);
-}
-
-/*
  　機能：PCの指すメモリから指定されたサイズのイミディエイトデータをゲットし、
  　　　　サイズに応じてPCを進める
  戻り値：データの値
@@ -239,31 +217,6 @@ void mem_set(ULong adr, Long d, char size) {
       PokeL(adr, d);
       return;
   }
-}
-
-/*
- 機能：異常終了する
-*/
-void run68_abort(Long adr) {
-  printFmt("アドレス：%08X\n", adr);
-
-  close_all_files();
-
-#ifdef TRACE
-  int i;
-  printf("d0-7=%08lx", rd[0]);
-  for (i = 1; i < 8; i++) {
-    printf(",%08lx", rd[i]);
-  }
-  printf("\n");
-  printf("a0-7=%08lx", ra[0]);
-  for (i = 1; i < 8; i++) {
-    printf(",%08lx", ra[i]);
-  }
-  printf("\n");
-  printf("  pc=%08lx    sr=%04x\n", pc, sr);
-#endif
-  longjmp(jmp_when_abort, 2);
 }
 
 static const char* getAddressSpaceName(ULong adr) {

@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,50 @@
 
 #include "mem.h"
 #include "run68.h"
+
+/*
+ 　機能：アドレスレジスタをインクリメントする
+ 戻り値：なし
+*/
+static inline void inc_ra(int reg, int size) {
+  if (reg == 7 && size == S_BYTE) size = S_WORD;
+
+  // S_BYTE -> 1, S_WORD -> 2, S_LONG -> 4
+  ra[reg] += (1 << size);
+}
+
+/*
+ 　機能：アドレスレジスタをデクリメントする
+ 戻り値：なし
+*/
+static inline void dec_ra(int reg, int size) {
+  if (reg == 7 && size == S_BYTE) size = S_WORD;
+
+  // S_BYTE -> 1, S_WORD -> 2, S_LONG -> 4
+  ra[reg] -= (1 << size);
+}
+
+/*
+ 　機能：PCの指すメモリからインデックスレジスタ＋8ビットディスプレースメント
+ 　　　　の値を得る
+ 戻り値：その値
+*/
+static Long idx_get(void) {
+  UWord w = (UWord)mem_get(pc, S_WORD);
+
+  // Brief Extension Word Format
+  //   D/A | REG | REG | REG | W/L | SCALE | SCALE | 0
+  //   M68000ではSCALEは無効、最下位ビットが1でもBrief Formatとして解釈される。
+  UByte ext = (UByte)(w >> 8);
+  Byte disp8 = (Byte)w;
+  pc += 2;
+
+  int idx_reg = ((ext >> 4) & 0x07);
+  Long idx = (ext & 0x80) ? ra[idx_reg] : rd[idx_reg];
+  if ((ext & 0x08) == 0) idx = extl((Word)idx);  // Sign-Extended Word
+
+  return idx + extbl(disp8);
+}
 
 /*
  * 【説明】
@@ -141,20 +185,10 @@ bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data) {
       break;
     case EA_AIPI:
       *data = mem_get(ra[reg], (char)size);
-      if (reg == 7 && size == S_BYTE) {
-        /* システムスタックのポインタは常に偶数 */
-        inc_ra(reg, (char)S_WORD);
-      } else {
-        inc_ra(reg, (char)size);
-      }
+      inc_ra(reg, (char)size);
       break;
     case EA_AIPD:
-      if (reg == 7 && size == S_BYTE) {
-        /* システムスタックのポインタは常に偶数 */
-        dec_ra(reg, (char)S_WORD);
-      } else {
-        dec_ra(reg, (char)size);
-      }
+      dec_ra(reg, (char)size);
       *data = mem_get(ra[reg], (char)size);
       break;
     case EA_AID:
@@ -248,21 +282,10 @@ bool set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data) {
       break;
     case EA_AIPI:
       mem_set(ra[reg], data, (char)size);
-      if (reg == 7 && size == S_BYTE) {
-        /* システムスタックのポインタは常に偶数 */
-        inc_ra(reg, (char)S_WORD);
-      } else {
-        inc_ra(reg, (char)size);
-      }
+      inc_ra(reg, (char)size);
       break;
     case EA_AIPD:
-      if (reg == 7 && size == S_BYTE) {
-        /* システムスタックのポインタは常に偶数 */
-        dec_ra(reg, (char)S_WORD);
-      } else {
-        dec_ra(reg, (char)size);
-      }
-
+      dec_ra(reg, (char)size);
       mem_set(ra[reg], data, (char)size);
       break;
     case EA_AID:

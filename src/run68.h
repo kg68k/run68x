@@ -236,8 +236,6 @@ bool get_cond(char);
 NORETURN void err68(char *);
 NORETURN void err68a(char *mes, char *file, int line);
 NORETURN void err68b(char *mes, Long pc, Long ppc);
-void inc_ra(int reg, char size);
-void dec_ra(int, char size);
 void text_color(short);
 Long get_locate(void);
 void OPBuf_insert(const EXEC_INSTRUCTION_INFO *op);

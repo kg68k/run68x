@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -348,14 +348,17 @@ static bool Subi(char code) {
          false = 実行継続
 */
 static bool Eori(char code) {
-  char size;
   char mode;
   char reg;
   Long data;
   Long src_data;
   Long work_mode;
 
-  size = ((code >> 6) & 0x03);
+  char size = ((code >> 6) & 0x03);
+  if (size == 3) {
+    err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
+  }
+
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
 

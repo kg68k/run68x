@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
 
 #include "mem.h"
 #include "run68.h"
+
+NORETURN void run68_abort(Long adr);
 
 static bool linea(char *pc_ptr) {
   short save_s = SR_S_REF();
@@ -55,7 +57,7 @@ bool prog_exec() {
     err68("命令読み込み時にバスエラーが発生しました");
     return true;
   }
-  char* pc_ptr = mem.bufptr;
+  char *pc_ptr = mem.bufptr;
 
   /* 上位4ビットで命令を振り分ける */
   switch (*pc_ptr & 0xF0) {
@@ -210,47 +212,28 @@ void err68b(char *mes, Long pc, Long ppc) {
 }
 
 /*
- 　機能：アドレスレジスタをインクリメントする
- 戻り値：なし
+ 機能：異常終了する
 */
-void inc_ra(int reg, char size) {
-  if (reg == 7 && size == S_BYTE) {
-    ra[7] += 2;
-  } else {
-    switch (size) {
-      case S_BYTE:
-        ra[reg] += 1;
-        break;
-      case S_WORD:
-        ra[reg] += 2;
-        break;
-      default: /* S_LONG */
-        ra[reg] += 4;
-        break;
-    }
-  }
-}
+void run68_abort(Long adr) {
+  printFmt("アドレス：$%08x\n", adr);
 
-/*
- 　機能：アドレスレジスタをデクリメントする
- 戻り値：なし
-*/
-void dec_ra(int reg, char size) {
-  if (reg == 7 && size == S_BYTE) {
-    ra[7] -= 2;
-  } else {
-    switch (size) {
-      case S_BYTE:
-        ra[reg] -= 1;
-        break;
-      case S_WORD:
-        ra[reg] -= 2;
-        break;
-      default: /* S_LONG */
-        ra[reg] -= 4;
-        break;
-    }
+  close_all_files();
+
+#ifdef TRACE
+  int i;
+  printf("d0-7=%08lx", rd[0]);
+  for (i = 1; i < 8; i++) {
+    printf(",%08lx", rd[i]);
   }
+  printf("\n");
+  printf("a0-7=%08lx", ra[0]);
+  for (i = 1; i < 8; i++) {
+    printf(",%08lx", ra[i]);
+  }
+  printf("\n");
+  printf("  pc=%08lx    sr=%04x\n", pc, sr);
+#endif
+  longjmp(jmp_when_abort, 2);
 }
 
 /*

@@ -54,11 +54,9 @@ NORETURN static inline void throwBusErrorOnWrite(ULong adr) {
   throwBusError(adr, true);
 }
 
-Long idx_get(void);
 Long imi_get(char size);
 Long mem_get(ULong adr, char size);
 void mem_set(ULong adr, Long d, char size);
-NORETURN void run68_abort(Long adr);
 
 // インライン関数用
 bool mem_red_chk(ULong adr);
@@ -98,7 +96,9 @@ static inline ULong PeekL(ULong adr) {
 }
 
 // メインメモリに1バイト書き込む(ビッグエンディアン)
-static inline void PokeB(ULong adr, UByte n) { *(UByte*)(mainMemoryPtr + adr) = n; }
+static inline void PokeB(ULong adr, UByte n) {
+  *(UByte*)(mainMemoryPtr + adr) = n;
+}
 
 // メインメモリに1ワード書き込む(ビッグエンディアン)
 static inline void PokeW(ULong adr, UWord n) {
