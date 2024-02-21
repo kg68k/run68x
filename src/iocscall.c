@@ -23,10 +23,6 @@
 #include "mem.h"
 #include "run68.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 #if defined(USE_ICONV)
 #include <iconv.h>
 #endif
@@ -278,29 +274,16 @@ static void Putmes() {
  戻り値：BCDの日付データ
 */
 static Long Dateget() {
-  Long ret;
-#ifdef _WIN32
-  SYSTEMTIME st;
-  GetSystemTime(&st);
-  ret = (st.wDayOfWeek << 24);
-  ret |= (((st.wYear - 1980) / 10) << 20);
-  ret |= (((st.wYear - 1980) % 10) << 16);
-  ret |= ((st.wMonth / 10) << 12);
-  ret |= ((st.wMonth % 10) << 8);
-  ret |= ((st.wDay / 10) << 4);
-  ret |= (st.wDay % 10);
-#else
   time_t now = time(NULL);
   struct tm *t = localtime(&now);
-  ret = (t->tm_wday << 24);
-  ret |= (((t->tm_year - 80) / 10) << 20);
-  ret |= (((t->tm_year - 80) % 10) << 16);
-  ret |= ((t->tm_mon / 10) << 12);
-  ret |= ((t->tm_mon % 10) << 8);
-  ret |= ((t->tm_mday / 10) << 4);
-  ret |= (t->tm_mday % 10);
-#endif
-  return (ret);
+
+  return (t->tm_wday << 24)                  //
+         | (((t->tm_year - 80) / 10) << 20)  //
+         | (((t->tm_year - 80) % 10) << 16)  //
+         | ((t->tm_mon / 10) << 12)          //
+         | ((t->tm_mon % 10) << 8)           //
+         | ((t->tm_mday / 10) << 4)          //
+         | (t->tm_mday % 10);
 }
 
 /*
@@ -308,27 +291,15 @@ static Long Dateget() {
  戻り値：BCDの時刻データ
 */
 static Long Timeget() {
-  Long ret;
-#ifdef _WIN32
-  SYSTEMTIME st;
-  GetSystemTime(&st);
-  ret = ((st.wHour / 10) << 20);
-  ret |= ((st.wHour % 10) << 16);
-  ret |= ((st.wMinute / 10) << 12);
-  ret |= ((st.wMinute % 10) << 8);
-  ret |= ((st.wSecond / 10) << 4);
-  ret |= (st.wSecond % 10);
-#else
   time_t now = time(NULL);
   struct tm *t = localtime(&now);
-  ret = ((t->tm_hour / 10) << 20);
-  ret |= ((t->tm_hour % 10) << 16);
-  ret |= ((t->tm_min / 10) << 12);
-  ret |= ((t->tm_min % 10) << 8);
-  ret |= ((t->tm_sec / 10) << 4);
-  ret |= (t->tm_sec % 10);
-#endif
-  return (ret);
+
+  return ((t->tm_hour / 10) << 20)    //
+         | ((t->tm_hour % 10) << 16)  //
+         | ((t->tm_min / 10) << 12)   //
+         | ((t->tm_min % 10) << 8)    //
+         | ((t->tm_sec / 10) << 4)    //
+         | (t->tm_sec % 10);
 }
 
 /*
