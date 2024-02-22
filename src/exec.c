@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 NORETURN void run68_abort(Long adr);

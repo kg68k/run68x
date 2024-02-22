@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,10 +18,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "operate.h"
 #include "run68.h"
 
 /*
- 　機能：cmpi命令を実行する
+ 　機能：cmp命令を実行する
  戻り値： true = 実行終了
          false = 実行継続
 */
@@ -32,10 +33,6 @@ static bool Cmp(char code1, char code2) {
   char dst_reg;
   Long src_data;
   Long dest_data;
-  Long result;
-#ifdef TEST_CCR
-  short before;
-#endif
 #ifdef TRACE
   Long save_pc = pc;
 #endif
@@ -60,10 +57,10 @@ static bool Cmp(char code1, char code2) {
   }
 
 #ifdef TEST_CCR
-  before = sr & 0x1f;
+  short before = sr & 0x1f;
 #endif
 
-  result = sub_long(src_data, dest_data, size);
+  Long result = dest_data - src_data;
 
   /* フラグの変化 */
   cmp_conditions(src_data, dest_data, result, size);
@@ -169,7 +166,6 @@ static bool Cmpm(char code1, char code2) {
   char dst_reg;
   Long src_data;
   Long dest_data;
-  Long result;
 
   size = ((code2 >> 6) & 0x03);
   src_reg = (code2 & 0x07);
@@ -185,18 +181,8 @@ static bool Cmpm(char code1, char code2) {
     return true;
   }
 
-  rd[8] = dest_data;
+  Long result = dest_data - src_data;
 
-  /* サイズに応じてCCRをセットする */
-  //	save_x = CCR_X_REF();
-  // result = sub_rd( 8, src_data, size );
-  result = sub_long(src_data, dest_data, size);
-  //	if ( save_x == 0 )
-  //		CCR_X_OFF();
-  //	else
-  //		CCR_X_ON();
-
-  /* 先のフラグ変化を無視する */
   /* フラグの変化 */
   cmp_conditions(src_data, dest_data, result, size);
 

@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 #if defined(DEBUG_JSR)
@@ -637,7 +637,6 @@ static bool Neg(char code) {
   char mode;
   char reg;
   Long data;
-  Long dest_data;
   int work_mode;
 #ifdef TRACE
   Long save_pc = pc;
@@ -659,7 +658,7 @@ static bool Neg(char code) {
   }
 
   /* NEG演算 */
-  dest_data = sub_long(data, 0, size);
+  Long dest_data = -data;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -693,7 +692,6 @@ static bool Negx(char code) {
   char reg;
   Long data;
   short save_x;
-  Long dest_data;
   int work_mode;
 #ifdef TRACE
   Long save_pc = pc;
@@ -718,7 +716,7 @@ static bool Negx(char code) {
   bool save_z = CCR_Z_REF() != 0 ? true : false;
 
   /* NEG演算 */
-  dest_data = sub_long(data + save_x, 0, size);
+  Long dest_data = -(data + save_x);
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {

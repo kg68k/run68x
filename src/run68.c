@@ -29,6 +29,7 @@
 #include "human68k.h"
 #include "hupair.h"
 #include "mem.h"
+#include "operate.h"
 
 EXEC_INSTRUCTION_INFO OP_info;
 FILEINFO finfo[FILE_MAX];

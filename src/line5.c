@@ -18,7 +18,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 /*
@@ -115,8 +115,7 @@ static int Addq(char code1, char code2) {
   rd[8] = dest_data;
 
   /* Add演算 */
-  // rd [ 8 ] = add_rd( 8, (Long)src_data, size );
-  rd[8] = add_long((Long)src_data, dest_data, size);
+  Long result = dest_data + src_data;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -125,14 +124,14 @@ static int Addq(char code1, char code2) {
     work_mode = mode;
   }
 
-  if (set_data_at_ea(EA_Variable, work_mode, reg, size, rd[8])) {
+  if (set_data_at_ea(EA_Variable, work_mode, reg, size, result)) {
     return true;
   }
 
   // アドレスレジスタ直接の場合はレジスタは変化しない
   if (mode != EA_AD) {
     /* フラグの変化 */
-    add_conditions((Long)src_data, dest_data, rd[8], size, true);
+    add_conditions((Long)src_data, dest_data, result, size, true);
   }
 
   return false;
@@ -179,12 +178,8 @@ static int Subq(char code1, char code2) {
     return true;
   }
 
-  /* ワークレジスタにコピー */
-  rd[8] = dest_data;
-
-  /* Add演算 */
-  // rd [ 8 ] = sub_rd( 8, (Long)src_data, size );
-  rd[8] = sub_long((Long)src_data, dest_data, size);
+  /* Sub演算 */
+  Long result = dest_data - src_data;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -193,14 +188,14 @@ static int Subq(char code1, char code2) {
     work_mode = mode;
   }
 
-  if (set_data_at_ea(EA_Variable, work_mode, reg, size, rd[8])) {
+  if (set_data_at_ea(EA_Variable, work_mode, reg, size, result)) {
     return true;
   }
 
   // アドレスレジスタ直接の場合はレジスタは変化しない
   if (mode != EA_AD) {
     /* フラグの変化 */
-    sub_conditions((Long)src_data, dest_data, rd[8], size, true);
+    sub_conditions((Long)src_data, dest_data, result, size, true);
   }
 
   return false;

@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "operate.h"
 #include "run68.h"
 
 static bool Adda(char code1, char code2) {
@@ -66,7 +67,6 @@ static bool Adda(char code1, char code2) {
 
 static bool Addx(char code1, char code2) {
   char size;
-  short save_x;
   Long dest_data;
 
   int src_reg = (code2 & 0x07);
@@ -81,26 +81,12 @@ static bool Addx(char code1, char code2) {
   dest_data = rd[dst_reg];
 
   bool save_z = CCR_Z_REF() != 0 ? true : false;
-  save_x = CCR_X_REF() != 0 ? 1 : 0;
-  rd[dst_reg] = add_long(rd[src_reg] + save_x, dest_data, size);
+
+  Long result = dest_data + rd[src_reg] + (CCR_X_REF() ? 1 : 0);
+  SetDreg(dst_reg, result, size);
 
   /* フラグの変化 */
   add_conditions(rd[src_reg], dest_data, rd[dst_reg], size, save_z);
-
-#ifdef TRACE
-  switch (size) {
-    case S_BYTE:
-      rd[8] = (rd[src_reg] & 0xFF);
-      break;
-    case S_WORD:
-      rd[8] = (rd[src_reg] & 0xFFFF);
-      break;
-    default: /* S_LONG */
-      rd[8] = rd[src_reg];
-      break;
-  }
-  printf("trace: addx.%c   src=%d PC=%06lX\n", size_char[size], rd[8], pc);
-#endif
 
   return false;
 }
@@ -118,9 +104,6 @@ static bool Add1(char code1, char code2) {
   int work_mode;
   Long src_data;
   Long dest_data;
-#ifdef TRACE
-  Long save_pc = pc;
-#endif
 
   mode = ((code2 & 0x38) >> 3);
   src_reg = ((code1 & 0x0E) >> 1);
@@ -143,8 +126,8 @@ static bool Add1(char code1, char code2) {
     return true;
   }
 
-  /* Sub演算 */
-  rd[8] = add_long(src_data, dest_data, size);
+  /* Add演算 */
+  Long result = dest_data + src_data;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -153,27 +136,12 @@ static bool Add1(char code1, char code2) {
     work_mode = mode;
   }
 
-  if (set_data_at_ea(EA_VariableMemory, work_mode, dst_reg, size, rd[8])) {
+  if (set_data_at_ea(EA_VariableMemory, work_mode, dst_reg, size, result)) {
     return true;
   }
 
   /* フラグの変化 */
-  sub_conditions(src_data, dest_data, rd[8], size, true);
-
-#ifdef TRACE
-  switch (size) {
-    case S_BYTE:
-      rd[8] = (rd[src_reg] & 0xFF);
-      break;
-    case S_WORD:
-      rd[8] = (rd[src_reg] & 0xFFFF);
-      break;
-    default: /* S_LONG */
-      rd[8] = rd[src_reg];
-      break;
-  }
-  printf("trace: add.%c    src=%d PC=%06lX\n", size_char[size], rd[8], save_pc);
-#endif
+  sub_conditions(src_data, dest_data, result, size, true);
 
   return false;
 }
@@ -209,21 +177,9 @@ static bool Add2(char code1, char code2) {
   if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dest_data)) {
     return true;
   }
-  switch (size) {
-    case 0:
-      rd[dst_reg] = (rd[dst_reg] & 0xffffff00) |
-                    (add_long(src_data, dest_data, size) & 0xff);
-      break;
-    case 1:
-      rd[dst_reg] = (rd[dst_reg] & 0xffff0000) |
-                    (add_long(src_data, dest_data, size) & 0xffff);
-      break;
-    case 2:
-      rd[dst_reg] = add_long(src_data, dest_data, size);
-      break;
-    default:
-      return true;
-  }
+
+  SetDreg(dst_reg, dest_data + src_data, size);
+
   /* フラグの変化 */
   add_conditions(src_data, dest_data, rd[dst_reg], size, true);
 

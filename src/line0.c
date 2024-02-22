@@ -18,7 +18,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 /*
@@ -217,10 +217,6 @@ static bool Addi(char code) {
   int work_mode;
   Long dest_data;
 
-#ifdef TEST_CCR
-  short before;
-#endif
-
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
@@ -242,15 +238,11 @@ static bool Addi(char code) {
   }
 
 #ifdef TEST_CCR
-  before = sr & 0x1f;
+  short before = sr & 0x1f;
 #endif
 
-  /* ワークレジスタへコピー */
-  rd[8] = dest_data;
-
   /* Add演算 */
-  // rd [ 8 ] = add_rd( 8, src_data, size );
-  rd[8] = add_long(src_data, dest_data, size);
+  Long result = dest_data + src_data;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -259,15 +251,15 @@ static bool Addi(char code) {
     work_mode = mode;
   }
 
-  if (set_data_at_ea(EA_VariableData, work_mode, reg, size, rd[8])) {
+  if (set_data_at_ea(EA_VariableData, work_mode, reg, size, result)) {
     return true;
   }
 
   /* フラグの変化 */
-  add_conditions(src_data, dest_data, rd[8], size, true);
+  add_conditions(src_data, dest_data, result, size, true);
 
 #ifdef TEST_CCR
-  check("addi", src_data, dest_data, rd[8], size, before);
+  check("addi", src_data, dest_data, result, size, before);
 #endif
 
   return false;
@@ -286,10 +278,6 @@ static bool Subi(char code) {
   int work_mode;
   Long dest_data;
 
-#ifdef TEST_CCR
-  short before;
-#endif
-
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
@@ -311,15 +299,11 @@ static bool Subi(char code) {
   }
 
 #ifdef TEST_CCR
-  before = sr & 0x1f;
+  short before = sr & 0x1f;
 #endif
 
-  /* ワークレジスタへコピー */
-  rd[8] = dest_data;
-
   /* Sub演算 */
-  // rd [ 8 ] = sub_rd( 8, src_data, size );
-  rd[8] = sub_long(src_data, dest_data, size);
+  Long result = dest_data - src_data;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -328,15 +312,15 @@ static bool Subi(char code) {
     work_mode = mode;
   }
 
-  if (set_data_at_ea(EA_VariableData, work_mode, reg, size, rd[8])) {
+  if (set_data_at_ea(EA_VariableData, work_mode, reg, size, result)) {
     return true;
   }
 
   /* フラグの変化 */
-  sub_conditions(src_data, dest_data, rd[8], size, true);
+  sub_conditions(src_data, dest_data, result, size, true);
 
 #ifdef TEST_CCR
-  check("subi", src_data, dest_data, rd[8], size, before);
+  check("subi", src_data, dest_data, result, size, before);
 #endif
 
   return false;
@@ -423,11 +407,6 @@ static bool Cmpi(char code) {
   short save_x;
   Long dest_data;
 
-#ifdef TEST_CCR
-  short before;
-  Long result;
-#endif
-
   size = ((code >> 6) & 0x03);
   if (size == 3) {
     err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
@@ -442,16 +421,12 @@ static bool Cmpi(char code) {
     return true;
   }
 
-  /* ワークレジスタへコピー */
-  rd[8] = dest_data;
-
 #ifdef TEST_CCR
-  before = sr & 0x1f;
+  short before = sr & 0x1f;
 #endif
 
   /* Sub演算 */
-  // rd[8] = sub_rd( 8, src_data, size );
-  rd[8] = sub_long(src_data, dest_data, size);
+  Long result = dest_data - src_data;
 
   if (save_x == 0)
     CCR_X_OFF();
@@ -459,10 +434,10 @@ static bool Cmpi(char code) {
     CCR_X_ON();
 
   /* フラグの変化 */
-  cmp_conditions(src_data, dest_data, rd[8], size);
+  cmp_conditions(src_data, dest_data, result, size);
 
 #ifdef TEST_CCR
-  check("cmpi", src_data, dest_data, rd[8], size, before);
+  check("cmpi", src_data, dest_data, result, size, before);
 #endif
 
   return false;

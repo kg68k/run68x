@@ -19,7 +19,7 @@
 
 #include <stdbool.h>
 
-#include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 /*

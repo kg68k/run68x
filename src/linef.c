@@ -26,6 +26,7 @@
 #include "fefunc.h"
 #include "human68k.h"
 #include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 #define CCR_N_C_ON() (sr |= (CCR_N | CCR_C))

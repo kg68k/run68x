@@ -25,7 +25,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 /*

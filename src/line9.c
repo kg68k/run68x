@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "operate.h"
 #include "run68.h"
 
 static bool Suba(char code1, char code2) {
@@ -25,7 +26,6 @@ static bool Suba(char code1, char code2) {
   char src_reg;
   char size;
   Long src_data;
-  Long dest_data;
 #ifdef TRACE
   Long save_pc = pc;
 #endif
@@ -46,19 +46,10 @@ static bool Suba(char code1, char code2) {
     return true;
   }
 
-  if (size == S_WORD) {
-    if ((src_data & 0x8000) != 0) {
-      src_data |= 0xFFFF0000;
-    } else {
-      src_data &= 0x0000FFFF;
-    }
-  }
-
-  dest_data = ra[dst_reg];
+  if (size == S_WORD) src_data = extl(src_data);
 
   // sub演算
-  ra[dst_reg] = sub_long(src_data, dest_data, S_LONG);
-  // ra [ dst_reg ] -= src_data;
+  ra[dst_reg] -= src_data;
 
 #ifdef TRACE
   printf("trace: suba.%c   src=%d PC=%06lX\n", size_char[size], src_data,
@@ -75,12 +66,7 @@ static bool Suba(char code1, char code2) {
 */
 static bool Subx(char code1, char code2) {
   char size;
-  short save_x;
   Long dest_data;
-
-#ifdef TEST_CCR
-  short before;
-#endif
 
   int src_reg = (code2 & 0x07);
   int dst_reg = ((code1 & 0x0E) >> 1);
@@ -92,13 +78,12 @@ static bool Subx(char code1, char code2) {
   }
 
 #ifdef TEST_CCR
-  before = sr & 0x1f;
+  short before = sr & 0x1f;
 #endif
   dest_data = rd[dst_reg];
 
   bool save_z = CCR_Z_REF() != 0 ? true : false;
-  save_x = CCR_X_REF() != 0 ? 1 : 0;
-  rd[dst_reg] = sub_long(rd[src_reg] + save_x, dest_data, size);
+  rd[dst_reg] -= rd[src_reg] + (CCR_X_REF() ? 1 : 0);
 
   /* フラグの変化 */
   sub_conditions(rd[src_reg], dest_data, rd[dst_reg], size, save_z);
@@ -138,9 +123,6 @@ static bool Sub1(char code1, char code2) {
   int work_mode;
   Long src_data;
   Long dest_data;
-#ifdef TEST_CCR
-  short before;
-#endif
 #ifdef TRACE
   Long save_pc = pc;
 #endif
@@ -167,15 +149,11 @@ static bool Sub1(char code1, char code2) {
   }
 
 #ifdef TEST_CCR
-  before = sr & 0x1f;
+  short before = sr & 0x1f;
 #endif
 
-  /* ワークレジスタへコピー */
-  rd[8] = dest_data;
-
   /* Sub演算 */
-  // rd [ 8 ] = sub_rd( 8, src_data, size );
-  rd[8] = sub_long(src_data, dest_data, size);
+  Long result = dest_data - src_data;
 
   /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
   if (mode == EA_AIPD) {
@@ -184,15 +162,15 @@ static bool Sub1(char code1, char code2) {
     work_mode = mode;
   }
 
-  if (set_data_at_ea(EA_VariableMemory, work_mode, dst_reg, size, rd[8])) {
+  if (set_data_at_ea(EA_VariableMemory, work_mode, dst_reg, size, result)) {
     return true;
   }
 
   /* フラグの変化 */
-  sub_conditions(src_data, dest_data, rd[8], size, true);
+  sub_conditions(src_data, dest_data, result, size, true);
 
 #ifdef TEST_CCR
-  check("sub", src_data, dest_data, rd[8], size, before);
+  check("sub", src_data, dest_data, result, size, before);
 #endif
 
 #ifdef TRACE
@@ -224,9 +202,6 @@ static bool Sub2(char code1, char code2) {
   char src_reg;
   Long src_data;
   Long dest_data;
-#ifdef TEST_CCR
-  short before;
-#endif
 #ifdef TRACE
   Long save_pc = pc;
 #endif
@@ -250,11 +225,10 @@ static bool Sub2(char code1, char code2) {
   }
 
 #ifdef TEST_CCR
-  before = sr & 0x1f;
+  short before = sr & 0x1f;
 #endif
 
-  // rd [ dst_reg ] = sub_rd( dst_reg, src_data, size );
-  rd[dst_reg] = sub_long(src_data, dest_data, size);
+  SetDreg(dst_reg, dest_data - src_data, size);
 
   /* フラグの変化 */
   sub_conditions(src_data, dest_data, rd[dst_reg], size, true);

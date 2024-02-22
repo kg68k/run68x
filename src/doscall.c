@@ -51,6 +51,7 @@
 #include "host.h"
 #include "human68k.h"
 #include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 static Long Gets(Long);

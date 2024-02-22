@@ -21,6 +21,7 @@
 
 #include "host.h"
 #include "mem.h"
+#include "operate.h"
 #include "run68.h"
 
 #if defined(USE_ICONV)

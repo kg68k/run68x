@@ -8,7 +8,6 @@ endif()
 add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PRIVATE
-  src/calc.c
   src/conditions.c
   src/debugger.c
   src/disassemble.c
@@ -48,6 +47,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/m68k.h
   src/mem.c
   src/mem.h
+  src/operate.h
   src/run68.c
   src/run68.h
 )

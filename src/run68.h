@@ -246,10 +246,6 @@ int OPBuf_numentries();
 const EXEC_INSTRUCTION_INFO *OPBuf_getentry(int no);
 void OPBuf_display(int n);
 
-/* calc.c */
-Long add_long(Long src, Long dest, int size);
-Long sub_long(Long src, Long dest, int size);
-
 /* doscall.c */
 void close_all_files(void);
 bool dos_call(UByte);

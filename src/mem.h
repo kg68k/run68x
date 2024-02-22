@@ -232,14 +232,4 @@ static inline ULong ReadParamULong(ULong* refParam) {
   return v;
 }
 
-Long imi_get(char size);
-Long mem_get(ULong adr, char size);
-void mem_set(ULong adr, Long d, char size);
-
-static inline Word imi_get_word(void) {
-  Span mem = GetReadableMemory(pc, 2);
-  pc += 2;
-  return mem.bufptr ? PeekW(mem.bufptr) : 0;
-}
-
 #endif
