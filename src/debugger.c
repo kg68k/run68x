@@ -472,7 +472,8 @@ static void print1line(Long addr, Long naddr, const char *opstr) {
 
   Span mem = GetReadableMemorySuper(addr, naddr - addr);
   if (mem.bufptr) {
-    for (char *p = mem.bufptr; addr < naddr; p += 2) {
+    char* end = mem.bufptr + mem.length;
+    for (char *p = mem.bufptr; p < end; p += 2) {
       sprintf(hex + strlen(hex), "%04x ", PeekW(p));
     }
   } else {
