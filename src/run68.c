@@ -46,7 +46,6 @@ unsigned int nest_cnt;
 jmp_buf jmp_when_abort;
 UWord cwatchpoint = 0x4afc;
 
-static bool trace_f = false;
 static bool debug_flag = false;
 
 static char ini_file_name[MAX_PATH];
@@ -78,9 +77,9 @@ static void print_title(void) {
 static void print_usage(void) {
   const char *usage =
       "Usage: run68 [options] execute_filename [commandline]\n"
-      "    -f        function call trace\n"
-      "    -t        mpu trace\n"
-      "    -debug    run with debugger\n";
+      "  -f         function call trace\n"
+      "  -tr <adr>  mpu instruction trap\n"
+      "  -debug     run with debugger\n";
   print(usage);
 }
 
@@ -313,8 +312,7 @@ Restart:
       switch (argv[i][1]) {
         case 't':
           if (strlen(argv[i]) == 2) {
-            trace_f = true;
-            print("MPU命令トレースフラグ=ON\n");
+            // print("MPU命令トレースフラグ=ON\n");
           } else if (argv[i][2] == 'r') {
             char *p; /* アドレス文字列へのポインタ */
             if (strlen(argv[i]) == strlen("-tr")) {
@@ -486,7 +484,7 @@ Restart:
   int ret = exec_notrap(&restart);
 
   /* 終了 */
-  if (trace_f || settings.traceFunc) {
+  if (settings.traceFunc) {
     printf("d0-7=%08x", rd[0]);
     for (i = 1; i < 8; i++) {
       printf(",%08x", rd[i]);
