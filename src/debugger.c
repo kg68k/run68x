@@ -57,6 +57,7 @@ static void set_breakpoint(int argc, char **argv);
 static void clear_breakpoint();
 static ULong get_stepcount(int argc, char **argv);
 static void debuggerError(const char *fmt, ...) GCC_FORMAT(1, 2);
+static void print1line(Long addr, Long naddr, const char *opstr);
 
 typedef enum {
   ARGUMENT_TYPE_NAME = 0,
@@ -106,28 +107,13 @@ RUN68_COMMAND debugger(bool running) {
 
   if (running) {
     Long naddr, addr = pc;
-    char hex[64];
-    char *s = disassemble(addr, &naddr);
-    int j;
+    const char *s = disassemble(addr, &naddr);
+    if (addr == naddr) naddr += 2;  // ディスアセンブルできなかった
 
     /* まず全レジスタを表示し、*/
     display_registers();
     /* 1命令分、逆アセンブルして表示する。*/
-    sprintf(hex, "$%06X ", addr);
-    if (addr == naddr) {
-      /* ディスアセンブルできなかった */
-      naddr += 2;
-    }
-    while (addr < naddr) {
-      char *p = hex + strlen(hex);
-      sprintf(p, "%04X ", PeekW(addr));
-      addr += 2;
-    }
-    for (j = strlen(hex); j < 34; j++) {
-      hex[j] = ' ';
-    }
-    hex[j] = '\0';
-    printFmt("%s%s\n", hex, s ? s : "\?\?\?\?");
+    print1line(addr, naddr, s);
   } else {
     stepcount = 0;
   }
@@ -361,8 +347,8 @@ static void run68_dump(int argc, char **argv) {
     return;
   }
 
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(dump_addr, size, &mem) || (int)mem.length < size) {
+  Span mem = GetWritableMemorySuper(dump_addr, size);
+  if (!mem.bufptr) {
     // ダンプ対象がメインメモリ外ならエラー
     debuggerError("dump:Address range error.\n");
     return;
@@ -410,10 +396,10 @@ static void display_registers() {
 
 static void set_breakpoint(int argc, char **argv) {
   if (argc < 2) {
-    if (trap_pc == 0) {
+    if (settings.trapPc == 0) {
       debuggerError("break:No breakpoints set.\n");
     } else {
-      debuggerError("break:Breakpoint is set to $%06X.\n", trap_pc);
+      debuggerError("break:Breakpoint is set to $%08x.\n", settings.trapPc);
     }
     return;
   } else if (determine_string(argv[1]) != 2) {
@@ -424,11 +410,11 @@ static void set_breakpoint(int argc, char **argv) {
   {
     long unsigned int a;
     sscanf(&argv[1][1], "%lx", &a);
-    trap_pc = (Long)a;
+    settings.trapPc = (ULong)a;
   }
 }
 
-static void clear_breakpoint() { trap_pc = 0; }
+static void clear_breakpoint() { settings.trapPc = 0; }
 
 static void display_history(int argc, char **argv) {
   int n = 0;
@@ -445,8 +431,8 @@ static void display_history(int argc, char **argv) {
 static void display_list(int argc, char **argv) {
   static Long list_addr = 0;
   static Long old_pc = 0;
-  Long addr, naddr;
-  int i, j, n;
+  Long addr, naddr = 0;
+  int i, n;
 
   n = 10;
   if (old_pc == 0) {
@@ -471,26 +457,35 @@ static void display_list(int argc, char **argv) {
     }
   }
   for (i = 0; i < n; i++) {
-    char *s = disassemble(addr, &naddr);
-    char hex[64];
-
-    sprintf(hex, "$%06X ", addr);
-    if (addr == naddr) {
-      /* ディスアセンブルできなかった */
-      naddr += 2;
-    }
-    while (addr < naddr) {
-      char *p = hex + strlen(hex);
-      sprintf(p, "%04X ", PeekW(addr));
-      addr += 2;
-    }
-    for (j = strlen(hex); j < 34; j++) {
-      hex[j] = ' ';
-    }
-    hex[j] = '\0';
-    printFmt("%s%s\n", hex, s ? s : "\?\?\?\?");
+    const char *s = disassemble(addr, &naddr);
+    if (addr == naddr) naddr += 2;
+    print1line(addr, naddr, s);
+    addr = naddr;
   }
   list_addr = naddr;
+}
+
+// アドレス、16進数ダンプ、逆アセンブル結果を表示する
+static void print1line(Long addr, Long naddr, const char *opstr) {
+  char hex[128];
+  sprintf(hex, "$%08x ", addr);
+
+  Span mem = GetReadableMemorySuper(addr, naddr - addr);
+  if (mem.bufptr) {
+    for (char *p = mem.bufptr; addr < naddr; p += 2) {
+      sprintf(hex + strlen(hex), "%04x ", PeekW(p));
+    }
+  } else {
+    strcat(hex, "(read error) ");
+  }
+
+  int j;
+  for (j = strlen(hex); j < 34; j++) {
+    hex[j] = ' ';
+  }
+  hex[j] = '\0';
+
+  printFmt("%s%s\n", hex, opstr ? opstr : "\?\?\?");
 }
 
 static ULong get_stepcount(int argc, char **argv) {

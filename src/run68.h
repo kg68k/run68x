@@ -168,8 +168,13 @@ typedef struct {
 } FILEINFO;
 
 typedef struct {
-  bool io_through;
-} INI_INFO;
+  ULong mainMemorySize;
+  ULong trapPc;    // -tr MPU命令トレースを行うアドレス
+  bool traceFunc;  // -f ファンクションコールトレース
+  bool debug;      // -debug デバッガ有効
+
+  bool iothrough;
+} Settings;
 
 /* デバッグ用に実行した命令の情報を保存しておく構造体 */
 typedef struct {
@@ -193,7 +198,7 @@ bool get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size,
 /* run68.c */
 extern EXEC_INSTRUCTION_INFO OP_info;  // 命令実行情報
 extern FILEINFO finfo[FILE_MAX];       // ファイル管理テーブル
-extern INI_INFO ini_info;              // iniファイルの内容
+extern Settings settings;
 extern const char size_char[3];
 extern Long ra[8];              // アドレスレジスタ
 extern Long rd[8 + 1];          // データレジスタ
@@ -206,9 +211,6 @@ extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保
 extern Long nest_sp[NEST_MAX];  // 親プロセスのスタックポインタを保存
 extern unsigned int nest_cnt;  // 子プロセスを起動するたびに+1
 extern jmp_buf jmp_when_abort;  // アボート処理のためのジャンプバッファ
-extern ULong mem_aloc;     // メインメモリの大きさ(1～12MB)
-extern bool func_trace_f;  // -f ファンクションコールトレース
-extern Long trap_pc;       // -tr MPU命令トレースを行うアドレス
 extern UWord cwatchpoint;  // 命令ウォッチ
 
 void print(const char *message);

@@ -56,7 +56,7 @@ bool iocs_call() {
 
   UByte no = rd[0] & 0xff;
 
-  if (func_trace_f) {
+  if (settings.traceFunc) {
     printf("IOCS(%02X): PC=%06X\n", no, pc);
   }
   switch (no) {
@@ -206,7 +206,7 @@ bool iocs_call() {
       printf("%c[>5h", 0x1B);
       break;
     default:
-      if (func_trace_f) {
+      if (settings.traceFunc) {
         printf("IOCS(%02X): Unknown IOCS call. Ignored.\n", no);
       }
       break;
@@ -389,14 +389,14 @@ static Long Dayasc(Long data, Long adr) {
   // 実行環境やソースコードのエンコーディングに左右されないように、
   // シフトJISの文字コードを直接埋め込んでいる。
   static const char days[8][4] = {
-    { "\x93\xfa" },  // 0: 日
-    { "\x8c\x8e" },  // 1: 月
-    { "\x89\xce" },  // 2: 火
-    { "\x90\x85" },  // 3: 水
-    { "\x96\xd8" },  // 4: 木
-    { "\x8b\xe0" },  // 5: 金
-    { "\x93\x79" },  // 6: 土
-    { "\x81\x48" },  // 7: ？
+      {"\x93\xfa"},  // 0: 日
+      {"\x8c\x8e"},  // 1: 月
+      {"\x89\xce"},  // 2: 火
+      {"\x90\x85"},  // 3: 水
+      {"\x96\xd8"},  // 4: 木
+      {"\x8b\xe0"},  // 5: 金
+      {"\x93\x79"},  // 6: 土
+      {"\x81\x48"},  // 7: ？
   };
 
   WriteStringSuper(adr, days[data & 7]);
@@ -439,7 +439,7 @@ static void Dmamove(Long md, Long size, Long adr1, Long adr2) {
   /* adr1,adr2共にインクリメントモードでない場合は未サポート */
   if ((md & 0x0F) != 5) return;
 
-  MemoryRange r, w;
+  Span r, w;
   if (!GetReadableMemoryRangeSuper(adr1, size, &r)) return;
   if (!GetWritableMemoryRangeSuper(adr2, r.length, &w)) return;
   memcpy(w.bufptr, r.bufptr, w.length);

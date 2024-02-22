@@ -32,7 +32,6 @@
 
 EXEC_INSTRUCTION_INFO OP_info;
 FILEINFO finfo[FILE_MAX];
-INI_INFO ini_info;
 const char size_char[3] = {'b', 'w', 'l'};
 Long ra[8];
 Long rd[8 + 1];
@@ -45,16 +44,22 @@ Long nest_pc[NEST_MAX];
 Long nest_sp[NEST_MAX];
 unsigned int nest_cnt;
 jmp_buf jmp_when_abort;
-ULong mem_aloc;
-bool func_trace_f = false;
-Long trap_pc;
 UWord cwatchpoint = 0x4afc;
 
 static bool trace_f = false;
-static bool debug_on = false;
 static bool debug_flag = false;
 
 static char ini_file_name[MAX_PATH];
+
+Settings settings;
+static const Settings defaultSettings = {
+    DEFAULT_MAIN_MEMORY_SIZE,  // mainMemorySize
+    0,                         // trapPc
+    false,                     // traceFunc
+    false,                     // debug
+
+    false  // iothrough
+};
 
 static void print_title(void) {
   const char *title =  //
@@ -129,9 +134,8 @@ static void WriteDrviceHeader(ULong adr, const DeviceHeader dev) {
   WriteULongSuper(adr + DEVHEAD_STRATEGY, dev.strategy);
   WriteULongSuper(adr + DEVHEAD_INTERRUPT, dev.interrupt_);
 
-  MemoryRange mem;
-  if (GetWritableMemoryRangeSuper(adr + DEVHEAD_NAME, sizeof(dev.name), &mem))
-    memcpy(mem.bufptr, dev.name, mem.length);
+  Span mem = GetWritableMemorySuper(adr + DEVHEAD_NAME, sizeof(dev.name));
+  if (mem.bufptr) memcpy(mem.bufptr, dev.name, mem.length);
 }
 
 // 全てのデバイスヘッダをメモリに書き込む
@@ -165,25 +169,28 @@ static int exec_notrap(bool *restart) {
       SR_S_OFF();
       superjsr_ret = 0;
     }
-    if (trap_pc != 0 && pc == trap_pc) {
-      printFmt("(run68) breakpoint:MPUがアドレス$%06Xの命令を実行しました。\n",
+    if (settings.trapPc != 0 && (ULong)pc == settings.trapPc) {
+      printFmt("(run68) breakpoint:MPUがアドレス$%08xの命令を実行しました。\n",
                pc);
-      debug_on = true;
+      settings.debug = true;
       if (stepcount != 0) {
         printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
         stepcount = 0;
       }
-    } else if (cwatchpoint != 0x4afc && cwatchpoint == PeekW(pc)) {
-      printFmt("(run68) watchpoint:MPUが命令0x%04xを実行しました。\n",
-               cwatchpoint);
-      debug_on = true;
-      if (stepcount != 0) {
-        printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
-        stepcount = 0;
+    } else if (cwatchpoint != 0x4afc) {
+      Span mem = GetReadableMemorySuper(pc, 2);
+      if (mem.bufptr && cwatchpoint == PeekW(mem.bufptr)) {
+        printFmt("(run68) watchpoint:MPUが命令$%04xを実行しました。\n",
+                 cwatchpoint);
+        settings.debug = true;
+        if (stepcount != 0) {
+          printFmt("(run68) breakpoint:%d counts left.\n", stepcount);
+          stepcount = 0;
+        }
       }
     }
-    if (debug_on) {
-      debug_on = false;
+    if (settings.debug) {
+      settings.debug = false;
       debug_flag = true;
       RUN68_COMMAND cmd = debugger(running);
       switch (cmd) {
@@ -197,7 +204,7 @@ static int exec_notrap(bool *restart) {
           goto NextInstruction;
         case RUN68_COMMAND_STEP:
         case RUN68_COMMAND_NEXT:
-          debug_on = true;
+          settings.debug = true;
           goto NextInstruction;
         case RUN68_COMMAND_QUIT:
           cont_flag = false;
@@ -206,7 +213,7 @@ static int exec_notrap(bool *restart) {
     } else if (stepcount != 0) {
       stepcount--;
       if (stepcount == 0) {
-        debug_on = true;
+        settings.debug = true;
       }
     }
     if ((pc & 0xFF000001) != 0) {
@@ -217,13 +224,13 @@ static int exec_notrap(bool *restart) {
     /* PCの値を保存する */
     OP_info.pc = pc;
     if (setjmp(jmp_when_abort) != 0) {
-      debug_on = true;
+      settings.debug = true;
       continue;
     }
     if (prog_exec()) {
       running = false;
       if (debug_flag) {
-        debug_on = true;
+        settings.debug = true;
       } else {
         cont_flag = false;
       }
@@ -282,7 +289,7 @@ static void setHuman68kPathName(Human68kPathName *hpn, const char *path,
                                 const char *name, const char *ext) {
   strncpy(hpn->path, path, sizeof(hpn->path));
   strncpy(hpn->name, name, sizeof(hpn->name));
-  strncat(hpn->name, ext, sizeof(hpn->name));
+  strncat(hpn->name, ext, sizeof(hpn->name) - strlen(hpn->name));
   hpn->nameLen = strlen(name);
   hpn->extLen = strlen(ext);
 }
@@ -294,6 +301,8 @@ int main(int argc, char *argv[]) {
   bool restart;
 
   debug_flag = false;
+  settings = defaultSettings;
+
 Restart:
   /* コマンドライン解析 */
   for (i = 1; i < argc; i++) {
@@ -322,8 +331,10 @@ Restart:
               }
             }
             /* トラップするPCのアドレスを取得する。*/
-            sscanf(p, "%x", &trap_pc);
-            printFmt("MPU命令トラップフラグ=ON ADDR=$%06X\n", trap_pc);
+            int tpc = 0;
+            sscanf(p, "%x", &tpc);
+            settings.trapPc = (ULong)tpc;
+            printFmt("MPU命令トラップフラグ=ON ADDR=$%08x\n", settings.trapPc);
           } else {
             invalid_flag = true;
           }
@@ -333,12 +344,11 @@ Restart:
             invalid_flag = true;
             break;
           }
-          debug_on = true;
-          debug_flag = false;
+          settings.debug = true;
           print("デバッガを起動します。\n");
           break;
         case 'f':
-          func_trace_f = true;
+          settings.traceFunc = true;
           print("ファンクションコールトレースフラグ=ON\n");
           break;
         default:
@@ -364,11 +374,11 @@ Restart:
   read_ini(ini_file_name);
 
   /* メインメモリ(1～12MB)を確保する */
-  if (!AllocateMachineMemory(mem_aloc)) {
+  if (!AllocateMachineMemory(&settings)) {
     printFmt("メモリが確保できません\n");
     return EXIT_FAILURE;
   }
-  WriteULongSuper(OSWORK_MEMORY_END, mem_aloc);
+  WriteULongSuper(OSWORK_MEMORY_END, settings.mainMemorySize);
 
   trap_table_make();
 
@@ -435,8 +445,8 @@ Restart:
   }
 
   /* プログラムをメモリに読み込む */
-  Long prog_size = 0;          // プログラムサイズ(bss含む)
-  Long prog_size2 = mem_aloc;  // プログラムサイズ(bss除く)
+  Long prog_size = 0;  // プログラムサイズ(bss含む)
+  Long prog_size2 = settings.mainMemorySize;  // プログラムサイズ(bss除く)
   const Long entryAddress = prog_read(fp, fname, programPsp + SIZEOF_PSP,
                                       &prog_size, &prog_size2, print);
   if (entryAddress < 0) {
@@ -476,7 +486,7 @@ Restart:
   int ret = exec_notrap(&restart);
 
   /* 終了 */
-  if (trace_f || func_trace_f) {
+  if (trace_f || settings.traceFunc) {
     printf("d0-7=%08x", rd[0]);
     for (i = 1; i < 8; i++) {
       printf(",%08x", rd[i]);

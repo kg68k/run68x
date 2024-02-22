@@ -211,10 +211,9 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
   }
 
   ULong bss_top = read_top + code_size + data_size;
-  MemoryRange mem;
-  if (GetWritableMemoryRangeSuper(bss_top, bss_size, &mem)) {
-    memset(mem.bufptr, 0, bss_size);
-  }
+  Span mem = GetWritableMemorySuper(bss_top, bss_size);
+  if (mem.bufptr) memset(mem.bufptr, 0, bss_size);
+
   *prog_size = code_size + data_size + bss_size;
   *prog_sz2 = code_size + data_size;
 
@@ -262,8 +261,8 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
 
   read_sz = *prog_sz;
 
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(read_top, read_sz, &mem)) {
+  Span mem = GetWritableMemorySuper(read_top, read_sz);
+  if (!mem.bufptr) {
     return -8;  // ポインタ取得しているだけなので、エラーにはならない
   }
   char *read_ptr = mem.bufptr;
@@ -338,10 +337,9 @@ static Long xhead_getl(int adr) {
 void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
               ULong parentSsp, const ProgramSpec *progSpec,
               const Human68kPathName *pathname) {
-  MemoryRange mem;
-  if (GetWritableMemoryRangeSuper(psp, SIZEOF_PSP, &mem)) {
+  Span mem = GetWritableMemorySuper(psp, SIZEOF_PSP);
+  if (mem.bufptr)
     memset(mem.bufptr + SIZEOF_MEMBLK, 0, SIZEOF_PSP - SIZEOF_MEMBLK);
-  }
 
   WriteULongSuper(psp + PSP_ENV_PTR, envptr);
   WriteULongSuper(psp + PSP_CMDLINE, cmdline);

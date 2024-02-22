@@ -36,11 +36,9 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
   // 書き込みモードで開いたファイルでも読み込むことができるので
   // オープンモードは確認しない
 
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(buffer, length, &mem)) {
-    // バッファアドレスが不正
-    throwBusErrorOnWrite(mem.address);
-  }
+  Span mem;
+  GetWritableMemoryRangeSuper(buffer, length, &mem);
+  if (mem.length == 0) throwBusErrorOnWrite(buffer);  // バッファアドレスが不正
 
   Long result = HOST_READ_FILE_OR_TTY(finfop, mem.bufptr, mem.length);
   if (result <= 0) return result;
@@ -64,7 +62,7 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
   if (result2 == 0) return result;
 
   // 追加で読めてしまったらバスエラー発生
-  throwBusErrorOnWrite(mem.address + mem.length);
+  throwBusErrorOnWrite(buffer + mem.length);
 }
 
 // Human68kにおける2バイト文字の1バイト目の文字コードか

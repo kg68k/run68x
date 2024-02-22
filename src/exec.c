@@ -50,46 +50,44 @@ static bool linea(char *pc_ptr) {
          false = 実行継続
 */
 bool prog_exec() {
-  // 現状では、ユーザーモードのときにPCがスーパーバイザ領域を
-  // 指していてもバスエラーが発生しない。
-  MemoryRange mem;
-  if (!GetReadableMemoryRangeSuper(pc, 2, &mem)) {
+  Span mem = GetReadableMemory(pc, 2);
+  if (!mem.bufptr) {
     err68("命令読み込み時にバスエラーが発生しました");
     return true;
   }
   char *pc_ptr = mem.bufptr;
 
   /* 上位4ビットで命令を振り分ける */
-  switch (*pc_ptr & 0xF0) {
-    case 0x00:
+  switch (*pc_ptr >> 4) {
+    case 0x0:
       return (line0(pc_ptr));
-    case 0x10:
-    case 0x20:
-    case 0x30:
+    case 0x1:
+    case 0x2:
+    case 0x3:
       return (line2(pc_ptr));
-    case 0x40:
+    case 0x4:
       return (line4(pc_ptr));
-    case 0x50:
+    case 0x5:
       return (line5(pc_ptr));
-    case 0x60:
+    case 0x6:
       return (line6(pc_ptr));
-    case 0x70:
+    case 0x7:
       return (line7(pc_ptr));
-    case 0x80:
+    case 0x8:
       return (line8(pc_ptr));
-    case 0x90:
+    case 0x9:
       return (line9(pc_ptr));
-    case 0xA0:
+    case 0xA:
       return (linea(pc_ptr));
-    case 0xB0:
+    case 0xB:
       return (lineb(pc_ptr));
-    case 0xC0:
+    case 0xC:
       return (linec(pc_ptr));
-    case 0xD0:
+    case 0xD:
       return (lined(pc_ptr));
-    case 0xE0:
+    case 0xE:
       return (linee(pc_ptr));
-    case 0xF0:
+    case 0xF:
       return (linef(pc_ptr));
 
     default:
@@ -387,20 +385,26 @@ void OPBuf_display(int n) {
       "ADDRESS OPCODE                    MNEMONIC\n"
       "-------------------------------------------------------\n");
   for (i = n - 1; 0 <= i; i--) {
-    const EXEC_INSTRUCTION_INFO *op;
-    Long addr, naddr;
-    char *s, hex[64];
-    int j;
+    char hex[128];
+    const EXEC_INSTRUCTION_INFO *op = OPBuf_getentry(i);
 
-    op = OPBuf_getentry(i);
-    addr = op->pc;
-    s = disassemble(addr, &naddr);
-    sprintf(hex, "$%06X ", addr);
-    while (addr < naddr) {
-      char *p = hex + strlen(hex);
-      sprintf(p, "%04X ", PeekW(addr));
-      addr += 2;
+    Long addr = op->pc;
+    Long naddr;
+    const char *s = disassemble(addr, &naddr);
+    sprintf(hex, "$%08x ", addr);
+    if (addr == naddr) naddr += 2;
+
+    Span mem = GetReadableMemory(addr, naddr - addr);
+    if (mem.bufptr) {
+      for (char *p = mem.bufptr; addr < naddr; p += 2) {
+        sprintf(hex + strlen(hex), "%04x ", PeekW(p));
+        addr += 2;
+      }
+    } else {
+      strcat(hex, "(read error) ");
     }
+
+    int j;
     for (j = strlen(hex); j < 34; j++) {
       hex[j] = ' ';
     }

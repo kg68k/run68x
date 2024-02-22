@@ -320,7 +320,7 @@ bool dos_call(UByte code) {
 #endif
   Long stack_adr = ra[7];
 
-  if (func_trace_f) {
+  if (settings.traceFunc) {
     PrintDosCall(code, pc - 2, stack_adr);
   }
 
@@ -1362,23 +1362,21 @@ static Long Write(short hdl, Long buf, Long len) {
   if (!finfo[hdl].is_opened) return -6;  // オープンされていない
   if (len == 0) return 0;
 
-  MemoryRange mem;
-  if (GetReadableMemoryRangeSuper(buf, len, &mem)) {
-#ifdef _WIN32
-    unsigned len2;
-    WriteFile(finfo[hdl].host.handle, mem.bufptr, mem.length, &len2, NULL);
-    write_len = len2;
-    if (finfo[hdl].host.handle == GetStdHandle(STD_OUTPUT_HANDLE))
-      FlushFileBuffers(finfo[hdl].host.handle);
-#else
-    write_len = Write_conv(hdl, mem.bufptr, mem.length);
-#endif
+  Span mem = GetReadableMemorySuper(buf, len);
+  if (!mem.bufptr) {
+    // 指定範囲の先頭ないし途中でバスエラー発生
+    throwBusErrorOnRead(buf + mem.length);
   }
 
-  if ((ULong)len != mem.length) {
-    // 有効なアドレス末尾まで書き込んだあとにバスエラー発生
-    throwBusErrorOnRead(mem.address + mem.length);
-  }
+#ifdef _WIN32
+  unsigned len2;
+  WriteFile(finfo[hdl].host.handle, mem.bufptr, mem.length, &len2, NULL);
+  write_len = len2;
+  if (finfo[hdl].host.handle == GetStdHandle(STD_OUTPUT_HANDLE))
+    FlushFileBuffers(finfo[hdl].host.handle);
+#else
+  write_len = Write_conv(hdl, mem.bufptr, mem.length);
+#endif
 
   return write_len;
 }
@@ -1608,11 +1606,8 @@ static Long Files(Long buf, Long name, short atr) {
     return DOSE_ILGFNC;
   }
 
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(buf, bufSize, &mem) ||
-      mem.length != bufSize) {
-    throwBusErrorOnWrite(mem.address + mem.length);
-  }
+  Span mem = GetWritableMemorySuper(buf, bufSize);
+  if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
   char *buf_ptr = mem.bufptr;
 
 #ifdef _WIN32
@@ -1744,12 +1739,8 @@ static Long Files(Long buf, Long name, short atr) {
  戻り値：エラーコード
  */
 static Long Nfiles(Long buf) {
-  ULong bufSize = 53;
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(buf, bufSize, &mem) ||
-      mem.length != bufSize) {
-    throwBusErrorOnWrite(mem.address + mem.length);
-  }
+  Span mem = GetWritableMemorySuper(buf, SIZEOF_FILES);
+  if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
 
 #ifdef _WIN32
   WIN32_FIND_DATA f_data;
@@ -1944,14 +1935,10 @@ static Long Settim2(Long tim) {
 static Long Namests(Long name, Long buf) {
   char nbuf[256];
   int wild = 0;
-
   const char *name_ptr = GetStringSuper(name);
 
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(buf, SIZEOF_NAMESTS, &mem) ||
-      mem.length != SIZEOF_NAMESTS) {
-    throwBusErrorOnWrite(mem.address + mem.length);
-  }
+  Span mem = GetWritableMemorySuper(buf, SIZEOF_NAMESTS);
+  if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
   char *buf_ptr = mem.bufptr;
   memset(buf_ptr, 0x00, SIZEOF_NAMESTS);
 
@@ -2049,14 +2036,10 @@ static Long Namests(Long name, Long buf) {
 static Long Nameck(Long name, Long buf) {
   char nbuf[89];
   int ret = 0;
-
   char *name_ptr = GetStringSuper(name);
 
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(buf, SIZEOF_NAMECK, &mem) ||
-      mem.length != SIZEOF_NAMECK) {
-    throwBusErrorOnWrite(mem.address + mem.length);
-  }
+  Span mem = GetWritableMemorySuper(buf, SIZEOF_NAMECK);
+  if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
   char *buf_ptr = mem.bufptr;
   memset(buf_ptr, 0x00, SIZEOF_NAMECK);
 
@@ -2263,17 +2246,14 @@ static Long Keyctrl(short mode, Long stack_adr) {
 static void Fnckey(short mode, Long buf) {
   int fno = mode & 0xff;
   ULong len = (fno >= 21) ? 6 : (fno >= 1) ? 32 : 712;
-  MemoryRange mem;
 
   if ((mode & 0xff00) == 0) {
-    if (!GetWritableMemoryRangeSuper(buf, len, &mem) || mem.length != len) {
-      throwBusErrorOnWrite(mem.address + mem.length);
-    }
+    Span mem = GetWritableMemorySuper(buf, len);
+    if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
     get_fnckey(fno, mem.bufptr);
   } else {
-    if (!GetReadableMemoryRangeSuper(buf, len, &mem) || mem.length != len) {
-      throwBusErrorOnRead(mem.address + mem.length);
-    }
+    Span mem = GetReadableMemorySuper(buf, len);
+    if (!mem.bufptr) throwBusErrorOnRead(buf + mem.length);
     put_fnckey(fno, mem.bufptr);
   }
 }
@@ -2395,10 +2375,8 @@ static Long Getfcb(short fhdl) {
   ULong adr = FCB_WORK;
   ULong len = 0x60;
 
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(adr, len, &mem) || mem.length != len) {
-    throwBusErrorOnWrite(mem.address + mem.length);
-  }
+  Span mem = GetWritableMemorySuper(adr, len);
+  if (!mem.bufptr) throwBusErrorOnWrite(adr + mem.length);
 
   switch (fhdl) {
     case 0:

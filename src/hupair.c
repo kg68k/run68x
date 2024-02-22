@@ -106,8 +106,8 @@ static inline void free_iconv_buf(IconvBufPtr* ibp) {
 
 static ULong encodeHupair(int argc, char* argv[], const char* argv0, ULong adr,
                           ULong size, bool* hupair) {
-  MemoryRange mem;
-  if (!GetWritableMemoryRangeSuper(adr, size, &mem)) return 0;
+  Span mem = GetWritableMemorySuper(adr, size);
+  if (!mem.bufptr) return 0;
 
   char* p = mem.bufptr;
   const char* const buffer_top = p;
@@ -215,8 +215,8 @@ bool IsCompliantWithHupair(ULong base, ULong size, ULong entry) {
   ULong markEnd = mark + (ULong)sizeof(hupairMark);
   if (markEnd > (base + size)) return false;
 
-  MemoryRange mem;
-  if (!GetReadableMemoryRangeSuper(mark, sizeof(hupairMark), &mem)) return false;
+  Span mem = GetReadableMemorySuper(mark, sizeof(hupairMark));
+  if (!mem.bufptr) return false;
   if (memcmp(mem.bufptr, hupairMark, sizeof(hupairMark)) != 0) return false;
 
   return true;

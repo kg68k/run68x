@@ -120,6 +120,7 @@ typedef struct {
 // DOSコール関係の定数
 #define SIZEOF_NAMESTS 88
 #define SIZEOF_NAMECK 91
+#define SIZEOF_FILES 53
 
 // FEFUNC (FLOAT*.X)
 #define FEFUNC_FCVT_INT_MAXLEN 255

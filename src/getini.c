@@ -36,10 +36,6 @@ void read_ini(char *path) {
   FILE *fp;
   char *p;
 
-  /* 情報構造体の初期化 */
-  ini_info.io_through = false;
-  mem_aloc = DEFAULT_MAIN_MEMORY_SIZE;
-
   /* INIファイルのフルパス名を得る。*/
   /* まずはファイル名を取得する。*/
   if ((p = strrchr(path, '\\')) != NULL) {
@@ -85,7 +81,7 @@ void read_ini(char *path) {
 
     /* キーワードを見る */
     if (section_match) {
-      if (_stricmp(buf, "iothrough") == 0) ini_info.io_through = true;
+      if (_stricmp(buf, "iothrough") == 0) settings.iothrough = true;
     }
   }
   fclose(fp);
@@ -127,8 +123,8 @@ void readenv_from_ini(char *path, ULong envbuf) {
       ULong len = strlen(buf) + 1;
       if (env_len + len < envSize - 5) {
         ULong s = envbuf + 4 + env_len;  // 文字列を書き込むアドレス
-        MemoryRange mem;
-        if (!GetWritableMemoryRangeSuper(s, len + 1, &mem)) break;
+        Span mem = GetWritableMemorySuper(s, len + 1);
+        if (!mem.bufptr) break;
         strcpy(mem.bufptr, buf);
         env_len += len;
 

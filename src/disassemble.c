@@ -30,6 +30,21 @@ static void fill_space(char *str, unsigned int n) {
   str[n] = '\0';
 }
 
+static UByte peekB(ULong adr) {
+  Span mem = GetReadableMemorySuper(adr, 1);
+  return mem.bufptr ? PeekB(mem.bufptr) : 0;
+}
+
+static UWord peekW(ULong adr) {
+  Span mem = GetReadableMemorySuper(adr, 2);
+  return mem.bufptr ? PeekW(mem.bufptr) : 0;
+}
+
+static ULong peekL(ULong adr) {
+  Span mem = GetReadableMemorySuper(adr, 4);
+  return mem.bufptr ? PeekL(mem.bufptr) : 0;
+}
+
 /*
    機能：
    パラメータ：
@@ -70,11 +85,11 @@ static bool effective_address(Long addr, short mode, short reg, char size,
       break;
     case 5: /* パターン5:ディスプレースメント付きアドレスレジスタ間接 */
       /* ディスプレースメントは符号付きのワード値である */
-      sprintf(str, "%d(a%1d)", extl(PeekW(addr)), reg);
+      sprintf(str, "%d(a%1d)", extl(peekW(addr)), reg);
       *next_addr = addr + 2;
       break;
     case 6: /* パターン6:インデックス付きアドレスレジスタ間接 */
-      ext = PeekW(addr);
+      ext = peekW(addr);
       sprintf(str, "%d(a%1d,%c%1d.%c)", extbl(ext), reg,
               ext & 0x8000 ? 'a' : 'd', (ext & 0x7000) >> 12,
               ext & 0x0800 ? 'l' : 'w');
@@ -83,20 +98,20 @@ static bool effective_address(Long addr, short mode, short reg, char size,
     case 7: /* regフィールドで更に場合分け */
       switch (reg) {
         case 0x0: /* パターン7:絶対ショートアドレス */
-          sprintf(str, "$%04x.w", PeekW(addr));
+          sprintf(str, "$%04x.w", peekW(addr));
           *next_addr = addr + 2;
           break;
         case 0x1: /* パターン8:絶対ロングアドレス */
-          sprintf(str, "$%06x", PeekL(addr));
+          sprintf(str, "$%06x", peekL(addr));
           *next_addr = addr + 4;
           break;
         case 0x2: /* パターン9:ディスプレースメント付きPC相対 */
           /* ディスプレースメントは符号付きのワード値である */
-          sprintf(str, "%d(pc)", extl(PeekW(addr)));
+          sprintf(str, "%d(pc)", extl(peekW(addr)));
           *next_addr = addr + 2;
           break;
         case 0x3: /* パターン10:インデックス付きPC相対 */
-          ext = PeekW(addr);
+          ext = peekW(addr);
           sprintf(str, "%d(pc,%c%1d.%c)", extbl(ext), ext & 0x8000 ? 'a' : 'd',
                   (ext & 0x7000) >> 12, ext & 0x0800 ? 'l' : 'w');
           *next_addr = addr + 2;
@@ -105,15 +120,15 @@ static bool effective_address(Long addr, short mode, short reg, char size,
           /* ステータスレジスタの場合はここには現れない */
           switch (size) {
             case 'b':
-              imm = PeekB(addr + 1);
+              imm = peekB(addr + 1);
               *next_addr = addr + 2;
               break;
             case 'w':
-              imm = PeekW(addr);
+              imm = peekW(addr);
               *next_addr = addr + 2;
               break;
             case 'l':
-              imm = PeekL(addr);
+              imm = peekL(addr);
               *next_addr = addr + 4;
               break;
             default:
@@ -148,7 +163,7 @@ static bool disa0_movep(Long addr, UWord code, Long *next_addr,
     L4:
       fill_space(mnemonic, 8);
       char *p = mnemonic + strlen(mnemonic);
-      sprintf(p, "%d(a%1d),d%1d", extl(PeekW(addr + 2)), code & 0x07,
+      sprintf(p, "%d(a%1d),d%1d", extl(peekW(addr + 2)), code & 0x07,
               (code & 0x0e00) >> 9);
       *next_addr = addr + 4;
       return true;
@@ -160,7 +175,7 @@ static bool disa0_movep(Long addr, UWord code, Long *next_addr,
     L5:
       fill_space(mnemonic, 8);
       p = mnemonic + strlen(mnemonic);
-      sprintf(p, "d%1d,%d(a%1d)", (code & 0x0e00) >> 9, extl(PeekW(addr + 2)),
+      sprintf(p, "d%1d,%d(a%1d)", (code & 0x0e00) >> 9, extl(peekW(addr + 2)),
               code & 0x07);
       *next_addr = addr + 4;
       return true;
@@ -186,7 +201,7 @@ static char *disa0(Long addr, UWord code, Long *next_addr, char *mnemonic) {
     L0:
       fill_space(mnemonic, 8);
       p = mnemonic + strlen(mnemonic);
-      sprintf(p, "#$%02x,ccr", PeekB(addr + 3));
+      sprintf(p, "#$%02x,ccr", peekB(addr + 3));
       *next_addr = addr + 4;
       return mnemonic;
     case 0x007c: /* OR Immediate to SR */
@@ -200,7 +215,7 @@ static char *disa0(Long addr, UWord code, Long *next_addr, char *mnemonic) {
     L1:
       fill_space(mnemonic, 8);
       p = mnemonic + strlen(mnemonic);
-      sprintf(p, "#$%04x,sr", PeekW(addr + 2));
+      sprintf(p, "#$%04x,sr", peekW(addr + 2));
       *next_addr = addr + 4;
       goto EndOfFunc;
   }
@@ -236,7 +251,7 @@ static char *disa0(Long addr, UWord code, Long *next_addr, char *mnemonic) {
       size = ' '; /* Data registers are Long only. Others are byte only. */
       fill_space(mnemonic, 8);
       p = mnemonic + strlen(mnemonic);
-      sprintf(p, "#%d,", PeekW(addr + 2));
+      sprintf(p, "#%d,", peekW(addr + 2));
       p = mnemonic + strlen(mnemonic);
       goto AddEA;
     case 0x0a00: /* EOR Immediate */
@@ -249,19 +264,19 @@ static char *disa0(Long addr, UWord code, Long *next_addr, char *mnemonic) {
         case 0x0000:
           strcat(mnemonic, ".b");
           *next_addr = addr + 4;
-          d1 = PeekB(addr + 3);
+          d1 = peekB(addr + 3);
           size = 'b';
           break;
         case 0x0040:
           strcat(mnemonic, ".w");
           *next_addr = addr + 4;
-          d1 = PeekW(addr + 2);
+          d1 = peekW(addr + 2);
           size = 'w';
           break;
         case 0x0080:
           strcat(mnemonic, ".l");
           *next_addr = addr + 6;
-          d1 = PeekL(addr + 2);
+          d1 = peekL(addr + 2);
           size = 'l';
           break;
         case 0x00c0:
@@ -422,7 +437,7 @@ static char *disa4(Long addr, UWord code, Long *next_addr, char *mnemonic) {
       sprintf(mnemonic, "ext.l   d%1d", code & 0x7);
       goto EndOfFunc;
     case 0x4e50:
-      sprintf(mnemonic, "link    a%1d,#%d", code & 0x7, extl(PeekW(addr + 2)));
+      sprintf(mnemonic, "link    a%1d,#%d", code & 0x7, extl(peekW(addr + 2)));
       *next_addr += 2;
       goto EndOfFunc;
     case 0x4e58:
@@ -568,7 +583,7 @@ static char *disa4(Long addr, UWord code, Long *next_addr, char *mnemonic) {
       size = 'l';
     L1:
       /* MOVEM命令のレジスタリストをAutomatonで文字列に変換する */
-      regmask = PeekW(addr + 2);
+      regmask = peekW(addr + 2);
       /* データレジスタ */
       stat = 0;
       for (i = 0; i < 8; i++) {
@@ -787,7 +802,7 @@ static char *disa5(Long addr, UWord code, Long *next_addr, char *mnemonic) {
     if ((code & 0xf8) != 0xc8) goto AddEA; /* It must be Scc. */
     /* DBcc */
     p = mnemonic + strlen(mnemonic);
-    sprintf(p, "d%1d,$%06x", code & 7, addr + 2 + extl(PeekW(addr + 2)));
+    sprintf(p, "d%1d,$%06x", code & 7, addr + 2 + extl(peekW(addr + 2)));
     *next_addr = addr + 4;
     goto EndOfFunc;
   } else if (code & 0x100) {
@@ -885,12 +900,12 @@ static char *disa6(Long addr, UWord code, Long *next_addr, char *mnemonic) {
     default:
       goto ErrorReturn;
   }
-  if (PeekB(addr + 1) != 0) {
-    jaddr = addr + 2 + extbl(PeekB(addr + 1));
+  if (peekB(addr + 1) != 0) {
+    jaddr = addr + 2 + extbl(peekB(addr + 1));
     (*next_addr) = addr + 2;
     strcat(mnemonic, ".b");
   } else {
-    jaddr = addr + 2 + extl(PeekW(addr + 2));
+    jaddr = addr + 2 + extl(peekW(addr + 2));
     (*next_addr) = addr + 4;
     strcat(mnemonic, ".w");
   }
@@ -1364,7 +1379,7 @@ char *disassemble(Long addr, Long *next_addr) {
   ptr = NULL;
   *next_addr = addr;
   mnemonic[0] = '\0';
-  UWord code = PeekW(addr);
+  UWord code = peekW(addr);
   switch ((code & 0xf000) >> 12) {
     case 0x0:
       ptr = disa0(addr, code, next_addr, mnemonic);
