@@ -35,7 +35,7 @@ EXEC_INSTRUCTION_INFO OP_info;
 FILEINFO finfo[FILE_MAX];
 const char size_char[3] = {'b', 'w', 'l'};
 Long ra[8];
-Long rd[8 + 1];
+Long rd[8];
 Long usp;
 Long pc;
 UWord sr;

@@ -111,9 +111,6 @@ static int Addq(char code1, char code2) {
     return true;
   }
 
-  /* ワークレジスタにコピー */
-  rd[8] = dest_data;
-
   /* Add演算 */
   Long result = dest_data + src_data;
 

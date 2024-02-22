@@ -33,9 +33,6 @@ static bool And1(char code1, char code2) {
   Long data;
   int work_mode;
   Long src_data;
-#ifdef TRACE
-  Long save_pc = pc;
-#endif
 
   size = ((code2 >> 6) & 0x03);
   mode = ((code2 & 0x38) >> 3);
@@ -75,22 +72,6 @@ static bool And1(char code1, char code2) {
 
   /* フラグの変化 */
   general_conditions(data, size);
-
-#ifdef TRACE
-  switch (size) {
-    case S_BYTE:
-      rd[8] = (rd[src_reg] & 0xFF);
-      break;
-    case S_WORD:
-      rd[8] = (rd[src_reg] & 0xFFFF);
-      break;
-    default: /* S_LONG */
-      rd[8] = rd[src_reg];
-      break;
-  }
-  printf("trace: and.%c    src=0x%08X PC=%06lX\n", size_char[size], rd[8],
-         save_pc);
-#endif
 
   return false;
 }

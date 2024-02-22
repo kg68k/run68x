@@ -92,21 +92,6 @@ static bool Subx(char code1, char code2) {
   check("subx", rd[src_reg], dest_data, rd[dst_reg], size, before);
 #endif
 
-#ifdef TRACE
-  switch (size) {
-    case S_BYTE:
-      rd[8] = (rd[src_reg] & 0xFF);
-      break;
-    case S_WORD:
-      rd[8] = (rd[src_reg] & 0xFFFF);
-      break;
-    default: /* S_LONG */
-      rd[8] = rd[src_reg];
-      break;
-  }
-  printf("trace: subx.%c   src=%d PC=%06lX\n", size_char[size], rd[8], pc);
-#endif
-
   return false;
 }
 
@@ -123,9 +108,6 @@ static bool Sub1(char code1, char code2) {
   int work_mode;
   Long src_data;
   Long dest_data;
-#ifdef TRACE
-  Long save_pc = pc;
-#endif
 
   mode = ((code2 & 0x38) >> 3);
   src_reg = ((code1 & 0x0E) >> 1);
@@ -173,21 +155,6 @@ static bool Sub1(char code1, char code2) {
   check("sub", src_data, dest_data, result, size, before);
 #endif
 
-#ifdef TRACE
-  switch (size) {
-    case S_BYTE:
-      rd[8] = (rd[src_reg] & 0xFF);
-      break;
-    case S_WORD:
-      rd[8] = (rd[src_reg] & 0xFFFF);
-      break;
-    default: /* S_LONG */
-      rd[8] = rd[src_reg];
-      break;
-  }
-  printf("trace: sub.%c    src=%d PC=%06lX\n", size_char[size], rd[8], save_pc);
-#endif
-
   return false;
 }
 
@@ -202,9 +169,6 @@ static bool Sub2(char code1, char code2) {
   char src_reg;
   Long src_data;
   Long dest_data;
-#ifdef TRACE
-  Long save_pc = pc;
-#endif
 
   mode = ((code2 & 0x38) >> 3);
   src_reg = (code2 & 0x07);
@@ -235,22 +199,6 @@ static bool Sub2(char code1, char code2) {
 
 #ifdef TEST_CCR
   check("sub2", src_data, dest_data, rd[dst_reg], size, before);
-#endif
-
-#ifdef TRACE
-  switch (size) {
-    case S_BYTE:
-      rd[8] = (rd[dst_reg] & 0xFF);
-      break;
-    case S_WORD:
-      rd[8] = (rd[dst_reg] & 0xFFFF);
-      break;
-    default: /* S_LONG */
-      rd[8] = rd[dst_reg];
-      break;
-  }
-  printf("trace: sub.%c    src=%d dst=%d PC=%06lX\n", size_char[size], src_data,
-         rd[8], save_pc);
 #endif
 
   return false;

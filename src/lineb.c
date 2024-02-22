@@ -33,9 +33,6 @@ static bool Cmp(char code1, char code2) {
   char dst_reg;
   Long src_data;
   Long dest_data;
-#ifdef TRACE
-  Long save_pc = pc;
-#endif
 
   size = ((code2 >> 6) & 0x03);
   mode = ((code2 & 0x38) >> 3);
@@ -67,22 +64,6 @@ static bool Cmp(char code1, char code2) {
 
 #ifdef TEST_CCR
   check("cmp", src_data, dest_data, result, size, before);
-#endif
-
-#ifdef TRACE
-  switch (size) {
-    case S_BYTE:
-      rd[8] = (rd[dst_reg] & 0xFF);
-      break;
-    case S_WORD:
-      rd[8] = (rd[dst_reg] & 0xFFFF);
-      break;
-    default: /* S_LONG */
-      rd[8] = rd[dst_reg];
-      break;
-  }
-  printf("trace: cmp.%c    src=%d dst=%d PC=%06lX\n", size_char[size], src_data,
-         rd[8], save_pc);
 #endif
 
   return false;
@@ -185,11 +166,6 @@ static bool Cmpm(char code1, char code2) {
 
   /* フラグの変化 */
   cmp_conditions(src_data, dest_data, result, size);
-
-#ifdef TRACE
-  printf("trace: cmpm.%c   src=%d dst=%d PC=%06lX\n", size_char[size], src_data,
-         rd[8], pc);
-#endif
 
   return false;
 }

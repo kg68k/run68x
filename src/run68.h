@@ -201,7 +201,7 @@ extern FILEINFO finfo[FILE_MAX];       // ファイル管理テーブル
 extern Settings settings;
 extern const char size_char[3];
 extern Long ra[8];              // アドレスレジスタ
-extern Long rd[8 + 1];          // データレジスタ
+extern Long rd[8];              // データレジスタ
 extern Long usp;                // USP
 extern Long pc;                 // プログラムカウンタ
 extern UWord sr;                // ステータスレジスタ
