@@ -867,24 +867,24 @@ static bool Jsr(char code) {
          false = 実行継続
 */
 static bool Trap(char code) {
-  int vector;
+  int no = code & 0x0f;
 
-  if ((code & 0x0F) == 15) {
-    return (iocs_call());
-  } else if (((code & 0x0f) >= 0x0) && ((code & 0x0f) <= 0x8)) {
+  if (no == 15) {
+    return iocs_call();
+  }
+
+  if (no <= 8) {
+    SR_S_ON();
     ra[7] -= 4;
     mem_set(ra[7], pc, S_LONG);
-
     ra[7] -= 2;
     mem_set(ra[7], sr, S_WORD);
 
-    vector = mem_get((0x80 + ((code & 0x0f) << 2)), S_LONG);
-
-    pc = vector;
+    pc = ReadULongSuper(0x80 + no * 4);
     return false;
-  } else {
-    err68a("未定義の例外処理を実行しました", __FILE__, __LINE__);
   }
+
+  err68a("未定義の例外処理を実行しました", __FILE__, __LINE__);
 }
 
 /*
