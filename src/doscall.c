@@ -87,9 +87,9 @@ static Long Intvcg(UWord);
 static Long Intvcs(UWord, Long);
 static Long Assign(short, Long);
 static Long Getfcb(short);
-static Long Exec01(Long, Long, Long, int);
+static Long Exec01(ULong, Long, Long, int);
 static Long Exec2(Long, Long, Long);
-static Long Exec3(Long, Long, Long);
+static Long Exec3(ULong, Long, Long);
 static void Exec4(Long);
 
 #ifndef _WIN32
@@ -256,6 +256,36 @@ static Long DosMaketmp(ULong param) {
   ULong path = ReadParamULong(&param);
   UWord atr = ReadParamUWord(&param);
   return Maketmp(path, atr);
+}
+
+// DOS _MALLOC3 (0xff60, 0xff90)
+static Long DosMalloc3(ULong param) {
+  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
+
+  return MallocHuge(MALLOC_FROM_LOWER, ReadParamULong(&param), psp[nest_cnt]);
+}
+
+// DOS _SETBLOCK2 (0xff61, 0xff91)
+static Long DosSetblock2(ULong param) {
+  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
+
+  ULong adr = ReadParamULong(&param);
+  ULong size = ReadParamULong(&param);
+  return SetblockHuge(adr, size);
+}
+
+// DOS _MALLOC4 (0xff62, 0xff91)
+static Long DosMalloc4(ULong param) {
+  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
+
+  UWord mode = ReadParamUWord(&param);
+  UByte modeByte = mode & 0xff;
+  if (modeByte > MALLOC_FROM_HIGHER) return DOSE_ILGPARM;
+  ULong size = ReadParamULong(&param);
+  ULong parent =
+      (mode & 0x8000) ? ReadParamULong(&param) : (ULong)psp[nest_cnt];
+
+  return MallocHuge(modeByte, size, parent);
 }
 
 // ファイルを閉じてFILEINFOを未使用状態に戻す
@@ -845,6 +875,15 @@ bool dos_call(UByte code) {
       srt = (short)mem_get(stack_adr, S_WORD);
       rd[0] = Assign(srt, stack_adr + 2);
       break;
+    case 0x60:
+      rd[0] = DosMalloc3(stack_adr);
+      break;
+    case 0x61:
+      rd[0] = DosSetblock2(stack_adr);
+      break;
+    case 0x62:
+      rd[0] = DosMalloc4(stack_adr);
+      break;
     case 0x7C: /* GETFCB */
       fhdl = (short)mem_get(stack_adr, S_WORD);
       rd[0] = Getfcb(fhdl);
@@ -1244,7 +1283,6 @@ static Long Open(char *p, short mode) {
 
   Long ret = find_free_file();
   if (ret < 0) return -4;  // オープンしているファイルが多すぎる
-
 #ifdef _WIN32
   HANDLE handle =
       CreateFile(p, md, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -2392,16 +2430,34 @@ static Long Getfcb(short fhdl) {
   }
 }
 
+// DOS _EXECの引数(実行ファイル名)からファイルタイプを抽出する。
+//   実行ファイル名の最上位バイトをクリアする。
+static bool getExecType(ULong *refFile, ExecType *outType) {
+  UByte t = *refFile >> 24;
+  *outType = EXEC_TYPE_DEFAULT;
+
+  if (settings.highMemorySize) {
+    // ハイメモリ有効時はファイルタイプ指定不可としている。
+    // ただし正しく検出できない場合もある。
+    return ((EXEC_TYPE_R <= t) && (t <= EXEC_TYPE_X)) ? false : true;
+  }
+
+  if (t <= EXEC_TYPE_X) *outType = t;
+  *refFile &= ADDRESS_MASK;
+  return true;
+}
+
 /*
  　機能：DOSCALL EXEC(mode=0,1)を実行する
  戻り値：エラーコード等
  */
-static Long Exec01(Long nm, Long cmd, Long env, int md) {
+static Long Exec01(ULong nm, Long cmd, Long env, int md) {
   FILE *fp;
   char fname[89];
 
-  int loadmode = ((nm >> 24) & 0x03);
-  nm &= 0x00ffffff;
+  ExecType execType;
+  if (!getExecType(&nm, &execType)) return DOSE_ILGPARM;
+
   char *name_ptr = GetStringSuper(nm);
   if (strlen(name_ptr) > 88) return DOSE_ILGFNAME;  // ファイル名指定誤り
 
@@ -2415,21 +2471,20 @@ static Long Exec01(Long nm, Long cmd, Long env, int md) {
 
   // 最大メモリを確保する
   ULong parentPsp = psp[nest_cnt];
-  ULong size = Malloc(MALLOC_FROM_LOWER, 0x00ffffff, parentPsp) & 0x00ffffff;
-  Long childMemory = Malloc(MALLOC_FROM_LOWER, size, parentPsp);
-  if (childMemory < 0) {
+  MallocResult child = MallocAll(parentPsp);
+  if (child.address < 0) {
     fclose(fp);
-    return -8;  // メモリが確保できない
+    return DOSE_NOMEM;  // メモリが確保できない
   }
-  Long childPsp = childMemory - SIZEOF_MEMBLK;
+  Long childPsp = child.address - SIZEOF_MEMBLK;
 
   Long end_adr = mem_get(childPsp + MEMBLK_END, S_LONG);
   Long prog_size = 0;
-  Long prog_size2 = ((loadmode << 24) | end_adr);
+  Long prog_size2 = end_adr;
   const Long entryAddress = prog_read(fp, fname, childPsp + SIZEOF_PSP,
-                                      &prog_size, &prog_size2, NULL);
+                                      &prog_size, &prog_size2, NULL, execType);
   if (entryAddress < 0) {
-    Mfree(childMemory);
+    Mfree(child.address);
     return entryAddress;
   }
 
@@ -2488,17 +2543,12 @@ static Long Exec2(Long nm, Long cmd, Long env) {
  　機能：DOSCALL EXEC(mode=3)を実行する
  戻り値：エラーコード等
  */
-static Long Exec3(Long nm, Long adr1, Long adr2) {
+static Long Exec3(ULong nm, Long adr1, Long adr2) {
   char fname[89];
-  int loadmode;
-  Long ret;
-  Long prog_size;
-  Long prog_size2;
 
-  loadmode = ((nm >> 24) & 0x03);
-  nm &= 0xFFFFFF;
-  adr1 &= 0xFFFFFF;
-  adr2 &= 0xFFFFFF;
+  ExecType execType;
+  if (!getExecType(&nm, &execType)) return DOSE_ILGPARM;
+
   char *name_ptr = GetStringSuper(nm);
   if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
@@ -2506,8 +2556,10 @@ static Long Exec3(Long nm, Long adr1, Long adr2) {
   FILE *fp = prog_open(fname, (ULong)-1, NULL);
   if (fp == NULL) return -2;
 
-  prog_size2 = ((loadmode << 24) | adr2);
-  ret = prog_read(fp, fname, adr1, &prog_size, &prog_size2, NULL);
+  Long prog_size;
+  Long prog_size2 = adr2;
+  Long ret =
+      prog_read(fp, fname, adr1, &prog_size, &prog_size2, NULL, execType);
   if (ret < 0) return (ret);
 
   return (prog_size);

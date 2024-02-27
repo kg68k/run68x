@@ -29,43 +29,59 @@ enum {
   IOPORT = 0x00e80000,
   CGROM = 0x00f00000,
   IOCSROM = 0x00fc0000,
-  BASE_ADDRESS_MAX = 0x01000000,
 };
 
-// 確保したメインメモリの配列(1～12MB)。
-char* mainMemoryPtr;
+char* mainMemoryPtr;  // 確保したメインメモリの配列
+char* highMemoryPtr;  // 確保したハイメモリの配列
+ULong mainMemoryEnd;  // メインメモリの終端(+1)アドレス、容量に等しい
+ULong highMemoryEnd;  // ハイメモリの終端(+1)アドレス
+ULong supervisorEnd;  // $0～supervisorEndがスーパーバイザ領域
 
-// メインメモリの終端(+1)アドレス、容量に等しい。
-ULong mainMemoryEnd;
+// メインメモリ、ハイメモリを確保する。
+bool AllocateMachineMemory(const Settings* settings, ULong* outHimemAddress) {
+  *outHimemAddress = 0;
+  highMemoryEnd = 0;
+  highMemoryPtr = NULL;
 
-// メインメモリの0番地からsupervisorEndまでがスーパーバイザ領域。
-ULong supervisorEnd;
-
-// メインメモリを確保する。
-bool AllocateMachineMemory(const Settings* settings) {
   mainMemoryEnd = settings->mainMemorySize;
   mainMemoryPtr = calloc(1, settings->mainMemorySize);
-  if (mainMemoryPtr == NULL) return false;
 
+  ULong himemSize = settings->highMemorySize;
+  if (himemSize) {
+    *outHimemAddress = HIMEM_START;
+    highMemoryEnd = HIMEM_START + himemSize;
+    highMemoryPtr = calloc(1, himemSize);
+  }
+
+  if (!mainMemoryPtr || (himemSize && !highMemoryPtr)) {
+    FreeMachineMemory();
+    return false;
+  }
   return true;
 }
 
-// メインメモリを解放する。
+// メインメモリ、ハイメモリを解放する。
 void FreeMachineMemory(void) {
   free(mainMemoryPtr);
   mainMemoryPtr = NULL;
+
+  free(highMemoryPtr);
+  highMemoryPtr = NULL;
 }
 
 // メインメモリをスーパーバイザ領域として設定する。
 void SetSupervisorArea(ULong adr) { supervisorEnd = adr; }
 
+static inline ULong ulmin(ULong a, ULong b) {
+  return (a < b) ? a : b;
+}
 // アクセス可能なメモリ範囲を調べる。
-//   指定範囲すべてアクセス可能ならtrueを返す。
+//   指定範囲の先頭部分がアクセス可能ならtrueを返す。
 //   現在のところ読み書きを区別しない。
 bool getAccessibleMemoryRange(ULong adr, ULong len, bool super, Span* result) {
-  adr = toPhysicalAddress(adr);
-  const ULong end = mainMemoryEnd;
+  adr = ToPhysicalAddress(adr);
 
+  ULong end = mainMemoryEnd;
   if (adr < end) {
     // 開始アドレスはメインメモリ内。
     if (!super && adr < supervisorEnd) {
@@ -73,28 +89,41 @@ bool getAccessibleMemoryRange(ULong adr, ULong len, bool super, Span* result) {
       *result = (Span){NULL, 0};
       return false;
     }
-  } else {
-    // メインメモリ外は全てアクセス不可能。
+    ULong max = end - adr;  // 開始アドレスからメモリが実装されている長さ
+    if (len == 0 || max < len) {
+      // len==0 ... アクセス可能な範囲をすべて返す。
+      // len!=0 ... 指定範囲の途中までアクセス可能。
+      *result = (Span){mainMemoryPtr + adr, max};
+      return true;
+    }
+    // 指定範囲はすべてアクセス可能。
+    *result = (Span){mainMemoryPtr + adr, len};
+    return true;
+  }
+
+  if (adr < HIMEM_START) {
+    // メインメモリ未搭載領域と、$00c00000-$00ffffffはすべてアクセス不可能。
     // 実機の仕様としてはGVRAM等は読み書きできるが、run68では実装していない。
     *result = (Span){NULL, 0};
     return false;
   }
 
-  if (len == 0) {
-    // アクセス可能な範囲をすべて返す。
-    *result = (Span){mainMemoryPtr + adr, end - adr};
+  end = highMemoryEnd;
+  if (adr < end) {
+    // 開始アドレスはハイメモリ内。
+    ULong max = end - adr;
+    if (len == 0 || max < len) {
+      *result = (Span){highMemoryPtr + (adr - HIMEM_START), max};
+      return true;
+    }
+    // 指定範囲はすべてアクセス可能。
+    *result = (Span){highMemoryPtr + (adr - HIMEM_START), len};
     return true;
   }
 
-  if (end < (adr + len)) {
-    // 指定範囲の途中までアクセス可能。
-    *result = (Span){mainMemoryPtr + adr, end - adr};
-    return false;
-  }
-
-  // 指定範囲はすべてアクセス可能。
-  *result = (Span){mainMemoryPtr + adr, len};
-  return true;
+  // ハイメモリ未搭載領域(実機と異なると思われるが、とりあえず仕様とする)
+  *result = (Span){NULL, 0};
+  return false;
 }
 
 // 文字列(ASCIIZ)として読み込み可能なメモリか調べ、バッファへのポインタを返す。
@@ -109,7 +138,7 @@ char* GetStringSuper(ULong adr) {
   }
 
   // メモリ末尾までNUL文字がなければ不正なメモリを参照してバスエラーになる。
-  throwBusError(mem.length, false);
+  throwBusError(adr + mem.length, false);
 }
 
 // メモリに文字列(ASCIIZ)を書き込む。
@@ -144,8 +173,9 @@ static const char* getAddressSpaceName(ULong adr) {
 void throwBusError(ULong adr, bool onWrite) {
   char buf[256];
   const char* dir = onWrite ? "への書き込み" : "からの読み込み";
+  const char* name = getAddressSpaceName(ToPhysicalAddress(adr));
 
-  snprintf(buf, sizeof(buf), "%s($%08x)%sでバスエラーが発生しました。",
-           getAddressSpaceName(adr), adr, dir);
+  snprintf(buf, sizeof(buf), "%s($%08x)%sでバスエラーが発生しました。", name,
+           adr, dir);
   err68(buf);
 }

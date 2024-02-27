@@ -20,29 +20,45 @@
 
 #include "run68.h"
 
+#define BASE_ADDRESS_MAX 0x01000000
+#define HIMEM_START 0x10000000
+#define HIMEM_ADDRESS_MARK 0x30000000
+#define HIMEM_ADDRESS_MASK 0x3fffffff
+
 typedef struct {
   char* bufptr;
   ULong length;
 } Span;
 
 extern char* mainMemoryPtr;
+extern char* highMemoryPtr;
 extern ULong mainMemoryEnd;
+extern ULong highMemoryEnd;
 extern ULong supervisorEnd;
 
-bool AllocateMachineMemory(const Settings* settings);
+bool AllocateMachineMemory(const Settings* settings, ULong* outHimemAddress);
 void FreeMachineMemory(void);
 
 void SetSupervisorArea(ULong adr);
 
 // 論理アドレスを物理アドレスに変換する。
-static inline ULong toPhysicalAddress(ULong adr) { return adr & ADDRESS_MASK; }
+static inline ULong ToPhysicalAddress(ULong adr) {
+  // ほとんどのケースが$00000000-$00ffffffなので優先して処理する。
+  if (adr < BASE_ADDRESS_MAX) return adr;
+
+  if (highMemoryPtr && (adr & HIMEM_ADDRESS_MARK) != 0) {
+    return adr & HIMEM_ADDRESS_MASK;
+  }
+
+  return adr & ADDRESS_MASK;
+}
 
 // 指定したメモリ範囲がアクセス可能か調べ、バッファアドレスを返す。
 //   アクセス不可能なら(Span){NULL, (先頭からのアクセス可能なバイト数)}を返す。
 //   現在のところ読み書きを区別しない。
 static inline Span getAccessibleMemory(ULong adr, ULong len, bool super) {
-  adr = toPhysicalAddress(adr);
-  const ULong end = mainMemoryEnd;
+  adr = ToPhysicalAddress(adr);
+  ULong end = mainMemoryEnd;
 
   if (adr < end) {
     // 開始アドレスはメインメモリ内。
@@ -50,19 +66,33 @@ static inline Span getAccessibleMemory(ULong adr, ULong len, bool super) {
       // ユーザーモードでスーパーバイザ領域をアクセスしようとした。
       return (Span){NULL, 0};
     }
-  } else {
-    // メインメモリ外は全てアクセス不可能。
+    ULong max = end - adr;  // 開始アドレスからメモリが実装されている長さ
+    if (max < len) {
+      // 指定範囲の途中までアクセス可能。
+      return (Span){NULL, max};
+    }
+    // 指定範囲はすべてアクセス可能。
+    return (Span){mainMemoryPtr + adr, len};
+  }
+
+  if (adr < HIMEM_START) {
+    // メインメモリ未搭載領域と、$00c00000-$00ffffffはすべてアクセス不可能。
     // 実機の仕様としてはGVRAM等は読み書きできるが、run68では実装していない。
     return (Span){NULL, 0};
   }
 
-  if (end < (adr + len)) {
-    // 指定範囲の途中までアクセス可能。
-    return (Span){NULL, end - adr};
+  end = highMemoryEnd;
+  if (adr < end) {
+    // 開始アドレスはハイメモリ内。
+    ULong max = end - adr;
+    if (max < len) {
+      return (Span){NULL, max};
+    }
+    return (Span){highMemoryPtr + (adr - HIMEM_START), len};
   }
 
-  // 指定範囲はすべてアクセス可能。
-  return (Span){mainMemoryPtr + adr, len};
+  // ハイメモリ未搭載領域(実機と異なると思われるが、とりあえず仕様とする)
+  return (Span){NULL, 0};
 }
 
 static inline Span GetReadableMemorySuper(ULong adr, ULong len) {

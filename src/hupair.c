@@ -194,19 +194,18 @@ ULong EncodeHupair(int argc, char* argv[], const char* argv0, ULong parent,
                    bool* hupair) {
   *hupair = false;
 
-  ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & 0x00ffffff;
-  ULong adr = Malloc(MALLOC_FROM_LOWER, size, parent);
-  if ((Long)adr < 0) return 0;
+  MallocResult m = MallocAll(parent);
+  if (m.address < 0) return 0;
 
-  ULong consumed = encodeHupair(argc, argv, argv0, adr, size, hupair);
+  ULong consumed = encodeHupair(argc, argv, argv0, m.address, m.length, hupair);
   if (consumed == 0) {
-    Mfree(adr);
+    Mfree(m.address);
     return 0;
   }
-  Setblock(adr, consumed);
+  Setblock(m.address, consumed);
 
   // コマンドライン先頭(文字列長のアドレス)を返す
-  return adr + (ULong)sizeof(hupairMark);
+  return m.address + (ULong)sizeof(hupairMark);
 }
 
 bool IsCompliantWithHupair(ULong base, ULong size, ULong entry) {

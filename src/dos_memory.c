@@ -21,8 +21,32 @@
 #include "mem.h"
 #include "run68.h"
 
+#define MALLOC_MAX_SIZE 0x00fffff0
+#define MALLOC3_MAX_SIZE 0x7ffffff0
+
+// DOS _MALLOCで確保する対象のメモリ空間。
+static AllocArea allocArea = ALLOC_AREA_MAIN_ONLY;
+
+static ULong tryMalloc(UByte mode, ULong size, ULong parent, ULong* maxSize);
 static void MfreeAll(ULong psp);
 static bool is_valid_memblk(ULong memblk, ULong* nextptr);
+
+// 確保するメモリ空間を指定する。
+void SetAllocArea(AllocArea area) { allocArea = area; }
+
+// 確保しようとしているアドレスが指定したメモリ空間か調べる。
+static bool isAllocatableArea(ULong adr) {
+  switch (allocArea) {
+    case ALLOC_AREA_MAIN_ONLY:
+      return (adr < BASE_ADDRESS_MAX);
+    case ALLOC_AREA_HIGH_ONLY:
+      return (adr >= BASE_ADDRESS_MAX);
+
+    default:
+    case ALLOC_AREA_UNLIMITED:
+      return true;
+  }
+}
 
 // 必要ならアドレスを加算して16バイト境界に整合する
 static ULong align_memblk(ULong adrs) {
@@ -34,16 +58,59 @@ static ULong negetive_align_memblk(ULong adrs) {
   return adrs & ~(MEMBLK_ALIGN - 1);
 }
 
-static ULong correct_malloc_size(ULong size) {
-  return (size > 0x00ffffff) ? 0x00ffffff : size;
+// 最大サイズでメモリブロックを確保する。
+MallocResult MallocAll(ULong parent) {
+  const UByte mode = MALLOC_FROM_LOWER;
+  ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & MALLOC_MASK;
+  Long adr = Malloc(MALLOC_FROM_LOWER, size, parent);
+  return (MallocResult){adr, size};
 }
 
-// DOS _MALLOC, _MALLOC2 共通処理
+static ULong determineRequestSize(ULong size) {
+  if (size > MALLOC_MAX_SIZE)
+    return (ULong)-1;  // 最大サイズの取得なら絶対に確保できないサイズを返す。
+
+  return size + SIZEOF_MEMBLK;
+}
+
+// DOS _MALLOC、_MALLOC2 共通処理
 Long Malloc(UByte mode, ULong size, ULong parent) {
-  ULong sizeWithHeader = correct_malloc_size(size) + SIZEOF_MEMBLK;
-  ULong maxSize = 0;
-  ULong minSize = 0xffffffff;
+  ULong sizeWithHeader = determineRequestSize(size);
+  ULong maxSize;
+  ULong adr = tryMalloc(mode, sizeWithHeader, parent, &maxSize);
+  if (adr) return adr;
+
+  if (maxSize <= SIZEOF_MEMBLK) return DOSE_MALLOC_NOMEM2;
+
+  maxSize -= SIZEOF_MEMBLK;
+  ULong n = (maxSize <= MALLOC_MAX_SIZE) ? maxSize : MALLOC_MAX_SIZE;
+  return DOSE_MALLOC_NOMEM | n;
+}
+
+static ULong determineRequestSizeHuge(ULong size) {
+  if (size > MALLOC3_MAX_SIZE)
+    return (ULong)-1;  // 最大サイズの取得なら絶対に確保できないサイズを返す。
+
+  return size + SIZEOF_MEMBLK;
+}
+
+// DOS _MALLOC3、_MALLOC4 共通処理
+Long MallocHuge(UByte mode, ULong size, ULong parent) {
+  ULong sizeWithHeader = determineRequestSizeHuge(size);
+  ULong maxSize;
+  ULong adr = tryMalloc(mode, sizeWithHeader, parent, &maxSize);
+  if (adr) return adr;
+
+  ULong n = (maxSize <= SIZEOF_MEMBLK) ? 0 : maxSize - SIZEOF_MEMBLK;
+  return DOSE_MALLOC3_NOMEM | n;
+}
+
+// メモリブロック確保共通処理
+static ULong tryMalloc(UByte mode, ULong sizeWithHeader, ULong parent,
+                       ULong* outMaxSize) {
+  ULong minSize = (ULong)-1;
   ULong cMemblk = 0, cNewblk = 0, cNext = 0;  // 見つけた候補アドレス
+  *outMaxSize = 0;  // 確保可能な最大サイズ(確保できなかった場合のみ)
 
   ULong memoryEnd = ReadULongSuper(OSWORK_MEMORY_END);
   ULong memblk = ReadULongSuper(OSWORK_ROOT_PSP);
@@ -53,14 +120,15 @@ Long Malloc(UByte mode, ULong size, ULong parent) {
 
     // 新しくメモリブロックを作る場合のヘッダアドレス
     ULong newblk = align_memblk(ReadULongSuper(memblk + MEMBLK_END));
+    if (!isAllocatableArea(newblk)) continue;
 
     // この隙間の末尾アドレス
-    ULong limit = (next == 0) ? memoryEnd : next;
+    ULong limit = next ? next : memoryEnd;
 
     ULong capacity = limit - newblk;
     if (capacity < sizeWithHeader) {
       // この隙間には入らない
-      if (capacity > maxSize) maxSize = capacity;
+      if (capacity > *outMaxSize) *outMaxSize = capacity;
       continue;
     }
 
@@ -84,19 +152,17 @@ Long Malloc(UByte mode, ULong size, ULong parent) {
     cNext = next;
   }
 
-  if (cNewblk != 0) {
-    if (mode == MALLOC_FROM_HIGHER) {
-      // 隙間の高位側にメモリブロックを作成する
-      ULong limit = (cNext == 0) ? memoryEnd : cNext;
-      cNewblk = negetive_align_memblk(limit - sizeWithHeader);
-    }
+  if (cNewblk == 0) return 0;  // 確保できない。
 
-    BuildMemoryBlock(cNewblk, cMemblk, parent, cNewblk + sizeWithHeader, cNext);
-    return cNewblk + SIZEOF_MEMBLK;
+  // メモリブロック作成。
+  if (mode == MALLOC_FROM_HIGHER) {
+    // 隙間の高位側にメモリブロックを作成する
+    ULong limit = cNext ? cNext : memoryEnd;
+    cNewblk = negetive_align_memblk(limit - sizeWithHeader);
   }
 
-  if (maxSize > SIZEOF_MEMBLK) return 0x81000000 + (maxSize - SIZEOF_MEMBLK);
-  return 0x82000000;  // 完全に確保不可
+  BuildMemoryBlock(cNewblk, cMemblk, parent, cNewblk + sizeWithHeader, cNext);
+  return cNewblk + SIZEOF_MEMBLK;
 }
 
 // メモリブロックのヘッダを作成する
@@ -166,22 +232,49 @@ static void MfreeAll(ULong psp) {
 
 // DOS _SETBLOCK
 Long Setblock(ULong adr, ULong size) {
+  ULong sizeWithHeader = determineRequestSize(size);
+
   ULong memblk = adr - SIZEOF_MEMBLK;
-  ULong sizeWithHeader = correct_malloc_size(size) + SIZEOF_MEMBLK;
-
   ULong next;
-  if (!is_valid_memblk(adr - SIZEOF_MEMBLK, &next)) return DOSE_ILGMPTR;
+  if (!is_valid_memblk(memblk, &next)) return DOSE_ILGMPTR;
 
-  ULong limit = (next == 0) ? ReadULongSuper(OSWORK_MEMORY_END) : next;
-  ULong capacity = limit - memblk;
-  if (capacity >= sizeWithHeader) {
-    WriteULongSuper(memblk + MEMBLK_END, memblk + sizeWithHeader);
-    return DOSE_SUCCESS;
+  ULong limit = next ? next : ReadULongSuper(OSWORK_MEMORY_END);
+  ULong maxSize = limit - memblk;
+
+  if (maxSize < sizeWithHeader) {
+    // 指定サイズに変更できるだけの隙間がない。
+    if (maxSize <= SIZEOF_MEMBLK) return DOSE_MALLOC_NOMEM2;
+
+    maxSize -= SIZEOF_MEMBLK;
+    ULong n = (maxSize <= MALLOC_MAX_SIZE) ? maxSize : MALLOC_MAX_SIZE;
+    return DOSE_MALLOC_NOMEM | n;
   }
 
-  // 指定サイズには変更できない
-  if (capacity > SIZEOF_MEMBLK) return 0x81000000 + (capacity - SIZEOF_MEMBLK);
-  return 0x82000000;
+  // サイズ変更。
+  WriteULongSuper(memblk + MEMBLK_END, adr + size);
+  return DOSE_SUCCESS;
+}
+
+// DOS _SETBLOCK2
+Long SetblockHuge(ULong adr, ULong size) {
+  ULong sizeWithHeader = determineRequestSizeHuge(size);
+
+  ULong memblk = adr - SIZEOF_MEMBLK;
+  ULong next;
+  if (!is_valid_memblk(memblk, &next)) return DOSE_ILGMPTR;
+
+  ULong limit = next ? next : ReadULongSuper(OSWORK_MEMORY_END);
+  ULong maxSize = limit - memblk;
+
+  if (maxSize < sizeWithHeader) {
+    // 指定サイズに変更できるだけの隙間がない。
+    ULong n = (maxSize <= SIZEOF_MEMBLK) ? 0 : maxSize - SIZEOF_MEMBLK;
+    return DOSE_MALLOC3_NOMEM | n;
+  }
+
+  // サイズ変更。
+  WriteULongSuper(memblk + MEMBLK_END, adr + size);
+  return DOSE_SUCCESS;
 }
 
 // 有効なメモリ管理ポインタか調べる

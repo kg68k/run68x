@@ -203,20 +203,26 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
   Long data_size = xhead_getl(0x10);
   Long bss_size = xhead_getl(0x14);
   Long reloc_size = xhead_getl(0x18);
+  Long textAndData = code_size + data_size;
 
   if (reloc_size != 0) {
-    if (!xrelocate(code_size + data_size, reloc_size, read_top)) {
+    if (!xrelocate(textAndData, reloc_size, read_top)) {
       onError("未対応のリロケート情報があります\n");
       return (0);
     }
   }
 
-  ULong bss_top = read_top + code_size + data_size;
+  ULong bss_top = read_top + textAndData;
+  if (*prog_sz2 < (bss_top + bss_size)) {
+    onError("メモリが足りません\n");
+    return 0;
+  }
+
   Span mem = GetWritableMemorySuper(bss_top, bss_size);
   if (mem.bufptr) memset(mem.bufptr, 0, bss_size);
 
-  *prog_size = code_size + data_size + bss_size;
-  *prog_sz2 = code_size + data_size;
+  *prog_sz2 = textAndData;
+  *prog_size = textAndData + bss_size;
 
   return (read_top + pc_begin);
 }
@@ -227,32 +233,25 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
  　　　　負 = エラーコード
 */
 Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
-               Long *prog_sz2, void (*err)(const char *))
-/* prog_sz2はロードモード＋リミットアドレスの役割も果たす */
-{
+               Long *prog_sz2, void (*err)(const char *), ExecType execType) {
   Long read_sz;
   bool x_file = false;
-  int loadmode;
-  int i;
   void (*onError)(const char *) = err ? err : onErrorDummy;
-
-  loadmode = ((*prog_sz2 >> 24) & 0x03);
-  *prog_sz2 &= 0xFFFFFF;
 
   if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
     onError("ファイルのシークに失敗しました\n");
-    return (-11);
+    return DOSE_ILGFMT;
   }
   if ((*prog_sz = ftell(fp)) <= 0) {
     fclose(fp);
     onError("ファイルサイズが０です\n");
-    return (-11);
+    return DOSE_ILGFMT;
   }
   if (fseek(fp, 0, SEEK_SET) != 0) {
     fclose(fp);
     onError("ファイルのシークに失敗しました\n");
-    return (-11);
+    return DOSE_ILGFMT;
   }
   if (read_top + *prog_sz > *prog_sz2) {
     fclose(fp);
@@ -273,17 +272,19 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
     if (fread(read_ptr, 1, XHEAD_SIZE, fp) != XHEAD_SIZE) {
       fclose(fp);
       onError("ファイルの読み込みに失敗しました\n");
-      return (-11);
+      return DOSE_ILGFMT;
     }
     read_sz -= XHEAD_SIZE;
-    if (loadmode == 1)
+
+    int i;
+    if (execType == EXEC_TYPE_R)
       i = 0; /* Rファイル */
-    else if (loadmode == 3)
+    else if (execType == EXEC_TYPE_X)
       i = 1; /* Xファイル */
     else
       i = strlen(fname) - 2;
     if (mem_get(read_top, S_WORD) == 0x4855 && i > 0) {
-      if (loadmode == 3 || strcmp(&(fname[i]), ".x") == 0 ||
+      if (execType == EXEC_TYPE_X || strcmp(&(fname[i]), ".x") == 0 ||
           strcmp(&(fname[i]), ".X") == 0) {
         x_file = true;
         memcpy(xhead, read_ptr, XHEAD_SIZE);
@@ -300,7 +301,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
   if (fread(read_ptr, 1, read_sz, fp) != (size_t)read_sz) {
     fclose(fp);
     onError("ファイルの読み込みに失敗しました\n");
-    return (-11);
+    return DOSE_ILGFMT;
   }
 
   /* 実行ファイルのクローズ */
@@ -308,10 +309,11 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
 
   /* Xファイルの処理 */
   Long pc_begin = read_top;
-  *prog_sz2 = *prog_sz;
   if (x_file) {
-    if ((pc_begin = xfile_cnv(prog_sz, prog_sz2, read_top, onError)) == 0)
-      return (-11);
+    pc_begin = xfile_cnv(prog_sz, prog_sz2, read_top, onError);
+    if (pc_begin == 0) return DOSE_ILGFMT;
+  } else {
+    *prog_sz2 = *prog_sz;
   }
 
   return (pc_begin);

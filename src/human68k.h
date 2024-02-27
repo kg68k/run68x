@@ -50,7 +50,9 @@ typedef struct {
 #define DOSE_ILGFNC -1
 #define DOSE_NODIR -3
 #define DOSE_BADF -6
+#define DOSE_NOMEM -8
 #define DOSE_ILGMPTR -9
+#define DOSE_ILGFMT -11
 #define DOSE_ILGARG -12
 #define DOSE_ILGFNAME -13
 #define DOSE_ILGPARM -14
@@ -69,6 +71,16 @@ typedef struct {
 
 #define MEMBLK_ALIGN 16
 
+// DOS _MALLOC、_MALLOC2、_SETBLOCKのエラーコード
+#define DOSE_MALLOC_NOMEM 0x81000000  // d0 & MALLOC_MASK までなら確保できる
+#define DOSE_MALLOC_NOMEM2 0x82000000  // 完全に確保不可
+#define MALLOC_MASK 0x00ffffff
+
+// 060turbo.sysのDOS _MALLOC3、_MALLOC4、_SETBLOCK2のエラーコード
+#define DOSE_MALLOC3_NOMEM 0x80000000
+#define MALLOC3_MASK 0x7fffffff
+
+// DOS _MALLOC2の確保モード
 enum {
   MALLOC_FROM_LOWER = 0,
   MALLOC_FROM_SMALLEST = 1,
@@ -121,6 +133,14 @@ typedef struct {
 #define SIZEOF_NAMESTS 88
 #define SIZEOF_NAMECK 91
 #define SIZEOF_FILES 53
+
+// DOS _EXEC
+typedef enum {
+  EXEC_TYPE_DEFAULT = 0,
+  EXEC_TYPE_R = 1,
+  EXEC_TYPE_Z = 2,
+  EXEC_TYPE_X = 3,
+} ExecType;
 
 // FEFUNC (FLOAT*.X)
 #define FEFUNC_FCVT_INT_MAXLEN 255

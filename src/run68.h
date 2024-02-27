@@ -56,6 +56,7 @@
 #endif
 
 #define DEFAULT_MAIN_MEMORY_SIZE (12 * 1024 * 1024)
+#define DEFAULT_HIGH_MEMORY_SIZE (0)
 #define DEFAULT_STACK_SIZE (64 * 1024)
 #define DEFAULT_ENV_SIZE (8 * 1024)
 
@@ -77,8 +78,6 @@
 
 #define NEST_MAX 20
 #define FILE_MAX 20
-
-#define RAS_INTERVAL 10000 /* ラスタ割り込みの間隔 */
 
 #define S_BYTE 0 /* BYTEサイズ */
 #define S_WORD 1 /* WORDサイズ */
@@ -169,6 +168,8 @@ typedef struct {
 
 typedef struct {
   ULong mainMemorySize;
+  ULong highMemorySize;
+
   ULong trapPc;    // -tr MPU命令トレースを行うアドレス
   bool traceFunc;  // -f ファンクションコールトレース
   bool debug;      // -debug デバッガ有効
@@ -227,7 +228,8 @@ typedef struct {
 } ProgramSpec;
 
 FILE *prog_open(char *, ULong, void (*)(const char *));
-Long prog_read(FILE *, char *, Long, Long *, Long *, void (*)(const char *));
+Long prog_read(FILE *, char *, Long, Long *, Long *, void (*)(const char *),
+               ExecType);
 void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
               ULong parentSsp, const ProgramSpec *progSpec,
               const Human68kPathName *pathname);

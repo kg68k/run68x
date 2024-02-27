@@ -309,7 +309,7 @@ static bool scanAddress(const char *s, ULong *adrptr) {
   const char *afterDoller = s + 1;
   if (sscanf(afterDoller, "%x", &adr) != 1) return false;
 
-  *adrptr = adr & ADDRESS_MASK;
+  *adrptr = (ULong)adr;
   return true;
 }
 
@@ -472,7 +472,7 @@ static void print1line(Long addr, Long naddr, const char *opstr) {
 
   Span mem = GetReadableMemorySuper(addr, naddr - addr);
   if (mem.bufptr) {
-    char* end = mem.bufptr + mem.length;
+    char *end = mem.bufptr + mem.length;
     for (char *p = mem.bufptr; p < end; p += 2) {
       sprintf(hex + strlen(hex), "%04x ", PeekW(p));
     }

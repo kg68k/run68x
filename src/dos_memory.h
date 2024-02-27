@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,10 +20,24 @@
 
 #include "run68.h"
 
+typedef enum {
+  ALLOC_AREA_MAIN_ONLY = 0,
+  ALLOC_AREA_HIGH_ONLY = 1,
+  ALLOC_AREA_UNLIMITED = 8,
+} AllocArea;
+
+typedef struct {
+  Long address;
+  ULong length;
+} MallocResult;
+
+void SetAllocArea(AllocArea area);
+MallocResult MallocAll(ULong parent);
 Long Malloc(UByte mode, ULong size, ULong parent);
+Long MallocHuge(UByte mode, ULong size, ULong parent);
 Long Mfree(ULong adr);
 Long Setblock(ULong adr, ULong size);
-
+Long SetblockHuge(ULong adr, ULong size);
 void BuildMemoryBlock(ULong adrs, ULong prev, ULong parent, ULong end,
                       ULong next);
 

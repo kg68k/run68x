@@ -37,8 +37,8 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
   // オープンモードは確認しない
 
   Span mem;
-  GetWritableMemoryRangeSuper(buffer, length, &mem);
-  if (mem.length == 0) throwBusErrorOnWrite(buffer);  // バッファアドレスが不正
+  if (!GetWritableMemoryRangeSuper(buffer, length, &mem))
+    throwBusErrorOnWrite(buffer);  // バッファアドレスが不正
 
   Long result = HOST_READ_FILE_OR_TTY(finfop, mem.bufptr, mem.length);
   if (result <= 0) return result;

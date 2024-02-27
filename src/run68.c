@@ -54,9 +54,11 @@ static char ini_file_name[MAX_PATH];
 Settings settings;
 static const Settings defaultSettings = {
     DEFAULT_MAIN_MEMORY_SIZE,  // mainMemorySize
-    0,                         // trapPc
-    false,                     // traceFunc
-    false,                     // debug
+    DEFAULT_HIGH_MEMORY_SIZE,  // highMemorySize
+
+    0,      // trapPc
+    false,  // traceFunc
+    false,  // debug
 
     false  // iothrough
 };
@@ -78,53 +80,71 @@ static void print_title(void) {
 static void print_usage(void) {
   const char *usage =
       "Usage: run68 [options] execute_filename [commandline]\n"
-      "  -f         function call trace\n"
-      "  -tr <adr>  mpu instruction trap\n"
-      "  -debug     run with debugger\n";
+      "  -himem=<mb>  allocate high memory"
+      "  -f           function call trace\n"
+      "  -tr <adr>    mpu instruction trap\n"
+      "  -debug       run with debugger\n";
   print(usage);
 }
+
+typedef struct {
+  ULong vector;
+  ULong handler;
+} VectorSet;
 
 /*
    機能：割り込みベクタテーブルを作成する
  戻り値：なし
 */
 static void trap_table_make(void) {
-  int i;
+  enum {
+    rte = HUMAN_WORK,
+    rts = HUMAN_WORK + 2,
+  };
+  static const VectorSet vectors[] = {
+      {0x28, rte},         // A系列命令
+      {0x2c, rte},         // F系列命令
+      {0x80, TRAP0_WORK},  // trap #0
+      {0x84, TRAP1_WORK},  // trap #1
+      {0x88, TRAP2_WORK},  // trap #2
+      {0x8c, TRAP3_WORK},  // trap #3
+      {0x90, TRAP4_WORK},  // trap #4
+      {0x94, TRAP5_WORK},  // trap #5
+      {0x98, TRAP6_WORK},  // trap #6
+      {0x9c, TRAP7_WORK},  // trap #7
+      {0xa0, TRAP8_WORK},  // trap #8
+      {0x118, 0},          // V-DISP
+      {0x138, 0},          // CRTC-IRQ
+  };
 
-  SR_S_ON();
+  WriteUWordSuper(rte, 0x4e73);
+  WriteUWordSuper(rts, 0x4e75);
 
-  /* 割り込みルーチンの処理先設定 */
-  mem_set(0x28, HUMAN_WORK, S_LONG);       /* A系列命令 */
-  mem_set(0x2C, HUMAN_WORK, S_LONG);       /* F系列命令 */
-  mem_set(0x80, TRAP0_WORK, S_LONG);       /* trap0 */
-  mem_set(0x84, TRAP1_WORK, S_LONG);       /* trap1 */
-  mem_set(0x88, TRAP2_WORK, S_LONG);       /* trap2 */
-  mem_set(0x8C, TRAP3_WORK, S_LONG);       /* trap3 */
-  mem_set(0x90, TRAP4_WORK, S_LONG);       /* trap4 */
-  mem_set(0x94, TRAP5_WORK, S_LONG);       /* trap5 */
-  mem_set(0x98, TRAP6_WORK, S_LONG);       /* trap6 */
-  mem_set(0x9C, TRAP7_WORK, S_LONG);       /* trap7 */
-  mem_set(0xA0, TRAP8_WORK, S_LONG);       /* trap8 */
-  mem_set(0x118, 0, S_LONG);               /* vdisp */
-  mem_set(0x138, 0, S_LONG);               /* crtc */
-  mem_set(HUMAN_WORK, 0x4e73, S_WORD);     /* 0x4e73 = rte */
-  mem_set(HUMAN_WORK + 2, 0x4e75, S_WORD); /* 0x4e75 = rts */
+  // 割り込みルーチンの処理先設定
+  const int len = sizeof(vectors) / sizeof(vectors[0]);
+  for (int i = 0; i < len; i += 1) {
+    ULong h = vectors[i].handler;
 
-  /* IOCSコールベクタの設定 */
-  for (i = 0; i < 256; i++) {
-    mem_set(0x400 + i * 4, HUMAN_WORK + 2, S_LONG);
+    // 最上位にベクタ番号を入れたアドレスがハイメモリ空間を指してしまうなら
+    // ベクタ番号は取り除く。
+    h = (ToPhysicalAddress(h) < BASE_ADDRESS_MAX) ? h : (h & ADDRESS_MASK);
+
+    WriteULongSuper(vectors[i].vector, h);
   }
 
-  /* IOCSワークの設定 */
-  mem_set(0x970, 79, S_WORD); /* 画面の桁数-1 */
-  mem_set(0x972, 24, S_WORD); /* 画面の行数-1 */
-
-  /* DOSコールベクタの設定 */
-  for (i = 0; i < 256; i++) {
-    mem_set(0x1800 + i * 4, HUMAN_WORK + 2, S_LONG);
+  // IOCSコールベクタの設定
+  for (int i = 0; i < 256; i++) {
+    WriteULongSuper(0x400 + i * 4, rts);
   }
 
-  SR_S_OFF();
+  // IOCSワークの設定
+  WriteUWordSuper(0x970, 79);  // 画面の桁数-1
+  WriteUWordSuper(0x972, 24);  // 画面の行数-1
+
+  // DOSコールベクタの設定
+  for (int i = 0; i < 256; i++) {
+    WriteULongSuper(0x1800 + i * 4, rts);
+  }
 }
 
 // 指定したデバイスヘッダをメモリに書き込む
@@ -216,7 +236,7 @@ static int exec_notrap(bool *restart) {
         settings.debug = true;
       }
     }
-    if ((pc & 0xFF000001) != 0) {
+    if (pc & 1) {
       err68b("アドレスエラーが発生しました", pc, OPBuf_getentry(0)->pc);
       break;
     }
@@ -265,23 +285,13 @@ static void init_all_fileinfo(void) {
   }
 }
 
-static ULong malloc_for_child(ULong parent) {
-  ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & 0x00ffffff;
-  if (size < 256 * 1024) {
-    return 0;
-  }
-
-  Long adr = Malloc(MALLOC_FROM_LOWER, size, parent);
-  return (adr < 0) ? 0 : adr - SIZEOF_MEMBLK;
-}
-
 static ULong init_env(ULong size, ULong parent) {
   Long buf = Malloc(MALLOC_FROM_LOWER, size, parent);
-  if (buf != 0) {
-    WriteULongSuper(buf, size);
-    WriteUByteSuper(buf + 4, 0);
-    readenv_from_ini(ini_file_name, buf);
-  }
+  if (buf < 0) return 0;
+
+  WriteULongSuper(buf, size);
+  WriteUByteSuper(buf + 4, 0);
+  readenv_from_ini(ini_file_name, buf);
   return buf;
 }
 
@@ -292,6 +302,53 @@ static void setHuman68kPathName(Human68kPathName *hpn, const char *path,
   strncat(hpn->name, ext, sizeof(hpn->name) - strlen(hpn->name));
   hpn->nameLen = strlen(name);
   hpn->extLen = strlen(ext);
+}
+
+// メインメモリ、ハイメモリを確保し初期化する。
+static bool initMachineMemory(Settings *settings, ULong *outHimemAdr) {
+  if (!AllocateMachineMemory(settings, outHimemAdr)) {
+    printFmt("メモリが確保できません。\n");
+    return false;
+  }
+
+  WriteULongSuper(OSWORK_MEMORY_END, settings->mainMemorySize);
+  return true;
+}
+
+// ハイメモリをメモリブロックのリンクリストに連結する
+static void linkHimemToMemblkLink(ULong himemAdr, ULong himemSize,
+                                  ULong parent) {
+  if (himemSize == 0) return;
+
+  // メモリ管理ポインタが0x00bffff0～、データ領域が0x00c00000～0x10000000-1
+  // という構造の結合ブロックを作成する。
+  Long buf = Malloc(MALLOC_FROM_HIGHER, 0, parent);
+  if (buf < 0) return;
+  WriteULongSuper(buf - SIZEOF_MEMBLK + MEMBLK_END, himemAdr);
+
+  WriteULongSuper(OSWORK_MEMORY_END, himemAdr + himemSize);
+}
+
+static bool analyzeHimemOption(const char *arg) {
+  static const unsigned long sizes[] = {0, 16, 32, 64, 128, 256, 384, 512, 768};
+  const size_t sizes_len = sizeof(sizes) / sizeof(sizes[0]);
+
+  const char *p = strchr(arg, '=');
+  char *endptr;
+  unsigned long mb = p ? strtoul(p + 1, &endptr, 10) : 0;
+  if (*endptr) mb = 0;
+
+  for (size_t i = 0; i < sizes_len; ++i) {
+    if (sizes[i] == mb) {
+      settings.highMemorySize = (ULong)(mb * 1024 * 1024);
+      return true;
+    }
+  }
+
+  print(
+      "ハイメモリの容量は16,32,64,128,256,384,512,"
+      "768のいずれかを指定する必要があります。\n");
+  return false;
 }
 
 int main(int argc, char *argv[]) {
@@ -350,6 +407,15 @@ Restart:
           settings.traceFunc = true;
           print("ファンクションコールトレースフラグ=ON\n");
           break;
+        case 'h': {
+          const char himem[] = "-himem=";
+          if (strncmp(argv[i], himem, strlen(himem)) == 0) {
+            if (!analyzeHimemOption(argv[i])) invalid_flag = true;
+            break;
+          }
+          invalid_flag = true;
+          break;
+        }
         default:
           invalid_flag = true;
           break;
@@ -372,13 +438,8 @@ Restart:
   /* iniファイルのフルパス名が得られる。*/
   read_ini(ini_file_name);
 
-  /* メインメモリ(1～12MB)を確保する */
-  if (!AllocateMachineMemory(&settings)) {
-    printFmt("メモリが確保できません\n");
-    return EXIT_FAILURE;
-  }
-  WriteULongSuper(OSWORK_MEMORY_END, settings.mainMemorySize);
-
+  ULong himemAdr;
+  if (!initMachineMemory(&settings, &himemAdr)) return EXIT_FAILURE;
   trap_table_make();
 
   // Human68kのPSPを作成
@@ -398,6 +459,8 @@ Restart:
   // Human68kの使用メモリを動的に変更する場合は、メモリブロックの末尾アドレスも
   // 同期させること。
   SetSupervisorArea(HUMAN_TAIL);
+
+  linkHimemToMemblkLink(himemAdr, settings.highMemorySize, humanPsp);
 
   // 環境変数を初期化
   const ULong humanEnv = init_env(DEFAULT_ENV_SIZE, humanPsp);
@@ -432,22 +495,31 @@ Restart:
                                hpn.name, humanPsp, &needHupair);
 
   // スタックを確保
-  const ULong programStack =
+  const Long programStack =
       Malloc(MALLOC_FROM_LOWER, DEFAULT_STACK_SIZE, humanPsp);
   const ULong stackBottom = programStack + DEFAULT_STACK_SIZE;
 
-  const ULong programPsp = malloc_for_child(humanPsp);
+  // ここまではメモリブロックをメインメモリから確保している。
+  // 以後はハイメモリからの確保も有効にする。
+  SetAllocArea(ALLOC_AREA_UNLIMITED);
 
-  if (humanEnv == 0 || cmdline == 0 || programStack == 0 || programPsp == 0) {
-    print("メインメモリからプロセス用のメモリを確保できません\n");
+  // プログラム本体のロード用メモリを確保する。
+  // ハイメモリ有効時でも16MBまでしか確保できないが、
+  // 060turbo.sysの動作に合わせた仕様としている。
+  const MallocResult child = MallocAll(humanPsp);
+
+  if (humanEnv == 0 || cmdline == 0 || programStack < 0 || child.address < 0) {
+    print("プロセス用のメモリを確保できません\n");
     return EXIT_FAILURE;
   }
+  const ULong programPsp = child.address - SIZEOF_MEMBLK;
 
   /* プログラムをメモリに読み込む */
   Long prog_size = 0;  // プログラムサイズ(bss含む)
-  Long prog_size2 = settings.mainMemorySize;  // プログラムサイズ(bss除く)
-  const Long entryAddress = prog_read(fp, fname, programPsp + SIZEOF_PSP,
-                                      &prog_size, &prog_size2, print);
+  Long prog_size2 = child.address + child.length;
+  const Long entryAddress =
+      prog_read(fp, fname, programPsp + SIZEOF_PSP, &prog_size, &prog_size2,
+                print, EXEC_TYPE_DEFAULT);
   if (entryAddress < 0) {
     FreeMachineMemory();
     return EXIT_FAILURE;
