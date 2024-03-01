@@ -65,28 +65,40 @@ static bool Adda(char code1, char code2) {
   return false;
 }
 
-static bool Addx(char code1, char code2) {
-  char size;
-  Long dest_data;
-
+// ADDX -(Ay),-(Ax)
+static bool AddxMem(char code1, char code2) {
   int src_reg = (code2 & 0x07);
   int dst_reg = ((code1 & 0x0E) >> 1);
-  size = ((code2 >> 6) & 0x03);
+  char size = ((code2 >> 6) & 0x03);
 
-  if ((code2 & 0x08) != 0) {
-    /* -(An), -(An) */
-    err68a("未定義命令を実行しました", __FILE__, __LINE__);
+  Long src_data, dst_data;
+  if (get_data_at_ea(EA_All, EA_AIPD, src_reg, size, &src_data) ||
+      get_data_at_ea(EA_All, EA_AIPD, dst_reg, size, &dst_data)) {
+    return true;
   }
 
-  dest_data = rd[dst_reg];
+  bool save_z = CCR_Z_REF() != 0 ? true : false;
+  Long result = dst_data + src_data + (CCR_X_REF() ? 1 : 0);
+  if (set_data_at_ea(EA_All, EA_AI, dst_reg, size, result)) {
+    return true;
+  }
+  add_conditions(src_data, dst_data, result, size, save_z);
+
+  return false;
+}
+
+static bool Addx(char code1, char code2) {
+  int src_reg = (code2 & 0x07);
+  int dst_reg = ((code1 & 0x0E) >> 1);
+  char size = ((code2 >> 6) & 0x03);
+
+  Long src_data = rd[src_reg];
+  Long dst_data = rd[dst_reg];
 
   bool save_z = CCR_Z_REF() != 0 ? true : false;
-
-  Long result = dest_data + rd[src_reg] + (CCR_X_REF() ? 1 : 0);
+  Long result = dst_data + src_data + (CCR_X_REF() ? 1 : 0);
   SetDreg(dst_reg, result, size);
-
-  /* フラグの変化 */
-  add_conditions(rd[src_reg], dest_data, rd[dst_reg], size, save_z);
+  add_conditions(src_data, dst_data, result, size, save_z);
 
   return false;
 }
@@ -197,24 +209,20 @@ static bool Add2(char code1, char code2) {
          false = 実行継続
 */
 bool lined(char *pc_ptr) {
-  char code1, code2;
-
-  code1 = *(pc_ptr++);
-  code2 = *pc_ptr;
+  char code1 = *(pc_ptr++);
+  char code2 = *pc_ptr;
   pc += 2;
 
-  if ((code2 & 0xC0) == 0xC0) {
-    return (Adda(code1, code2));
-  } else {
-    if ((code1 & 0x01) == 1) {
-      if ((code2 & 0x30) == 0x00)
-        return (Addx(code1, code2));
-      else
-        return (Add1(code1, code2));
-    } else {
-      return (Add2(code1, code2));
+  if ((code2 & 0xC0) == 0xC0) return Adda(code1, code2);
+
+  if ((code1 & 0x01) == 1) {
+    if ((code2 & 0x30) == 0x00) {
+      return (code2 & 0x08) ? AddxMem(code1, code2) : Addx(code1, code2);
     }
+    return Add1(code1, code2);
   }
+
+  return Add2(code1, code2);
 }
 
 /* $Id: lined.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */

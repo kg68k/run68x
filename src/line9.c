@@ -59,38 +59,44 @@ static bool Suba(char code1, char code2) {
   return false;
 }
 
+static bool SubxMem(char code1, char code2) {
+  int src_reg = (code2 & 0x07);
+  int dst_reg = ((code1 & 0x0E) >> 1);
+  char size = ((code2 >> 6) & 0x03);
+
+  Long src_data, dst_data;
+  if (get_data_at_ea(EA_All, EA_AIPD, src_reg, size, &src_data) ||
+      get_data_at_ea(EA_All, EA_AIPD, dst_reg, size, &dst_data)) {
+    return true;
+  }
+
+  bool save_z = CCR_Z_REF() != 0 ? true : false;
+  Long result = dst_data - src_data - (CCR_X_REF() ? 1 : 0);
+  if (set_data_at_ea(EA_All, EA_AI, dst_reg, size, result)) {
+    return true;
+  }
+  sub_conditions(src_data, dst_data, result, size, save_z);
+
+  return false;
+}
+
 /*
  　機能：subx命令を実行する
  戻り値： true = 実行終了
          false = 実行継続
 */
 static bool Subx(char code1, char code2) {
-  char size;
-  Long dest_data;
-
   int src_reg = (code2 & 0x07);
   int dst_reg = ((code1 & 0x0E) >> 1);
-  size = ((code2 >> 6) & 0x03);
+  char size = ((code2 >> 6) & 0x03);
 
-  if ((code2 & 0x08) != 0) {
-    /* -(An), -(An) */
-    err68a("未定義命令を実行しました", __FILE__, __LINE__);
-  }
-
-#ifdef TEST_CCR
-  short before = sr & 0x1f;
-#endif
-  dest_data = rd[dst_reg];
+  Long src_data = rd[src_reg];
+  Long dst_data = rd[dst_reg];
 
   bool save_z = CCR_Z_REF() != 0 ? true : false;
-  rd[dst_reg] -= rd[src_reg] + (CCR_X_REF() ? 1 : 0);
-
-  /* フラグの変化 */
-  sub_conditions(rd[src_reg], dest_data, rd[dst_reg], size, save_z);
-
-#ifdef TEST_CCR
-  check("subx", rd[src_reg], dest_data, rd[dst_reg], size, before);
-#endif
+  Long result = dst_data - src_data - (CCR_X_REF() ? 1 : 0);
+  SetDreg(dst_reg, result, size);
+  sub_conditions(src_data, dst_data, result, size, save_z);
 
   return false;
 }
@@ -210,24 +216,20 @@ static bool Sub2(char code1, char code2) {
          false = 実行継続
 */
 bool line9(char *pc_ptr) {
-  char code1, code2;
-
-  code1 = *(pc_ptr++);
-  code2 = *pc_ptr;
+  char code1 = *(pc_ptr++);
+  char code2 = *pc_ptr;
   pc += 2;
 
-  if ((code2 & 0xC0) == 0xC0) {
-    return (Suba(code1, code2));
-  } else {
-    if ((code1 & 0x01) == 1) {
-      if ((code2 & 0x30) == 0x00)
-        return (Subx(code1, code2));
-      else
-        return (Sub1(code1, code2));
-    } else {
-      return (Sub2(code1, code2));
+  if ((code2 & 0xC0) == 0xC0) return Suba(code1, code2);
+
+  if ((code1 & 0x01) == 1) {
+    if ((code2 & 0x30) == 0x00) {
+      return (code2 & 0x08) ? SubxMem(code1, code2) : Subx(code1, code2);
     }
+    return Sub1(code1, code2);
   }
+
+  return Sub2(code1, code2);
 }
 
 /* $Id: line9.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */
