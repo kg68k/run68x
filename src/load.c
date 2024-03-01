@@ -213,7 +213,7 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
   }
 
   ULong bss_top = read_top + textAndData;
-  if (*prog_sz2 < (bss_top + bss_size)) {
+  if (*prog_sz2 < (Long)(bss_top + bss_size)) {
     onError("メモリが足りません\n");
     return 0;
   }

@@ -61,8 +61,8 @@ static ULong negetive_align_memblk(ULong adrs) {
 // 最大サイズでメモリブロックを確保する。
 MallocResult MallocAll(ULong parent) {
   const UByte mode = MALLOC_FROM_LOWER;
-  ULong size = Malloc(MALLOC_FROM_LOWER, (ULong)-1, parent) & MALLOC_MASK;
-  Long adr = Malloc(MALLOC_FROM_LOWER, size, parent);
+  ULong size = Malloc(mode, (ULong)-1, parent) & MALLOC_MASK;
+  Long adr = Malloc(mode, size, parent);
   return (MallocResult){adr, size};
 }
 
