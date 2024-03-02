@@ -288,6 +288,37 @@ static Long DosMalloc4(ULong param) {
   return MallocHuge(modeByte, size, parent);
 }
 
+// DOS _BUS_ERR (0xfff7)
+static Long DosBusErr(ULong param) {
+  ULong s_adr = ReadParamULong(&param);
+  ULong d_adr = ReadParamULong(&param);
+  UWord size = ReadParamUWord(&param);
+
+  if (size == 1) {
+    // バイトアクセス
+  } else if (size == 2 || size == 4) {
+    // ワード、ロングワードアクセス
+    if ((s_adr & 1) != 0 || (d_adr & 1) != 0)
+      return DOSE_ILGFNC;  // 奇数アドレス
+  } else {
+    return DOSE_ILGFNC;  // サイズが不正
+  }
+
+  Span r = GetReadableMemorySuper(s_adr, size);
+  if (!r.bufptr) return 2;  // 読み込み時にバスエラー発生
+  Span w = GetWritableMemorySuper(d_adr, size);
+  if (!w.bufptr) return 1;  // 書き込み時にバスエラー発生
+
+  if (size == 1)
+    PokeB(w.bufptr, PeekB(r.bufptr));
+  else if (size == 2)
+    PokeW(w.bufptr, PeekW(r.bufptr));
+  else
+    PokeL(w.bufptr, PeekL(r.bufptr));
+
+  return 0;
+}
+
 // ファイルを閉じてFILEINFOを未使用状態に戻す
 static bool CloseFile(FILEINFO *finfop) {
   finfop->is_opened = false;
@@ -898,6 +929,9 @@ bool dos_call(UByte code) {
       }
       pc = data;
       break;
+    case 0xf7:  // BUS_ERR
+      rd[0] = DosBusErr(stack_adr);
+      break;
 
     case 0x4C: /* EXIT2 */
       if (Exit2(mem_get(stack_adr, S_WORD))) return true;
@@ -921,14 +955,6 @@ bool dos_call(UByte code) {
       pc = nest_pc[nest_cnt];
       ra[7] = nest_sp[nest_cnt];
       rd[0] = exit_code;
-    } break;
-
-    case 0xf7:  // BUS_ERR
-    {
-      // short size = (short)mem_get(stack_adr, S_WORD);
-      // Long r_ptr = mem_get(stack_adr + 2, S_LONG);
-      // Long w_ptr = mem_get(stack_adr + 6, S_LONG);
-      rd[0] = 1;  // BusErr( buf, data, srt );
     } break;
 
     default:
