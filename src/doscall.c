@@ -1129,10 +1129,6 @@ static Long Dskfre(short drv, Long buf) {
 
 #ifndef _WIN32
 static char *to_slash(size_t size, char *buf, const char *path) {
-  // 成功時にFILEINFO::nameにコピーするのでここでチェック
-  FILEINFO fi;
-  if (size > sizeof(fi.name)) return NULL;
-
   if (strlen(path) >= size) return NULL;
 
   char *p = strncpy(buf, path, size);
@@ -1221,7 +1217,6 @@ Long CreateNewFile(ULong file, UWord atr, bool newfile) {
   finfo[ret].is_opened = true;
   finfo[ret].mode = 2;
   finfo[ret].nest = nest_cnt;
-  strcpy(finfo[ret].name, p);
   return (ret);
 }
 
@@ -1308,7 +1303,6 @@ static Long Open(char *p, short mode) {
   finfo[ret].is_opened = true;
   finfo[ret].mode = mode;
   finfo[ret].nest = nest_cnt;
-  strcpy(finfo[ret].name, p);
   return (ret);
 }
 
@@ -1318,29 +1312,11 @@ static Long Open(char *p, short mode) {
  */
 static Long Close(short hdl) {
   if (hdl <= HUMAN68K_SYSTEM_FILENO_MAX) return DOSE_SUCCESS;
-  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
-  if (!CloseFile(&finfo[hdl])) return -14;  // 無効なパラメータでコールした
+  if (!finfo[hdl].is_opened) return DOSE_BADF;  // オープンされていない
+  if (!CloseFile(&finfo[hdl]))
+    return DOSE_ILGPARM;  // 無効なパラメータでコールした
 
-    /* タイムスタンプ変更 */
-#ifdef _WIN32
-  if (finfo[hdl].date != 0 || finfo[hdl].time != 0) {
-    FILETIME ft0, ft1, ft2;
-    int64_t datetime;
-
-    HANDLE handle = CreateFileA(finfo[hdl].name, GENERIC_WRITE, 0, NULL,
-                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    GetFileTime(handle, &ft0, &ft1, &ft2);
-    // 秒→100nsecに変換する。
-    datetime = ((int64_t)finfo[hdl].date * 86400L + finfo[hdl].time) * 10000000;
-    ft2.dwLowDateTime = (ULong)(datetime & 0xffffffff);
-    ft2.dwHighDateTime = (ULong)(datetime >> 32);
-    SetFileTime(handle, &ft0, &ft1, &ft2);
-    CloseHandle(handle);
-    finfo[hdl].date = 0;
-    finfo[hdl].time = 0;
-  }
-#endif
-  return (0);
+  return 0;
 }
 
 /*
@@ -1493,43 +1469,8 @@ static Long Write_conv(short hdl, void *buf, size_t size) {
  戻り値：ファイルハンドル(負ならエラーコード)
  */
 static Long Delete(char *p) {
-  int err_save;
-  unsigned int len;
-  int hdl;
-  int i;
-
-  errno = 0;
-  if (remove(p) != 0) {
-    /* オープン中のファイルを調べる */
-    err_save = errno;
-    len = strlen(p);
-    hdl = 0;
-    for (i = 5; i < FILE_MAX; i++) {
-      if (!finfo[i].is_opened || nest_cnt != finfo[i].nest) continue;
-      if (len == strlen(finfo[i].name)) {
-        if (memcmp(p, finfo[i].name, len) == 0) {
-          hdl = i;
-          break;
-        }
-      }
-    }
-    if (len > 0 && hdl >= HUMAN68K_USER_FILENO_MIN) {
-      CloseFile(&finfo[hdl]);
-      errno = 0;
-      if (remove(p) != 0) {
-        if (errno == ENOENT)
-          return (-2); /* ファイルがない */
-        else
-          return (-13); /* ファイル名指定誤り */
-      }
-    } else {
-      if (err_save == ENOENT)
-        return (-2);
-      else
-        return (-13);
-    }
-  }
-  return (0);
+  if (remove(p) != 0) return (errno == ENOENT) ? DOSE_NOENT : DOSE_ILGFNAME;
+  return DOSE_SUCCESS;
 }
 
 /*

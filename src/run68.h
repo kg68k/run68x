@@ -163,7 +163,6 @@ typedef struct {
   unsigned time;
   short mode;
   unsigned int nest;
-  char name[89];
 } FILEINFO;
 
 typedef struct {

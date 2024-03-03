@@ -270,7 +270,6 @@ static void init_fileinfo(int fileno, bool is_opened, short mode) {
   finfop->time = 0;
   finfop->mode = mode;
   finfop->nest = 0;
-  finfop->name[0] = '\0';
 }
 
 // ファイル管理テーブルの初期化

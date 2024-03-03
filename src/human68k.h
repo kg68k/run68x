@@ -48,6 +48,7 @@ typedef struct {
 // DOSコールエラー番号
 #define DOSE_SUCCESS 0
 #define DOSE_ILGFNC -1
+#define DOSE_NOENT -2
 #define DOSE_NODIR -3
 #define DOSE_MFILE -4
 #define DOSE_BADF -6
