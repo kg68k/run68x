@@ -471,6 +471,12 @@ Restart:
     return EXIT_FAILURE;
   }
   strcpy(fname, argv[argbase]);
+  char fnameSjis[HUMAN68K_PATH_MAX + 1];
+  if (!HOST_CONVERT_TO_SJIS(fname, fnameSjis, sizeof(fnameSjis))) {
+    print("ファイルのパス名が長すぎます\n");
+    return EXIT_FAILURE;
+  }
+
   /*
    * プログラムをPATH環境変数で設定したディレクトリから探して
    * 読み込みを行う。
@@ -481,7 +487,7 @@ Restart:
   }
 
   Human68kPathName hpn;
-  if (!HOST_CANONICAL_PATHNAME(fname, &hpn)) {
+  if (!HOST_CANONICAL_PATHNAME(fnameSjis, &hpn)) {
     setHuman68kPathName(&hpn, "A:\\", "PROG", ".X");
     printFmt(
         "run68:Human68k形式のパス名に変換できないため、PSP内の実行ファイル名を"

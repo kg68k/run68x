@@ -49,6 +49,7 @@ typedef struct {
 #define DOSE_SUCCESS 0
 #define DOSE_ILGFNC -1
 #define DOSE_NODIR -3
+#define DOSE_MFILE -4
 #define DOSE_BADF -6
 #define DOSE_NOMEM -8
 #define DOSE_ILGMPTR -9
@@ -60,6 +61,7 @@ typedef struct {
 #define DOSE_RDONLY -19
 #define DOSE_EXISTDIR -20
 #define DOSE_NOTEMPTY -21
+#define DOSE_DISKFULL -23
 #define DOSE_EXISTFILE -80
 
 // メモリブロック

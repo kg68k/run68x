@@ -35,6 +35,18 @@ bool SjisToSjis_generic(char* inbuf, char* outbuf, size_t outbuf_size);
 #endif
 #endif
 
+#ifndef HOST_CONVERT_FROM_SJIS
+#ifdef USE_ICONV
+#define HOST_CONVERT_FROM_SJIS_GENERIC_ICONV
+bool SjisToUtf8_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size);
+#define HOST_CONVERT_FROM_SJIS SjisToUtf8_generic_iconv
+#else
+#define HOST_CONVERT_FROM_SJIS_GENERIC
+bool SjisToSjis_generic(char* inbuf, char* outbuf, size_t outbuf_size);
+#define HOST_CONVERT_FROM_SJIS SjisToSjis_generic
+#endif
+#endif
+
 #ifndef HOST_CANONICAL_PATHNAME
 #define HOST_CANONICAL_PATHNAME_GENERIC
 bool CanonicalPathName_generic(const char* path, Human68kPathName* hpn);

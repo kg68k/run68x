@@ -253,7 +253,7 @@ void close_all_files(void);
 bool dos_call(UByte);
 const char *Getenv(const char *name, ULong env);
 Long gets2(char *str, int max);
-Long Newfile(char *, short);
+Long CreateNewFile(ULong file, UWord atr, bool newfile);
 
 /* iocscall.c */
 bool iocs_call(void);

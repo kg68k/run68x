@@ -111,7 +111,7 @@ Long Maketmp(ULong path, UWord atr) {
   replace_char(filename, '?', '0');  // ファイル名中の'?'を'0'に置き換える
 
   for (;;) {
-    Long fileno = Newfile(path_buf, atr);
+    Long fileno = CreateNewFile(path, atr, true);
     if (fileno != DOSE_EXISTFILE) {
       // ファイルを作成できれば終了
       // 同名ファイルが存在する以外のエラーでも終了

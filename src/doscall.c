@@ -60,7 +60,6 @@ static Long Ioctrl(short, Long);
 static Long Dup(short);
 static Long Dup2(short, short);
 static Long Dskfre(short, Long);
-static Long Create(char *, short);
 static Long Open(char *, short);
 static Long Close(short);
 static Long Fgets(Long, short);
@@ -176,6 +175,14 @@ static Long DosRead(ULong param) {
   return Read(fileno, buffer, length);
 }
 
+// DOS _CREATE (0xff3c)
+static Long DosCreate(ULong param) {
+  ULong file = ReadParamULong(&param);
+  UWord atr = ReadParamUWord(&param);
+
+  return CreateNewFile(file, atr, false);
+}
+
 // DOS _CURDIR (0xff47)
 static Long Curdir(short drv, char *buf_ptr) {
   return HOST_DOS_CURDIR(drv, buf_ptr);
@@ -256,6 +263,14 @@ static Long DosMaketmp(ULong param) {
   ULong path = ReadParamULong(&param);
   UWord atr = ReadParamUWord(&param);
   return Maketmp(path, atr);
+}
+
+// DOS _NEWFILE (0xff5b, 0xff8b)
+static Long DosNewfile(ULong param) {
+  ULong file = ReadParamULong(&param);
+  UWord atr = ReadParamUWord(&param);
+
+  return CreateNewFile(file, atr, true);
 }
 
 // DOS _MALLOC3 (0xff60, 0xff90)
@@ -770,10 +785,8 @@ bool dos_call(UByte code) {
       data = mem_get(stack_adr, S_LONG);
       rd[0] = Chdir(data);
       break;
-    case 0x3C: /* CREATE */
-      data = mem_get(stack_adr, S_LONG);
-      srt = (short)mem_get(stack_adr + 4, S_WORD);
-      rd[0] = Create(GetStringSuper(data), srt);
+    case 0x3c:  // CREATE
+      rd[0] = DosCreate(stack_adr);
       break;
     case 0x3D: /* OPEN */
       data = mem_get(stack_adr, S_LONG);
@@ -897,10 +910,8 @@ bool dos_call(UByte code) {
     case 0x5a:  // MAKETMP
       rd[0] = DosMaketmp(stack_adr);
       break;
-    case 0x5B: /* NEWFILE */
-      data = mem_get(stack_adr, S_LONG);
-      srt = (short)mem_get(stack_adr + 4, S_WORD);
-      rd[0] = Newfile(GetStringSuper(data), srt);
+    case 0x5b:  // NEWFILE
+      rd[0] = DosNewfile(stack_adr);
       break;
     case 0x5F: /* ASSIGN */
       srt = (short)mem_get(stack_adr, S_WORD);
@@ -1119,7 +1130,8 @@ static Long Dskfre(short drv, Long buf) {
 #ifndef _WIN32
 static char *to_slash(size_t size, char *buf, const char *path) {
   // 成功時にFILEINFO::nameにコピーするのでここでチェック
-  if (size > sizeof(((FILEINFO){}).name)) return NULL;
+  FILEINFO fi;
+  if (size > sizeof(fi.name)) return NULL;
 
   if (strlen(path) >= size) return NULL;
 
@@ -1133,108 +1145,76 @@ static char *to_slash(size_t size, char *buf, const char *path) {
 }
 #endif
 
-/*
-   機能：
-     DOSCALL CREATEを実行する
-   パラメータ：
-     Long  p         <in>    ファイルパス名文字列のポインタ
-     short    atr       <in>    ファイル属性
-   戻り値：
-     Long  ファイルハンドル(>=0)
-              エラーコード(<0)
- */
-static Long Create(char *p, short atr) {
-  Long i;
-
-#ifndef _WIN32
-  char buf[89];
-  p = to_slash(sizeof(buf), buf, p);
-  if (p == NULL) return DOSE_ILGFNAME;
-    // printf("Create(\"%s\", 0x%02x)\n", p, atr);
-#endif
-
-  Long ret = find_free_file();
-  if (ret < 0) return -4;  // オープンしているファイルが多すぎる
-
-  /* ファイル名後ろの空白をつめる */
-  int len = strlen(p);
-  for (i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
-
-  /* ファイル名のチェック */
-  if ((len = strlen(p)) > 88) return (-13); /* ファイル名の指定誤り */
-
-  for (i = len - 1; i >= 0 && p[i] != '.'; i--)
-    ;
-  if (i >= 0) {
-    /* 拡張子が存在する */
-    if (strlen(&(p[i])) > 4) return (-13);
-  }
-
-#ifdef _WIN32
-  HANDLE handle = CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL,
-                             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (handle == INVALID_HANDLE_VALUE) return -23;  // ディスクがいっぱい
-  finfo[ret].host.handle = handle;
-#else
-  FILE *fp = fopen(p, "w+b");
-  if (fp == NULL) return -23;  // ディスクがいっぱい
-  finfo[ret].host.fp = fp;
-#endif
-
-  finfo[ret].is_opened = true;
-  finfo[ret].mode = 2;
-  finfo[ret].nest = nest_cnt;
-  strcpy(finfo[ret].name, p);
-  return (ret);
+// ファイル名後ろの空白をつめる。
+static void trimRight(char *s) {
+  for (char *t = s + strlen(s) - 1; s <= t && *t == ' '; t -= 1) *t = '\0';
 }
 
-/*
- 　機能：DOSCALL NEWFILEを実行する
- 戻り値：ファイルハンドル(負ならエラーコード)
- */
-Long Newfile(char *p, short atr) {
-  Long i;
+// 新しいファイルを作成する。
+Long CreateNewFile(ULong file, UWord atr, bool newfile) {
+  const char *filename = GetStringSuper(file);
 
-#ifndef _WIN32
-  char buf[89];
-  p = to_slash(sizeof(buf), buf, p);
-  if (p == NULL) return DOSE_ILGFNAME;
-    // printf("Newfile(\"%s\", 0x%02x)\n", p, atr);
+  // パス名の加工用にバッファを確保してコピーする。
+  size_t bufSize = strlen(filename) + 1;
+  char *buf = malloc(bufSize);
+  if (!buf) return DOSE_ILGFNAME;
+#ifdef _WIN32
+  char *p = strcpy(buf, filename);
+#else
+  char *p = to_slash(bufSize, buf, filename);
+  if (!p) {
+    free(buf);
+    return DOSE_ILGFNAME;
+  }
+#endif
+  trimRight(p);
+
+  Human68kPathName hpn;
+  if (!HOST_CANONICAL_PATHNAME(p, &hpn)) {
+    free(buf);
+    return DOSE_ILGFNAME;
+  }
+  free(buf);
+
+  // ホスト上のファイルをオープンするためのパス名を作る。
+  char fullpath[HUMAN68K_PATH_MAX + 1];
+#ifdef _WIN32
+  p = strcat(strcpy(fullpath, hpn.path), hpn.name);
+#else
+  {
+    char fullpath2[HUMAN68K_PATH_MAX + 1];
+    strcat(strcpy(fullpath, hpn.path), hpn.name);
+    p = to_slash(sizeof(fullpath2), fullpath2, fullpath);
+    if (!p) return DOSE_ILGFNAME;
+    if (!HOST_CONVERT_FROM_SJIS(p, fullpath, sizeof(fullpath)))
+      return DOSE_ILGFNAME;
+    p = fullpath;
+  }
 #endif
 
   Long ret = find_free_file();
-  if (ret < 0) return -4;  // オープンしているファイルが多すぎる
+  if (ret < 0) return DOSE_MFILE;  // オープンしているファイルが多すぎる
 
-  /* ファイル名後ろの空白をつめる */
-  Long len = strlen(p);
-  for (i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
-
-  /* ファイル名のチェック */
-  if ((len = strlen(p)) > 88) return (-13); /* ファイル名の指定誤り */
-
-  for (i = len - 1; i >= 0 && p[i] != '.'; i--)
-    ;
-  if (i >= 0) {
-    /* 拡張子が存在する */
-    if (strlen(&(p[i])) > 4) return (-13);
-  }
 #ifdef _WIN32
-  HANDLE handle = CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL,
-                             CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+  DWORD dwCreationDisposition = newfile ? CREATE_NEW : CREATE_ALWAYS;
+  HANDLE handle =
+      CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL,
+                 dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
   if (handle == INVALID_HANDLE_VALUE) {
     DWORD e = GetLastError();
-    if (e == ERROR_FILE_EXISTS) return DOSE_EXISTFILE;
-    return -23;  // ディスクがいっぱい
+    return (e == ERROR_FILE_EXISTS) ? DOSE_EXISTFILE : DOSE_DISKFULL;
   }
   finfo[ret].host.handle = handle;
 #else
-  FILE *fp = fopen(p, "rb");
-  if (fp != NULL) {
-    fclose(fp);
-    return -80;  // 既に存在している
+  if (newfile) {
+    FILE *fp = fopen(p, "rb");
+    if (fp != NULL) {
+      fclose(fp);
+      return DOSE_EXISTFILE;  // 既に存在している
+    }
   }
-  fp = fopen(p, "w+b");
-  if (fp == NULL) return -23;  // ディスクがいっぱい
+  FILE *fp = fopen(p, "w+b");
+  if (fp == NULL) return DOSE_DISKFULL;
   finfo[ret].host.fp = fp;
 #endif
 

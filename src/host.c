@@ -42,7 +42,20 @@ bool Utf8ToSjis_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
 }
 #endif
 
-#ifdef HOST_CONVERT_TO_SJIS_GENERIC
+#ifdef HOST_CONVERT_FROM_SJIS_GENERIC_ICONV
+// Shift_JIS文字列からUTF-8文字列への変換
+bool SjisToUtf8_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
+  iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+  size_t inbytes = strlen(inbuf);
+  size_t outbytes = outbuf_size - 1;
+  size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
+  iconv_close(icd);
+  *outbuf = '\0';
+  return len != (size_t)-1;
+}
+#endif
+
+#if defined(HOST_CONVERT_TO_SJIS_GENERIC) || defined(HOST_CONVERT_FROM_SJIS_GENERIC)
 // Shift_JIS文字列からShift_JIS文字列への無変換コピー
 bool SjisToSjis_generic(char *inbuf, char *outbuf, size_t outbuf_size) {
   size_t len = strlen(inbuf);
@@ -125,15 +138,11 @@ static char *absolutePath(const char *path) {
 }
 
 static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
-  char buf[HUMAN68K_PATH_MAX + 1];
-
-  if (!HOST_CONVERT_TO_SJIS(fullpath, buf, sizeof(buf))) return false;
-
-  char *lastSlash = strrchr(buf, '/');
+  char *lastSlash = strrchr(fullpath, '/');
   if (lastSlash == NULL) return false;
 
   char *name = lastSlash + 1;
-  size_t pathLen = name - buf;
+  size_t pathLen = name - fullpath;
   if (pathLen > HUMAN68K_DIR_MAX) return false;
 
   size_t nameLen = strlen(name);  // 拡張子を含む長さなので後で差し引く
@@ -151,7 +160,7 @@ static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
   const char *prefix = DEFAULT_DRV_CLN;
   const size_t prefixLen = strlen(DEFAULT_DRV_CLN);
   strcpy(hpn->path, prefix);
-  strncpy(hpn->path + prefixLen, buf, pathLen);
+  strncpy(hpn->path + prefixLen, fullpath, pathLen);
   hpn->path[prefixLen + pathLen] = '\0';
 
   to_backslash(hpn->path);
