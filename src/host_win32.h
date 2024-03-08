@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,6 +23,9 @@
 #include "human68k.h"
 #include "run68.h"
 
+char* Utf8ToSjis2_win32(char* inbuf, size_t inbytes, size_t* outBufSize);
+#define HOST_UTF8_TO_SJIS Utf8ToSjis2_win32
+
 bool CanonicalPathName_win32(const char* path, Human68kPathName* hpn);
 #define HOST_CANONICAL_PATHNAME CanonicalPathName_win32
 
@@ -32,14 +35,17 @@ void AddLastSeparator_win32(char* path);
 bool PathIsFileSpec_win32(const char* path);
 #define HOST_PATH_IS_FILE_SPEC PathIsFileSpec_win32
 
-void InitFileInfo_win32(FILEINFO* finfop, int fileno);
-#define HOST_INIT_FILEINFO InitFileInfo_win32
+HostFileInfoMember GetStandardHostfile_win32(int fileno);
+#define HOST_GET_STANDARD_HOSTFILE GetStandardHostfile_win32
 
 bool CloseFile_win32(FILEINFO* finfop);
 #define HOST_CLOSE_FILE CloseFile_win32
 
 Long ReadFileOrTty_win32(FILEINFO* finfop, char* buffer, ULong length);
 #define HOST_READ_FILE_OR_TTY ReadFileOrTty_win32
+
+Long SeekFile_win32(FILEINFO* finfop, Long offset, FileSeekMode mode);
+#define HOST_SEEK_FILE SeekFile_win32
 
 Long DosMkdir_win32(Long name);
 #define HOST_DOS_MKDIR DosMkdir_win32

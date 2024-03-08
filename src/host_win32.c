@@ -27,6 +27,42 @@
 #include "mem.h"
 #include "run68.h"
 
+// UTF-8からShift_JISへの変換
+char* utf8ToSjis(char* inbuf, size_t inbytes, size_t* outBufSize,
+                 wchar_t** outWbuf, char** outSjbuf) {
+  *outBufSize = 0;
+  *outWbuf = NULL;
+  *outSjbuf = NULL;
+
+  int wsize =
+      MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, inbuf, inbytes, NULL, 0);
+  *outWbuf = malloc(sizeof(wchar_t) * wsize);
+  if (wsize == 0 || *outWbuf == NULL) return NULL;
+  wsize = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, inbuf, inbytes, *outWbuf,
+                              wsize);
+  if (wsize == 0) return NULL;
+
+  int sjsize =
+      WideCharToMultiByte(932, 0, *outWbuf, wsize, NULL, 0, NULL, NULL);
+  *outSjbuf = malloc(sjsize);
+  if (sjsize == 0 || *outSjbuf == NULL) return NULL;
+  sjsize = WideCharToMultiByte(932, 0, *outWbuf, wsize, *outSjbuf, sjsize, NULL,
+                               NULL);
+  if (sjsize == 0) return NULL;
+
+  *outBufSize = sjsize;
+  return *outSjbuf;
+}
+
+char* Utf8ToSjis2_win32(char* inbuf, size_t inbytes, size_t* outBufSize) {
+  wchar_t* wbuf;
+  char* sjbuf;
+  char* buf = utf8ToSjis(inbuf, inbytes, outBufSize, &wbuf, &sjbuf);
+  free(wbuf);
+  if (!buf) free(sjbuf);
+  return buf;
+}
+
 // パス名の正規化
 bool CanonicalPathName_win32(const char* path, Human68kPathName* hpn) {
   // Human68k仕様に変換できなければエラーにするので、Windowsの仕様より小さくてよい
@@ -79,9 +115,10 @@ static HANDLE fileno_to_handle(int fileno) {
   return NULL;
 }
 
-// FINFO構造体の環境依存メンバーを初期化する
-void InitFileInfo_win32(FILEINFO* finfop, int fileno) {
-  finfop->host.handle = fileno_to_handle(fileno);
+// 標準入出力ファイルに関するFINFO構造体の環境依存メンバーを返す。
+HostFileInfoMember GetStandardHostfile_win32(int fileno) {
+  HostFileInfoMember hostfile = {fileno_to_handle(fileno)};
+  return hostfile;
 }
 
 // ファイルを閉じる
@@ -101,6 +138,17 @@ Long ReadFileOrTty_win32(FILEINFO* finfop, char* buffer, ULong length) {
     return DOSE_BADF;
 
   return (Long)read_len;
+}
+
+// ファイルシーク
+Long SeekFile_win32(FILEINFO* finfop, Long offset, FileSeekMode mode) {
+  static const DWORD methods[] = {FILE_BEGIN, FILE_CURRENT, FILE_END};
+
+  DWORD result =
+      SetFilePointer(finfop->host.handle, offset, NULL, methods[mode]);
+  if (result == INVALID_SET_FILE_POINTER) return DOSE_CANTSEEK;
+
+  return (Long)result;
 }
 
 // DOS _MKDIR (0xff39)

@@ -68,7 +68,6 @@ static Long Write(short, Long, Long);
 static Long Write_conv(short, void *, size_t);
 #endif
 static Long Delete(char *);
-static Long Seek(short, Long, short);
 static Long Rename(Long, Long);
 static Long Chmod(Long, short);
 static Long Files(Long, Long, short);
@@ -151,6 +150,54 @@ char ungetch(char c) {
 }
 #endif
 
+static int fgetcFromOnmemory(FILEINFO *finfop) {
+  Long pos = finfop->onmemory.position;
+  if (pos >= finfop->onmemory.length) return DOSE_ILGFNC;
+
+  finfop->onmemory.position += 1;
+  return finfop->onmemory.buffer[pos];
+}
+
+// DOS _FGETC (0xff1b)
+static Long DosFgetc(ULong param) {
+  UWord fileno = ReadParamUWord(&param);
+  if (fileno >= FILE_MAX) return DOSE_MFILE;
+
+  FILEINFO *finfop = &finfo[fileno];
+  if (!finfop->is_opened) return DOSE_BADF;
+
+  if (finfop->onmemory.buffer) return (Long)fgetcFromOnmemory(finfop);
+
+#ifdef _WIN32
+  char c;
+  DWORD read_len = 0;
+  if (GetFileType(finfop->host.handle) == FILE_TYPE_CHAR) {
+    /* 標準入力のハンドルがキャラクタタイプだったら、ReadConsoleを試してみる。*/
+    while (true) {
+      INPUT_RECORD ir;
+      BOOL b =
+          ReadConsoleInput(finfop->host.handle, &ir, 1, (LPDWORD)&read_len);
+      if (b == FALSE) {
+        /* コンソールではなかった。*/
+        ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL);
+        break;
+      }
+      if (read_len == 1 && ir.EventType == KEY_EVENT &&
+          ir.Event.KeyEvent.bKeyDown) {
+        c = ir.Event.KeyEvent.uChar.AsciiChar;
+        if (0x01 <= c && c <= 0xff) break;
+      }
+    }
+  } else {
+    ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL);
+  }
+  return (read_len == 0) ? DOSE_ILGFNC : c;
+#else
+  int ch = fgetc(finfop->host.fp);
+  return (0 <= ch && ch <= 0xff) ? ch : DOSE_ILGFNC;
+#endif
+}
+
 // DOS _MKDIR (0xff39)
 static Long Mkdir(Long name) {  //
   return HOST_DOS_MKDIR(name);
@@ -181,6 +228,15 @@ static Long DosCreate(ULong param) {
   UWord atr = ReadParamUWord(&param);
 
   return CreateNewFile(file, atr, false);
+}
+
+// DOS _SEEK (0xff42)
+static Long DosSeek(ULong param) {
+  UWord fileno = ReadParamUWord(&param);
+  ULong offset = ReadParamULong(&param);
+  UWord mode = ReadParamUWord(&param);
+
+  return Seek(fileno, (Long)offset, mode);
 }
 
 // DOS _CURDIR (0xff47)
@@ -337,6 +393,7 @@ static Long DosBusErr(ULong param) {
 // ファイルを閉じてFILEINFOを未使用状態に戻す
 static bool CloseFile(FILEINFO *finfop) {
   finfop->is_opened = false;
+  FreeOnmemoryFile(finfop);
   return HOST_CLOSE_FILE(finfop);
 }
 
@@ -357,8 +414,9 @@ void close_all_files(void) {
   int i;
 
   for (i = HUMAN68K_USER_FILENO_MIN; i < FILE_MAX; i++) {
-    if (finfo[i].nest == nest_cnt) {
-      CloseFile(&finfo[i]);
+    FILEINFO *finfop = &finfo[i];
+    if (finfop->is_opened && finfop->nest == nest_cnt) {
+      CloseFile(finfop);
     }
   }
 }
@@ -598,40 +656,8 @@ bool dos_call(UByte code) {
       rd[0] = drv - 1;
 #endif
     break;
-    case 0x1B: /* FGETC */
-      fhdl = (short)mem_get(stack_adr, S_WORD);
-      if (finfo[fhdl].mode == 1) {
-        rd[0] = -1;
-      } else {
-#ifdef _WIN32
-        DWORD read_len = 0;
-        INPUT_RECORD ir;
-        FILEINFO *finfop = &finfo[fhdl];
-        if (GetFileType(finfop->host.handle) == FILE_TYPE_CHAR) {
-          /* 標準入力のハンドルがキャラクタタイプだったら、ReadConsoleを試してみる。*/
-          while (true) {
-            BOOL b = ReadConsoleInput(finfop->host.handle, &ir, 1,
-                                      (LPDWORD)&read_len);
-            if (b == FALSE) {
-              /* コンソールではなかった。*/
-              ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL);
-              break;
-            }
-            if (read_len == 1 && ir.EventType == KEY_EVENT &&
-                ir.Event.KeyEvent.bKeyDown) {
-              c = ir.Event.KeyEvent.uChar.AsciiChar;
-              if (0x01 <= c && c <= 0xff) break;
-            }
-          }
-        } else {
-          ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL);
-        }
-        if (read_len == 0) c = EOF;
-        rd[0] = c;
-#else
-        rd[0] = fgetc(finfo[fhdl].host.fp);
-#endif
-      }
+    case 0x1b:  // FGETC
+      rd[0] = DosFgetc(stack_adr);
       break;
     case 0x1C: /* FGETS */
       data = mem_get(stack_adr, S_LONG);
@@ -810,11 +836,8 @@ bool dos_call(UByte code) {
       data = mem_get(stack_adr, S_LONG);
       rd[0] = Delete(GetStringSuper(data));
       break;
-    case 0x42: /* SEEK */
-      fhdl = (short)mem_get(stack_adr, S_WORD);
-      data = mem_get(stack_adr + 2, S_LONG);
-      srt = (short)mem_get(stack_adr + 6, S_WORD);
-      rd[0] = Seek(fhdl, data, srt);
+    case 0x42:  // SEEK
+      rd[0] = DosSeek(stack_adr);
       break;
     case 0x43: /* CHMOD */
       data = mem_get(stack_adr, S_LONG);
@@ -1200,7 +1223,7 @@ Long CreateNewFile(ULong file, UWord atr, bool newfile) {
     DWORD e = GetLastError();
     return (e == ERROR_FILE_EXISTS) ? DOSE_EXISTFILE : DOSE_DISKFULL;
   }
-  finfo[ret].host.handle = handle;
+  HostFileInfoMember hostfile = {handle};
 #else
   if (newfile) {
     FILE *fp = fopen(p, "rb");
@@ -1211,13 +1234,11 @@ Long CreateNewFile(ULong file, UWord atr, bool newfile) {
   }
   FILE *fp = fopen(p, "w+b");
   if (fp == NULL) return DOSE_DISKFULL;
-  finfo[ret].host.fp = fp;
+  HostFileInfoMember hostfile = {fp};
 #endif
 
-  finfo[ret].is_opened = true;
-  finfo[ret].mode = 2;
-  finfo[ret].nest = nest_cnt;
-  return (ret);
+  SetFinfo(ret, hostfile, OPENMODE_READ_WRITE, nest_cnt);
+  return ret;
 }
 
 /*
@@ -1225,14 +1246,6 @@ Long CreateNewFile(ULong file, UWord atr, bool newfile) {
  戻り値：ファイルハンドル(負ならエラーコード)
  */
 static Long Open(char *p, short mode) {
-#ifdef _WIN32
-  DWORD md;
-#else
-  const char *mdstr;
-#endif
-  int len;
-  Long i;
-
 #ifndef _WIN32
   char buf[89];
   p = to_slash(sizeof(buf), buf, p);
@@ -1241,69 +1254,59 @@ static Long Open(char *p, short mode) {
 #endif
 
   switch (mode) {
-    case 0: /* 読み込みオープン */
-#ifdef _WIN32
-      md = GENERIC_READ;
-#else
-      mdstr = "rb";
-#endif
+    case OPENMODE_READ:  // 読み込みオープン
       break;
-    case 1: /* 書き込みオープン */
+    case OPENMODE_WRITE:  // 書き込みオープン
     {
 #ifdef _WIN32
       HANDLE handle = CreateFile(p, GENERIC_READ, 0, NULL, OPEN_EXISTING,
                                  FILE_ATTRIBUTE_NORMAL, NULL);
-
-      if (handle == INVALID_HANDLE_VALUE) return -2;
+      if (handle == INVALID_HANDLE_VALUE) return DOSE_NOENT;
       CloseHandle(handle);
-      md = GENERIC_WRITE;
 #else
       FILE *fp = fopen(p, "rb");
-      if (fp == NULL) return -2;  // ファイルは見つからない
+      if (fp == NULL) return DOSE_NOENT;  // ファイルは見つからない
       fclose(fp);
-      mdstr = "r+b";
 #endif
+    } break;
+    case OPENMODE_READ_WRITE:  // 読み書きオープン
       break;
-    }
-    case 2: /* 読み書きオープン */
-#ifdef _WIN32
-      md = GENERIC_READ | GENERIC_WRITE;
-#else
-      mdstr = "r+b";
-#endif
-      break;
+
     default:
-      return (-12); /* アクセスモードが異常 */
+      return DOSE_ILGARG;  // アクセスモードが異常
   }
+  FileOpenMode openMode = (FileOpenMode)mode;
 
   /* ファイル名後ろの空白をつめる */
-  len = strlen(p);
-  for (i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
+  int len = strlen(p);
+  for (int i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
 
-  if ((len = strlen(p)) > 88) return (-13); /* ファイル名の指定誤り */
+  if ((len = strlen(p)) > 88) return DOSE_ILGFNAME;  // ファイル名の指定誤り
 
   Long ret = find_free_file();
-  if (ret < 0) return -4;  // オープンしているファイルが多すぎる
+  if (ret < 0) return DOSE_MFILE;  // オープンしているファイルが多すぎる
+
 #ifdef _WIN32
-  HANDLE handle =
-      CreateFile(p, md, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (handle == INVALID_HANDLE_VALUE) return (mode == 1) ? -23 : -2;
-  finfo[ret].host.handle = handle;
+  static const DWORD md[] =  //
+      {GENERIC_READ, GENERIC_WRITE, GENERIC_READ | GENERIC_WRITE};
+
+  HANDLE handle = CreateFile(p, md[openMode], 0, NULL, OPEN_EXISTING,
+                             FILE_ATTRIBUTE_NORMAL, NULL);
+  if (handle == INVALID_HANDLE_VALUE)
+    return (openMode == OPENMODE_WRITE) ? DOSE_DISKFULL : DOSE_NOENT;
+  HostFileInfoMember hostfile = {handle};
 #else
-  FILE *fp = fopen(p, mdstr);
-  if (fp == NULL) {
-    if (mode == 1)
-      return -23;  // ディスクがいっぱい
-    else
-      return -2;  // ファイルは見つからない
-  }
-  finfo[ret].host.fp = fp;
+  static const char mdstr[][4] = {"rb", "r+b", "r+b"};
+
+  FILE *fp = fopen(p, mdstr[openMode]);
+  if (fp == NULL)
+    return (openMode == OPENMODE_WRITE) ? DOSE_DISKFULL : DOSE_NOENT;
+  HostFileInfoMember hostfile = {fp};
 #endif
 
-  finfo[ret].is_opened = true;
-  finfo[ret].mode = mode;
-  finfo[ret].nest = nest_cnt;
-  return (ret);
+  FILEINFO *finfop = SetFinfo(ret, hostfile, openMode, nest_cnt);
+  ReadOnmemoryFile(finfop, openMode);
+  return ret;
 }
 
 /*
@@ -1319,6 +1322,31 @@ static Long Close(short hdl) {
   return 0;
 }
 
+static Long fgetsFromOnmemory(FILEINFO *finfop, ULong adr) {
+  UByte rest = ReadUByteSuper(adr + 0);
+  ULong write = adr + 2;
+  Long len = 0;
+
+  while (rest > 0) {
+    int c = fgetcFromOnmemory(finfop);
+    if (c < 0) {
+      if (len == 0) len = DOSE_ILGFNC;  // 1バイトも入力できなければエラー
+      break;
+    }
+    if (c == '\n') break;     // LFなら終了
+    if (c == '\r') continue;  // CRは無視する
+
+    WriteUByteSuper(write++, (UByte)c);
+    len += 1;
+    rest -= 1;
+    if (c == '\x1a') break;  // EOFは書き込んだ上で終了
+  }
+  WriteUByteSuper(write, 0);
+
+  WriteUByteSuper(adr + 1, (UByte)len);
+  return len;
+}
+
 /*
  　機能：DOSCALL FGETSを実行する
  戻り値：エラーコード
@@ -1327,8 +1355,12 @@ static Long Fgets(Long adr, short hdl) {
   char buf[257];
   size_t len;
 
-  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
-  if (finfo[hdl].mode == 1) return (-1);
+  FILEINFO *finfop = &finfo[hdl];
+
+  if (!finfop->is_opened) return -6;  // オープンされていない
+  if (finfop->mode == 1) return (-1);
+
+  if (finfop->onmemory.buffer) return fgetsFromOnmemory(finfop, adr);
 
   UByte max = ReadUByteSuper(adr);
 #ifdef _WIN32
@@ -1338,7 +1370,7 @@ static Long Fgets(Long adr, short hdl) {
       DWORD read_len;
       char c;
 
-      if (ReadFile(finfo[hdl].host.handle, &c, 1, (LPDWORD)&read_len, NULL) ==
+      if (ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL) ==
           FALSE)
         return -1;
       if (read_len == 0) {
@@ -1355,7 +1387,7 @@ static Long Fgets(Long adr, short hdl) {
   }
 #else
   {
-    if (fgets(buf, max, finfo[hdl].host.fp) == NULL) return -1;
+    if (fgets(buf, max, finfop->host.fp) == NULL) return -1;
     char *s = buf;
     char *d = buf;
     char c;
@@ -1471,52 +1503,6 @@ static Long Write_conv(short hdl, void *buf, size_t size) {
 static Long Delete(char *p) {
   if (remove(p) != 0) return (errno == ENOENT) ? DOSE_NOENT : DOSE_ILGFNAME;
   return DOSE_SUCCESS;
-}
-
-/*
- 　機能：DOSCALL SEEKを実行する
- 戻り値：先頭からのオフセット(負ならエラーコード)
- */
-static Long Seek(short hdl, Long offset, short mode) {
-  int sk;
-
-  if (!finfo[hdl].is_opened) return -6;  // オープンされていない
-
-#ifdef _WIN32
-  switch (mode) {
-    case 0:
-      sk = FILE_BEGIN;
-      break;
-    case 1:
-      sk = FILE_CURRENT;
-      break;
-    case 2:
-      sk = FILE_END;
-      break;
-    default:
-      return (-14); /* 無効なパラメータ */
-  }
-  DWORD ret = SetFilePointer(finfo[hdl].host.handle, offset, NULL, sk);
-  if (ret < 0) return -25;  // 指定の位置にシークできない
-  return (Long)ret;
-#else
-  switch (mode) {
-    case 0:
-      sk = SEEK_SET;
-      break;
-    case 1:
-      sk = SEEK_CUR;
-      break;
-    case 2:
-      sk = SEEK_END;
-      break;
-    default:
-      return (-14); /* 無効なパラメータ */
-  }
-  if (fseek(finfo[hdl].host.fp, offset, sk) != 0)
-    return (-25); /* 指定の位置にシークできない */
-  return ftell(finfo[hdl].host.fp);
-#endif
 }
 
 /*

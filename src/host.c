@@ -29,10 +29,39 @@
 #define ROOT_SLASH_LEN 1  // "/"
 #define DEFAULT_DRV_CLN "A:"
 
+#ifdef HOST_UTF8_TO_SJIS_GENERIC_ICONV
+// UTF-8からShift_JISへの変換
+char *Utf8ToSjis2_generic_iconv(char *inbuf, size_t inbytes,
+                                size_t *outBufSize) {
+  *outBufSize = 0;
+
+  size_t bufsize = inbytes;
+  char *sjbuf = malloc(bufsize);
+  if (!sjbuf) return NULL;
+
+  iconv_t icd = iconv_open("CP932", "UTF-8");
+  char *outbuf = sjbuf;
+  size_t outbytes = bufsize;
+  size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
+  iconv_close(icd);
+  if (len == (size_t)-1) {
+    free(sjbuf);
+    return NULL;
+  }
+
+  size_t consumedSize = bufsize - outbytes;
+  char *sjbuf2 = realloc(sjbuf, consumedSize);
+  if (!sjbuf2) sjbuf2 = sjbuf;
+
+  *outBufSize = consumedSize;
+  return sjbuf2;
+}
+#endif
+
 #ifdef HOST_CONVERT_TO_SJIS_GENERIC_ICONV
-// UTF-8文字列からShift_JIS文字列への変換
+// ホスト文字列(UTF-8)からShift_JIS文字列への変換
 bool Utf8ToSjis_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
-  iconv_t icd = iconv_open("Shift_JIS", "UTF-8");
+  iconv_t icd = iconv_open("CP932", "UTF-8");
   size_t inbytes = strlen(inbuf);
   size_t outbytes = outbuf_size - 1;
   size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
@@ -43,9 +72,9 @@ bool Utf8ToSjis_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
 #endif
 
 #ifdef HOST_CONVERT_FROM_SJIS_GENERIC_ICONV
-// Shift_JIS文字列からUTF-8文字列への変換
+// Shift_JIS文字列からホスト文字列(UTF-8)への変換
 bool SjisToUtf8_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
-  iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+  iconv_t icd = iconv_open("UTF-8", "CP932");
   size_t inbytes = strlen(inbuf);
   size_t outbytes = outbuf_size - 1;
   size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
@@ -55,7 +84,8 @@ bool SjisToUtf8_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
 }
 #endif
 
-#if defined(HOST_CONVERT_TO_SJIS_GENERIC) || defined(HOST_CONVERT_FROM_SJIS_GENERIC)
+#if defined(HOST_CONVERT_TO_SJIS_GENERIC) || \
+    defined(HOST_CONVERT_FROM_SJIS_GENERIC)
 // Shift_JIS文字列からShift_JIS文字列への無変換コピー
 bool SjisToSjis_generic(char *inbuf, char *outbuf, size_t outbuf_size) {
   size_t len = strlen(inbuf);
@@ -201,7 +231,7 @@ bool PathIsFileSpec_generic(const char *path) {
 }
 #endif
 
-#ifdef HOST_INIT_FILEINFO_GENERIC
+#ifdef HOST_GET_STANDARD_HOSTFILE_GENERIC
 static FILE *fileno_to_fp(int fileno) {
   if (fileno == HUMAN68K_STDIN) return stdin;
   if (fileno == HUMAN68K_STDOUT) return stdout;
@@ -209,9 +239,10 @@ static FILE *fileno_to_fp(int fileno) {
   return NULL;
 }
 
-// FINFO構造体の環境依存メンバーを初期化する
-void InitFileInfo_generic(FILEINFO *finfop, int fileno) {
-  finfop->host.fp = fileno_to_fp(fileno);
+// 標準入出力ファイルに関するFINFO構造体の環境依存メンバーを返す。
+HostFileInfoMember GetStandardHostfile_generic(int fileno) {
+  HostFileInfoMember hostfile = {fileno_to_fp(fileno)};
+  return hostfile;
 }
 #endif
 
@@ -242,6 +273,17 @@ Long ReadFileOrTty_generic(FILEINFO *finfop, char *buffer, ULong length) {
   if (isatty(fileno(finfop->host.fp))) return read_from_tty(buffer, length);
 
   return (Long)fread(buffer, 1, length, finfop->host.fp);
+}
+#endif
+
+#ifdef HOST_SEEK_FILE_GENERIC
+Long SeekFile_generic(FILEINFO *finfop, Long offset, FileSeekMode mode) {
+  static const int seekModes[] = {SEEK_SET, SEEK_CUR, SEEK_END};
+
+  if (fseek(finfop->host.fp, offset, seekModes[mode]) != 0)
+    return DOSE_CANTSEEK;
+
+  return ftell(finfop->host.fp);
 }
 #endif
 

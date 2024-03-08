@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "1.4.1-beta.1"
+#define RUN68X_VERSION "2.0.0"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if defined(__GNUC__)
@@ -155,23 +155,29 @@ typedef struct {
 } HostFileInfoMember;
 #endif
 
+typedef struct {
+  char *buffer;
+  Long length;
+  Long position;
+} OnmemoryFileData;
+
 // 全てのメンバーが代入でコピー可能なこと
 typedef struct {
   HostFileInfoMember host;
   bool is_opened;
-  unsigned date;
-  unsigned time;
-  short mode;
+  FileOpenMode mode;
   unsigned int nest;
+  OnmemoryFileData onmemory;
 } FILEINFO;
 
 typedef struct {
   ULong mainMemorySize;
   ULong highMemorySize;
 
-  ULong trapPc;    // -tr MPU命令トレースを行うアドレス
-  bool traceFunc;  // -f ファンクションコールトレース
-  bool debug;      // -debug デバッガ有効
+  ULong trapPc;       // -tr MPU命令トレースを行うアドレス
+  bool traceFunc;     // -f ファンクションコールトレース
+  bool debug;         // -debug デバッガ有効
+  bool readFileUtf8;  // -read-file-utf8
 
   bool iothrough;
 } Settings;

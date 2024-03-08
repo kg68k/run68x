@@ -23,6 +23,17 @@
 #include "human68k.h"
 #include "run68.h"
 
+#ifndef HOST_UTF8_TO_SJIS
+#ifdef USE_ICONV
+#define HOST_UTF8_TO_SJIS_GENERIC_ICONV
+char* Utf8ToSjis2_generic_iconv(char* inbuf, size_t inbytes,
+                                size_t* outBufSize);
+#define HOST_UTF8_TO_SJIS Utf8ToSjis2_generic_iconv
+#else
+#define HOST_UTF8_TO_SJIS(inbuf, inbytes, outBufSize) (NULL)
+#endif
+#endif
+
 #ifndef HOST_CONVERT_TO_SJIS
 #ifdef USE_ICONV
 #define HOST_CONVERT_TO_SJIS_GENERIC_ICONV
@@ -65,10 +76,10 @@ bool PathIsFileSpec_generic(const char* path);
 #define HOST_PATH_IS_FILE_SPEC PathIsFileSpec_generic
 #endif
 
-#ifndef HOST_INIT_FILEINFO
-#define HOST_INIT_FILEINFO_GENERIC
-void InitFileInfo_generic(FILEINFO* finfop, int fileno);
-#define HOST_INIT_FILEINFO InitFileInfo_generic
+#ifndef HOST_GET_STANDARD_HOSTFILE
+#define HOST_GET_STANDARD_HOSTFILE_GENERIC
+HostFileInfoMember GetStandardHostfile_generic(int fileno);
+#define HOST_GET_STANDARD_HOSTFILE GetStandardHostfile_generic
 #endif
 
 #ifndef HOST_CLOSE_FILE
@@ -81,6 +92,12 @@ bool CloseFile_generic(FILEINFO* finfop);
 #define HOST_READ_FILE_OR_TTY_GENERIC
 Long ReadFileOrTty_generic(FILEINFO* finfop, char* buffer, ULong length);
 #define HOST_READ_FILE_OR_TTY ReadFileOrTty_generic
+#endif
+
+#ifndef HOST_SEEK_FILE
+#define HOST_SEEK_FILE_GENERIC
+Long SeekFile_generic(FILEINFO* finfop, Long offset, FileSeekMode mode);
+#define HOST_SEEK_FILE SeekFile_generic
 #endif
 
 #ifndef HOST_DOS_MKDIR

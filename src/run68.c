@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dos_file.h"
 #include "dos_memory.h"
 #include "host.h"
 #include "human68k.h"
@@ -59,6 +60,7 @@ static const Settings defaultSettings = {
     0,      // trapPc
     false,  // traceFunc
     false,  // debug
+    false,  // readFileUtf8
 
     false  // iothrough
 };
@@ -83,7 +85,8 @@ static void print_usage(void) {
       "  -himem=<mb>  allocate high memory"
       "  -f           function call trace\n"
       "  -tr <adr>    mpu instruction trap\n"
-      "  -debug       run with debugger\n";
+      "  -debug       run with debugger\n"
+      "  -read-file-utf8  convert file encoding from UTF-8 on read\n";
   print(usage);
 }
 
@@ -261,26 +264,19 @@ EndOfFunc:
   return rd[0];
 }
 
-static void init_fileinfo(int fileno, bool is_opened, short mode) {
-  FILEINFO *finfop = &finfo[fileno];
-
-  HOST_INIT_FILEINFO(finfop, fileno);
-  finfop->is_opened = is_opened;
-  finfop->date = 0;
-  finfop->time = 0;
-  finfop->mode = mode;
-  finfop->nest = 0;
+static void init_fileinfo(int fileno, FileOpenMode mode) {
+  HostFileInfoMember hostfile = HOST_GET_STANDARD_HOSTFILE(fileno);
+  SetFinfo(fileno, hostfile, mode, 0);
 }
 
 // ファイル管理テーブルの初期化
 static void init_all_fileinfo(void) {
-  init_fileinfo(HUMAN68K_STDIN, true, 0);
-  init_fileinfo(HUMAN68K_STDOUT, true, 1);
-  init_fileinfo(HUMAN68K_STDERR, true, 1);
+  init_fileinfo(HUMAN68K_STDIN, OPENMODE_READ);
+  init_fileinfo(HUMAN68K_STDOUT, OPENMODE_WRITE);
+  init_fileinfo(HUMAN68K_STDERR, OPENMODE_WRITE);
 
-  int i;
-  for (i = HUMAN68K_STDERR + 1; i < FILE_MAX; i++) {
-    init_fileinfo(i, false, 0);
+  for (int i = HUMAN68K_STDERR + 1; i < FILE_MAX; i++) {
+    ClearFinfo(i);
   }
 }
 
@@ -405,6 +401,13 @@ Restart:
         case 'f':
           settings.traceFunc = true;
           print("ファンクションコールトレースフラグ=ON\n");
+          break;
+        case 'r':
+          if (strcmp(argv[i], "-read-file-utf8") != 0) {
+            invalid_flag = true;
+            break;
+          }
+          settings.readFileUtf8 = true;
           break;
         case 'h': {
           const char himem[] = "-himem=";

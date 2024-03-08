@@ -25,6 +25,19 @@
 #include "mem.h"
 #include "run68.h"
 
+static Long readFile(FILEINFO* finfop, char* buffer, ULong length) {
+  if (!finfop->onmemory.buffer)
+    return HOST_READ_FILE_OR_TTY(finfop, buffer, length);
+
+  ULong rest = (ULong)(finfop->onmemory.length - finfop->onmemory.position);
+  ULong len = (rest < length) ? rest : length;
+
+  memcpy(buffer, finfop->onmemory.buffer + finfop->onmemory.position, len);
+  finfop->onmemory.position += len;
+
+  return len;
+}
+
 // DOS _READ
 Long Read(UWord fileno, ULong buffer, ULong length) {
   // Human68k v3.02ではファイルのエラー検査より先にバイト数が0か調べている
@@ -40,7 +53,7 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
   if (!GetWritableMemoryRangeSuper(buffer, length, &mem))
     throwBusErrorOnWrite(buffer);  // バッファアドレスが不正
 
-  Long result = HOST_READ_FILE_OR_TTY(finfop, mem.bufptr, mem.length);
+  Long result = readFile(finfop, mem.bufptr, mem.length);
   if (result <= 0) return result;
   if (length == mem.length) return result;  // バッファが全域有効なら完了
 
@@ -55,7 +68,7 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
 
   // 試しに追加で1バイト読み込んでみる
   char dummy;
-  Long result2 = HOST_READ_FILE_OR_TTY(finfop, &dummy, 1);
+  Long result2 = readFile(finfop, &dummy, 1);
   if (result2 < 0) return result2;
 
   // ファイル末尾に達していたら、最初の読み込みでちょうど終わっていた
@@ -63,6 +76,31 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
 
   // 追加で読めてしまったらバスエラー発生
   throwBusErrorOnWrite(buffer + mem.length);
+}
+
+static Long seekOnmemoryFile(FILEINFO* finfop, Long offset, FileSeekMode mode) {
+  Long base = (mode == SEEKMODE_SET)   ? 0
+              : (mode == SEEKMODE_CUR) ? finfop->onmemory.position
+                                       : finfop->onmemory.length;
+  Long pos = base + offset;
+
+  if (pos < 0 || pos > finfop->onmemory.length) return DOSE_CANTSEEK;
+
+  finfop->onmemory.position = pos;
+  return pos;
+}
+
+// DOS _SEEK (0xff42)
+Long Seek(UWord fileno, Long offset, UWord mode) {
+  if (fileno >= FILE_MAX) return DOSE_MFILE;
+
+  FILEINFO* finfop = &finfo[fileno];
+  if (!finfop->is_opened) return DOSE_BADF;
+
+  if (mode > SEEKMODE_END) return DOSE_ILGPARM;
+
+  return finfop->onmemory.buffer ? seekOnmemoryFile(finfop, offset, mode)
+                                 : HOST_SEEK_FILE(finfop, offset, mode);
 }
 
 // Human68kにおける2バイト文字の1バイト目の文字コードか
@@ -138,4 +176,67 @@ Long Maketmp(ULong path, UWord atr) {
 
     // 加算できたらファイル作成を再試行する
   }
+}
+
+static OnmemoryFileData defaultOnmemoryFileData(void) {
+  return (OnmemoryFileData){NULL, 0, 0};
+}
+
+// finfoを初期化する。
+void ClearFinfo(int fileno) {
+  FILEINFO* f = &finfo[fileno];
+
+  f->host = (HostFileInfoMember){0};
+  f->is_opened = false;
+  f->mode = OPENMODE_READ;
+  f->nest = 0;
+  f->onmemory = defaultOnmemoryFileData();
+}
+
+// オープンしたファイルの情報をfinfoに書き込む。
+FILEINFO* SetFinfo(int fileno, HostFileInfoMember hostfile, FileOpenMode mode,
+                   unsigned int nest) {
+  FILEINFO* f = &finfo[fileno];
+
+  f->host = hostfile;
+  f->is_opened = true;
+  f->mode = mode;
+  f->nest = nest_cnt;
+  f->onmemory = defaultOnmemoryFileData();
+
+  return f;
+}
+
+void FreeOnmemoryFile(FILEINFO* finfop) {
+  if (!finfop->onmemory.buffer) return;
+
+  free(finfop->onmemory.buffer);
+  finfop->onmemory.buffer = NULL;
+}
+
+void ReadOnmemoryFile(FILEINFO* finfop, FileOpenMode openMode) {
+  if (openMode != OPENMODE_READ || !settings.readFileUtf8) return;
+
+  Long fileSize = HOST_SEEK_FILE(finfop, 0, SEEKMODE_END);
+  HOST_SEEK_FILE(finfop, 0, SEEKMODE_SET);
+  if (fileSize < 0) return;
+
+  char* u8buf = malloc(fileSize);
+  if (!u8buf) return;
+
+  Long readSize = (Long)HOST_READ_FILE_OR_TTY(finfop, u8buf, fileSize);
+  HOST_SEEK_FILE(finfop, 0, SEEKMODE_SET);
+  if (readSize != fileSize) {
+    free(u8buf);
+    return;
+  }
+
+  size_t sjSize;
+  char* sjbuf = HOST_UTF8_TO_SJIS(u8buf, readSize, &sjSize);
+  free(u8buf);
+  if (!sjbuf) return;
+
+  finfop->onmemory.buffer = sjbuf;
+  finfop->onmemory.length = sjSize;
+  finfop->onmemory.position = 0;
 }

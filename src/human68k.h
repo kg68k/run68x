@@ -63,6 +63,7 @@ typedef struct {
 #define DOSE_EXISTDIR -20
 #define DOSE_NOTEMPTY -21
 #define DOSE_DISKFULL -23
+#define DOSE_CANTSEEK -25
 #define DOSE_EXISTFILE -80
 
 // メモリブロック
@@ -144,6 +145,20 @@ typedef enum {
   EXEC_TYPE_Z = 2,
   EXEC_TYPE_X = 3,
 } ExecType;
+
+// DOS _OPEN
+typedef enum {
+  OPENMODE_READ = 0,
+  OPENMODE_WRITE = 1,
+  OPENMODE_READ_WRITE = 2,
+} FileOpenMode;
+
+// DOS _SEEK
+typedef enum {
+  SEEKMODE_SET = 0,
+  SEEKMODE_CUR = 1,
+  SEEKMODE_END = 2,
+} FileSeekMode;
 
 // FEFUNC (FLOAT*.X)
 #define FEFUNC_FCVT_INT_MAXLEN 255
