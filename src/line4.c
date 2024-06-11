@@ -295,59 +295,34 @@ static bool Movem_f(char code) {
          false = 実行継続
 */
 static bool Movem_t(char code) {
-  Long mem_adr;
-  char mode;
-  int reg;
-  char size;
-  char size2;
-  short rlist;
-  short mask = 1;
-  Long save_pc;
-  int i;
-  int work_mode;
+  bool isWord = false;
+  int size2 = 4;
 
-  // save_pc = pc;
-  if ((code & 0x40) != 0) {
-    size = S_LONG;
-    size2 = 4;
-  } else {
-    size = S_WORD;
+  if ((code & 0x40) == 0) {
+    isWord = true;
     size2 = 2;
   }
-  mode = (code & 0x38) >> 3;
-  reg = (code & 0x07);
-  rlist = (short)imi_get(S_WORD);
-
-  // PC相対実行アドレス用PCセーブ
-  save_pc = pc;
+  char mode = (code & 0x38) >> 3;
+  int reg = (code & 0x07);
+  short rlist = (short)imi_get(S_WORD);
 
   // アドレッシングモードが MD_AIPI の場合は、
   // MD_AIとして実効アドレスを取得する。
-  if (mode == MD_AIPI) {
-    work_mode = MD_AI;
-  } else {
-    work_mode = mode;
-  }
+  int work_mode = (mode == MD_AIPI) ? MD_AI : mode;
 
   /* アドレッシングモードに応じた処理 */
-  if (get_ea(save_pc, EA_PostIncrement, work_mode, reg, &mem_adr)) {
+  Long mem_adr;
+  if (get_ea(pc, EA_PostIncrement, work_mode, reg, &mem_adr)) {
     return true;
   }
 
   // データレジスタの復帰
+  short mask = 1;
+  int i;
   for (i = 0; i <= 7; i++, mask <<= 1) {
     if ((rlist & mask) != 0) {
-      if (size == S_WORD) {
-        rd[i] = mem_get(mem_adr, S_WORD);
-        if (rd[i] & 0x8000) {
-          rd[i] |= 0xFFFF0000;
-        } else {
-          rd[i] &= 0xFFFF;
-        }
-      } else {
-        rd[i] = mem_get(mem_adr, S_LONG);
-      }
-      if (mode == MD_AIPI) ra[reg] += size2;
+      rd[i] =
+          isWord ? extl(mem_get(mem_adr, S_WORD)) : mem_get(mem_adr, S_LONG);
       mem_adr += size2;
     }
   }
@@ -355,24 +330,16 @@ static bool Movem_t(char code) {
   // アドレスレジスタの復帰
   for (i = 0; i <= 7; i++, mask <<= 1) {
     if ((rlist & mask) != 0) {
-      if (size == S_WORD) {
-        ra[i] = mem_get(mem_adr, S_WORD);
-        if (ra[i] & 0x8000) {
-          ra[i] |= 0xFFFF0000;
-        } else {
-          ra[i] &= 0xFFFF;
-        }
-      } else {
-        ra[i] = mem_get(mem_adr, S_LONG);
-      }
-      if (mode == MD_AIPI) ra[reg] += size2;
+      ra[i] =
+          isWord ? extl(mem_get(mem_adr, S_WORD)) : mem_get(mem_adr, S_LONG);
       mem_adr += size2;
     }
   }
 
-#ifdef TRACE
-  printf("trace: movemt.%c PC=%06lX\n", size_char[size], save_pc);
-#endif
+  // 余計に1ワード読み込む挙動の再現
+  mem_get(mem_adr, S_WORD);
+
+  if (mode == MD_AIPI) ra[reg] = mem_adr;
 
   return false;
 }
