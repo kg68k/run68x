@@ -62,7 +62,7 @@ run68の改造版です。
 
 
 ## Build
-Windows (Visual Studio 2022、x64)、WSL上のUbuntu 22.04でのみ確認しています。  
+Windows (Visual Studio 2022、x64)、WSL上のUbuntu 24.04でのみ確認しています。  
 なにか問題があれば報告してください。
 
 ### Visual Studio

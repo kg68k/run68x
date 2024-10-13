@@ -82,7 +82,7 @@ static void print_title(void) {
 static void print_usage(void) {
   const char *usage =
       "Usage: run68 [options] execute_filename [commandline]\n"
-      "  -himem=<mb>  allocate high memory"
+      "  -himem=<mb>  allocate high memory\n"
       "  -f           function call trace\n"
       "  -tr <adr>    mpu instruction trap\n"
       "  -debug       run with debugger\n"
