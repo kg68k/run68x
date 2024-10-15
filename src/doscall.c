@@ -33,6 +33,7 @@
 #include <windows.h>
 #else
 #include <dirent.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #endif
@@ -1488,10 +1489,18 @@ static Long Files(Long buf, Long name, short atr) {
   if (name_ptr == NULL) return DOSE_ILGFNAME;
 
   {
-    FILE* fp = fopen(name_ptr, "rb");
-    if (fp != NULL) {
-      fclose(fp);
-
+    ULong size = 0;
+    bool success = false;
+    struct stat st;
+    if (stat(name_ptr, &st) == 0) {
+      if (S_ISREG(st.st_mode)) {
+        size = st.st_size;
+        success = true;
+      } else if (S_ISDIR(st.st_mode)) {
+        success = true;
+      }
+    }
+    if (success) {
       /* 予約領域をセット */
       buf_ptr[0] = atr; /* ファイルの属性 */
       buf_ptr[1] = 0;   /* ドライブ番号(not used) */
@@ -1514,7 +1523,6 @@ static Long Files(Long buf, Long name, short atr) {
         */
       }
       // FILELENをセット
-      size_t size = 64;
       buf_ptr[26] = (unsigned char)((size & 0xff000000) >> 24);
       buf_ptr[27] = (unsigned char)((size & 0x00ff0000) >> 16);
       buf_ptr[28] = (unsigned char)((size & 0x0000ff00) >> 8);
