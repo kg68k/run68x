@@ -51,6 +51,7 @@ typedef struct {
 #define DOSE_NOENT -2
 #define DOSE_NODIR -3
 #define DOSE_MFILE -4
+#define DOSE_ISDIR -5
 #define DOSE_BADF -6
 #define DOSE_NOMEM -8
 #define DOSE_ILGMPTR -9
@@ -64,6 +65,7 @@ typedef struct {
 #define DOSE_NOTEMPTY -21
 #define DOSE_DISKFULL -23
 #define DOSE_CANTSEEK -25
+#define DOSE_LCKERR -33
 #define DOSE_EXISTFILE -80
 
 // メモリブロック
@@ -162,5 +164,14 @@ typedef enum {
 
 // FEFUNC (FLOAT*.X)
 #define FEFUNC_FCVT_INT_MAXLEN 255
+
+// Human68kにおける2バイト文字の1バイト目の文字コードか
+//   Shift_JIS-2004 ... 0x81～0x9f、0xe0～0xfc
+//   Human68kの実際の動作 ... 0x80～0x9f、0xe0～0xff
+//     ただしDOS _MAKETMPのみ0x80～0x9f、0xe0～0xefで、これは不具合と思われる。
+//   ここではHuman68kの実際の動作を採用する
+static inline int is_mb_lead(char c) {
+  return (0x80 <= c && c <= 0x9f) || (0xe0 <= c);
+}
 
 #endif

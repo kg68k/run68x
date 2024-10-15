@@ -15,8 +15,10 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #ifdef USE_ICONV
 #include <iconv.h>
@@ -31,16 +33,16 @@
 
 #ifdef HOST_UTF8_TO_SJIS_GENERIC_ICONV
 // UTF-8からShift_JISへの変換
-char *Utf8ToSjis2_generic_iconv(char *inbuf, size_t inbytes,
-                                size_t *outBufSize) {
+char* Utf8ToSjis2_generic_iconv(char* inbuf, size_t inbytes,
+                                size_t* outBufSize) {
   *outBufSize = 0;
 
   size_t bufsize = inbytes;
-  char *sjbuf = malloc(bufsize);
+  char* sjbuf = malloc(bufsize);
   if (!sjbuf) return NULL;
 
   iconv_t icd = iconv_open("CP932", "UTF-8");
-  char *outbuf = sjbuf;
+  char* outbuf = sjbuf;
   size_t outbytes = bufsize;
   size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
   iconv_close(icd);
@@ -50,7 +52,7 @@ char *Utf8ToSjis2_generic_iconv(char *inbuf, size_t inbytes,
   }
 
   size_t consumedSize = bufsize - outbytes;
-  char *sjbuf2 = realloc(sjbuf, consumedSize);
+  char* sjbuf2 = realloc(sjbuf, consumedSize);
   if (!sjbuf2) sjbuf2 = sjbuf;
 
   *outBufSize = consumedSize;
@@ -60,7 +62,7 @@ char *Utf8ToSjis2_generic_iconv(char *inbuf, size_t inbytes,
 
 #ifdef HOST_CONVERT_TO_SJIS_GENERIC_ICONV
 // ホスト文字列(UTF-8)からShift_JIS文字列への変換
-bool Utf8ToSjis_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
+bool Utf8ToSjis_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size) {
   iconv_t icd = iconv_open("CP932", "UTF-8");
   size_t inbytes = strlen(inbuf);
   size_t outbytes = outbuf_size - 1;
@@ -73,7 +75,7 @@ bool Utf8ToSjis_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
 
 #ifdef HOST_CONVERT_FROM_SJIS_GENERIC_ICONV
 // Shift_JIS文字列からホスト文字列(UTF-8)への変換
-bool SjisToUtf8_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
+bool SjisToUtf8_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size) {
   iconv_t icd = iconv_open("UTF-8", "CP932");
   size_t inbytes = strlen(inbuf);
   size_t outbytes = outbuf_size - 1;
@@ -87,7 +89,7 @@ bool SjisToUtf8_generic_iconv(char *inbuf, char *outbuf, size_t outbuf_size) {
 #if defined(HOST_CONVERT_TO_SJIS_GENERIC) || \
     defined(HOST_CONVERT_FROM_SJIS_GENERIC)
 // Shift_JIS文字列からShift_JIS文字列への無変換コピー
-bool SjisToSjis_generic(char *inbuf, char *outbuf, size_t outbuf_size) {
+bool SjisToSjis_generic(char* inbuf, char* outbuf, size_t outbuf_size) {
   size_t len = strlen(inbuf);
   if (len >= outbuf_size) return false;
   strcpy(outbuf, inbuf);
@@ -96,38 +98,65 @@ bool SjisToSjis_generic(char *inbuf, char *outbuf, size_t outbuf_size) {
 #endif
 
 // Shift_JIS文字列中のスラッシュをバックスラッシュに書き換える
-static void to_backslash(char *buf) {
-  for (; *buf; buf += 1) {
-    if (*buf == '/') {
-      *buf = '\\';
+static void to_backslash(char* s) {
+  for (; *s; s += 1) {
+    if (*s == '/') {
+      *s = '\\';
     }
   }
+}
+
+// Shift_JIS文字列中のバックスラッシュをスラッシュに書き換える
+static void to_slash(char* s) {
+  while (*s) {
+    if (*s == '\\') *s = '/';
+    s += (is_mb_lead(s[0]) && s[1]) ? 2 : 1;
+  }
+}
+
+static size_t getDriveNameLen(const char* path) {
+  return (path[0] && path[1] == ':' && !is_mb_lead(path[0])) ? 2 : 0;
 }
 
 #ifdef HOST_CANONICAL_PATHNAME_GENERIC
 #include <unistd.h>
 
-static void parentPath(char *buf) {
+static void parentPath(char* buf) {
   size_t len = strlen(buf);
   if (len <= 1) return;
 
   buf[len - 1] = '\0';
-  char *s = strrchr(buf, '/');
+  char* s = strrchr(buf, '/');
   if (s != NULL) s[1] = '\0';
 }
 
-static char *absolutePath(const char *path) {
-  char buf[PATH_MAX];
+static bool isPathDelimiter(char c) { return (c == '/') || (c == '\\'); }
 
-  if (path[0] == '/') {
+static const char* findPathDelimiter(const char* s) {
+  while (*s) {
+    if (isPathDelimiter(*s)) return s;
+    s += (is_mb_lead(s[0]) && s[1]) ? 2 : 1;
+  }
+  return NULL;
+}
+
+static const char* skipPathDelimiter(const char* s) {
+  while (isPathDelimiter(*s)) s += 1;
+  return s;
+}
+
+static char* absolutePath(const char* path, size_t bufsize, char* buf) {
+  path = path + getDriveNameLen(path);
+
+  if (isPathDelimiter(*path)) {
     strcpy(buf, "/");
-    while (path[0] == '/') path += 1;
+    path = skipPathDelimiter(path);
   } else {
-    if (getcwd(buf, sizeof(buf) - 1) == NULL) return NULL;
+    if (getcwd(buf, bufsize - 1) == NULL) return NULL;
     if (strcmp(buf, "/") != 0) strcat(buf, "/");
   }
 
-  while (path[0]) {
+  while (*path) {
     if (strcmp(path, ".") == 0) {
       break;
     }
@@ -136,47 +165,48 @@ static char *absolutePath(const char *path) {
       break;
     }
 
-    if (strncmp(path, "./", 2) == 0) {
+    if (path[0] == '.' && isPathDelimiter(path[1])) {
       path += 2;
       continue;
     }
-    if (strncmp(path, "../", 3) == 0) {
+    if (memcmp(path, "..", 2) == 0 && isPathDelimiter(path[2])) {
       path += 3;
       parentPath(buf);
       continue;
     }
 
     size_t buf_len = strlen(buf);
-    char *sep = strchr(path, '/');
-    size_t len = (sep == NULL) ? strlen(path) : (size_t)((sep + 1) - path);
-
-    // "/"なしなら、NUL文字までコピー
-    // "/"ありなら、"/"の次の文字(NUL文字の場合もある)までコピー
-    if ((buf_len + len) >= sizeof(buf)) return NULL;
-    memcpy(buf + buf_len, path, len + 1);
-
-    if (sep == NULL) break;
-
-    // "/"の次の文字を消す
-    buf[buf_len + len] = '\0';
-    path += len;
+    char* write_ptr = buf + buf_len;
+    const char* sep = findPathDelimiter(path);
+    if (sep) {
+      // パスデリミタあり
+      size_t len = (size_t)(sep - path);
+      if ((buf_len + len + 1) >= bufsize) return NULL;
+      memcpy(write_ptr, path, len);
+      strcpy(write_ptr + len, "/");
+      path = skipPathDelimiter(path + len);
+    } else {
+      // パスデリミタなし
+      size_t len = strlen(path);
+      if ((buf_len + len) >= bufsize) return NULL;
+      strcpy(write_ptr, path);
+      break;
+    }
   }
 
-  char *mem = malloc(strlen(buf) + 1);
-  if (mem != NULL) strcpy(mem, buf);
-  return mem;
+  return buf;
 }
 
-static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
-  char *lastSlash = strrchr(fullpath, '/');
+static bool canonical_pathname(const char* fullpath, Human68kPathName* hpn) {
+  char* lastSlash = strrchr(fullpath, '/');
   if (lastSlash == NULL) return false;
 
-  char *name = lastSlash + 1;
+  char* name = lastSlash + 1;
   size_t pathLen = name - fullpath;
   if (pathLen > HUMAN68K_DIR_MAX) return false;
 
   size_t nameLen = strlen(name);  // 拡張子を含む長さなので後で差し引く
-  char *ext = strrchr(name, '.');
+  char* ext = strrchr(name, '.');
   if (ext == NULL) ext = name + nameLen;
 
   size_t extLen = strlen(ext);
@@ -187,7 +217,7 @@ static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
   }
   if (nameLen > HUMAN68K_NAME_MAX) return false;
 
-  const char *prefix = DEFAULT_DRV_CLN;
+  const char* prefix = DEFAULT_DRV_CLN;
   const size_t prefixLen = strlen(DEFAULT_DRV_CLN);
   strcpy(hpn->path, prefix);
   strncpy(hpn->path + prefixLen, fullpath, pathLen);
@@ -204,19 +234,17 @@ static bool canonical_pathname(char *fullpath, Human68kPathName *hpn) {
 
 // パス名の正規化
 //   realpath()はシンボリックリンクを展開してしまうので使わない
-bool CanonicalPathName_generic(const char *path, Human68kPathName *hpn) {
-  char *buf = absolutePath(path);
-  if (buf == NULL) return false;
+bool CanonicalPathName_generic(const char* path, Human68kPathName* hpn) {
+  char buf[PATH_MAX];
 
-  bool result = canonical_pathname(buf, hpn);
-  free(buf);
-  return result;
+  if (!absolutePath(path, sizeof(buf), buf)) return false;
+  return canonical_pathname(buf, hpn);
 }
 #endif
 
 #ifdef HOST_ADD_LAST_SEPARATOR_GENERIC
 // パス名の末尾にパスデリミタを追加する
-void AddLastSeparator_generic(char *path) {
+void AddLastSeparator_generic(char* path) {
   size_t len = strlen(path);
   if (len == 0 || path[len - 1] != '/') strcpy(path + len, "/");
 }
@@ -226,13 +254,13 @@ void AddLastSeparator_generic(char *path) {
 // 文字列にパス区切り文字が含まれないか(ファイル名だけか)を調べる
 //   true -> ファイル名のみ
 //   false -> "/" が含まれる
-bool PathIsFileSpec_generic(const char *path) {
+bool PathIsFileSpec_generic(const char* path) {
   return strchr(path, '/') == NULL;
 }
 #endif
 
 #ifdef HOST_GET_STANDARD_HOSTFILE_GENERIC
-static FILE *fileno_to_fp(int fileno) {
+static FILE* fileno_to_fp(int fileno) {
   if (fileno == HUMAN68K_STDIN) return stdin;
   if (fileno == HUMAN68K_STDOUT) return stdout;
   if (fileno == HUMAN68K_STDERR) return stderr;
@@ -246,10 +274,99 @@ HostFileInfoMember GetStandardHostfile_generic(int fileno) {
 }
 #endif
 
+static int toDosError(int e, int defaultError) {
+  switch (e) {
+    default:
+      break;
+
+    case EEXIST:
+      return DOSE_EXISTFILE;
+    case EACCES:
+      return DOSE_RDONLY;
+    case EISDIR:
+      return DOSE_ISDIR;
+    case EMFILE:
+    case ENFILE:
+      return DOSE_MFILE;
+    case ENOENT:
+      return DOSE_NOENT;
+    case ENOMEM:
+      return DOSE_NOMEM;
+    case ENOSPC:
+      return DOSE_DISKFULL;
+  }
+
+  return defaultError;
+}
+
+#ifdef HOST_CREATE_NEWFILE_GENERIC
+// ファイルを作成する
+Long CreateNewfile_generic(char* fullpath, HostFileInfoMember* hostfile,
+                           bool newfile) {
+  char* p = fullpath + getDriveNameLen(fullpath);
+  to_slash(p);
+
+  char fullpath2[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!HOST_CONVERT_FROM_SJIS(p, fullpath2, sizeof(fullpath2)))
+    return DOSE_ILGFNAME;
+
+  struct stat st;
+  if (stat(fullpath2, &st) == 0) {
+    if (S_ISCHR(st.st_mode)) {
+      return DOSE_ILGFNAME;  // 同名のキャラクタデバイスが存在する
+    }
+    if (newfile) {
+      return DOSE_EXISTFILE;  // 同名のファイルが既に存在している
+    }
+  }
+
+  if (newfile) {
+    FILE* fp = fopen(fullpath2, "rb");
+    if (fp != NULL) {
+      fclose(fp);
+      return toDosError(errno, DOSE_ILGFNAME);
+    }
+  }
+
+  FILE* fp = fopen(fullpath2, "w+b");
+  if (fp == NULL) return toDosError(errno, DOSE_ILGFNAME);
+  hostfile->fp = fp;
+  return 0;
+}
+#endif
+
+#ifdef HOST_OPEN_FILE_GENERIC
+Long OpenFile_generic(char* fullpath, HostFileInfoMember* hostfile,
+                      FileOpenMode mode) {
+  char* p = fullpath + getDriveNameLen(fullpath);
+  to_slash(p);
+
+  char fullpath2[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!HOST_CONVERT_FROM_SJIS(p, fullpath2, sizeof(fullpath2)))
+    return DOSE_ILGFNAME;
+
+  static const char mdstr[][4] = {"rb", "r+b", "r+b"};
+  FILE* fp = fopen(p, mdstr[mode]);
+  if (fp == NULL) return toDosError(errno, DOSE_NOENT);
+
+  // ディレクトリをオープンしてしまった可能性がある。
+  struct stat st;
+  if (fstat(fileno(fp), &st) == 0) {
+    if (S_ISDIR(st.st_mode)) {
+      fclose(fp);
+      return DOSE_ISDIR;
+    }
+  }
+
+  hostfile->fp = fp;
+  return 0;
+}
+#endif
+
 #ifdef HOST_CLOSE_FILE_GENERIC
 // ファイルを閉じる
-bool CloseFile_generic(FILEINFO *finfop) {
-  FILE *fp = finfop->host.fp;
+bool CloseFile_generic(FILEINFO* finfop) {
+  FILE* fp = finfop->host.fp;
   if (fp == NULL) return false;
 
   finfop->host.fp = NULL;
@@ -261,7 +378,7 @@ bool CloseFile_generic(FILEINFO *finfop) {
 #include <unistd.h>
 
 // 端末からの入力
-Long read_from_tty(char *buffer, ULong length) {
+Long read_from_tty(char* buffer, ULong length) {
   ULong read_len = gets2(buffer, length);
   int crlf_len = ((length - read_len) >= 2) ? 2 : length - read_len;
   memcpy(buffer + read_len, "\r\n", crlf_len);
@@ -269,7 +386,7 @@ Long read_from_tty(char *buffer, ULong length) {
 }
 
 // ファイル読み込み
-Long ReadFileOrTty_generic(FILEINFO *finfop, char *buffer, ULong length) {
+Long ReadFileOrTty_generic(FILEINFO* finfop, char* buffer, ULong length) {
   if (isatty(fileno(finfop->host.fp))) return read_from_tty(buffer, length);
 
   return (Long)fread(buffer, 1, length, finfop->host.fp);
@@ -277,7 +394,7 @@ Long ReadFileOrTty_generic(FILEINFO *finfop, char *buffer, ULong length) {
 #endif
 
 #ifdef HOST_SEEK_FILE_GENERIC
-Long SeekFile_generic(FILEINFO *finfop, Long offset, FileSeekMode mode) {
+Long SeekFile_generic(FILEINFO* finfop, Long offset, FileSeekMode mode) {
   static const int seekModes[] = {SEEK_SET, SEEK_CUR, SEEK_END};
 
   if (fseek(finfop->host.fp, offset, seekModes[mode]) != 0)
@@ -287,7 +404,7 @@ Long SeekFile_generic(FILEINFO *finfop, Long offset, FileSeekMode mode) {
 }
 #endif
 
-static void not_implemented(const char *name) {
+static void not_implemented(const char* name) {
   printFmt("run68: %s()は未実装です。\n", name);
 }
 
@@ -319,9 +436,9 @@ Long DosChdir_generic(Long name) {
 #include <unistd.h>
 
 // DOS _CURDIR (0xff47)
-Long DosCurdir_generic(short drv, char *buf_ptr) {
+Long DosCurdir_generic(short drv, char* buf_ptr) {
   char buf[PATH_MAX];
-  const char *p = getcwd(buf, sizeof(buf));
+  const char* p = getcwd(buf, sizeof(buf));
   if (p == NULL) {
     // Human68kのDOS _CURDIRはエラーコードとして-15しか返さないので
     // getdcwd()が失敗する理由は考慮しなくてよい。

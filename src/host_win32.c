@@ -121,6 +121,66 @@ HostFileInfoMember GetStandardHostfile_win32(int fileno) {
   return hostfile;
 }
 
+static Long toDosError(DWORD e, int defaultError) {
+  switch (e) {
+    default:
+      break;
+
+    case ERROR_ACCESS_DENIED:  // ディレクトリを開こうとした場合もこのエラーになる
+      return DOSE_RDONLY;
+    case ERROR_FILE_NOT_FOUND:
+      return DOSE_NOENT;
+    case ERROR_PATH_NOT_FOUND:
+      return DOSE_NODIR;
+    case ERROR_SHARING_VIOLATION:
+      return DOSE_LCKERR;
+    case ERROR_FILE_EXISTS:
+      return DOSE_EXISTFILE;
+    case ERROR_DISK_FULL:
+      return DOSE_DISKFULL;
+    case ERROR_DIRECTORY:
+      return DOSE_ISDIR;
+  }
+
+  return defaultError;
+}
+
+// ファイルを作成する
+Long CreateNewfile_win32(char* fullpath, HostFileInfoMember* hostfile,
+                         bool newfile) {
+  const DWORD dwDesiredAccess = GENERIC_WRITE | GENERIC_READ;
+  const DWORD dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+  const DWORD dwCreationDisposition = newfile ? CREATE_NEW : CREATE_ALWAYS;
+
+  HANDLE handle =
+      CreateFile(fullpath, dwDesiredAccess, dwShareMode, NULL,
+                 dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (handle == INVALID_HANDLE_VALUE) {
+    return toDosError(GetLastError(), DOSE_ILGFNAME);
+  }
+  hostfile->handle = handle;
+  return 0;
+}
+
+// ファイルを開く
+Long OpenFile_win32(char* fullpath, HostFileInfoMember* hostfile,
+                    FileOpenMode mode) {
+  static const DWORD md[] = {GENERIC_READ, GENERIC_WRITE,
+                             GENERIC_READ | GENERIC_WRITE};
+  const DWORD dwDesiredAccess = md[mode];
+  const DWORD dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+  const DWORD dwCreationDisposition = OPEN_EXISTING;
+
+  HANDLE handle =
+      CreateFile(fullpath, dwDesiredAccess, dwShareMode, NULL,
+                 dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (handle == INVALID_HANDLE_VALUE) {
+    return toDosError(GetLastError(), DOSE_NOENT);
+  }
+  hostfile->handle = handle;
+  return 0;
+}
+
 // ファイルを閉じる
 bool CloseFile_win32(FILEINFO* finfop) {
   HANDLE hFile = finfop->host.handle;
@@ -257,6 +317,6 @@ RegPair IocsOntime_win32(void) {
   // GetTickCount64()のミリ秒単位から、IOCS _ONTIMEの1/100秒単位に換算する
   ULONGLONG t = GetTickCount64() / 10;
 
-  lldiv_t r = lldiv(t, 24 * 60 * 60 * 100);
+  lldiv_t r = lldiv(t, 24LL * 60 * 60 * 100);
   return (RegPair){(ULong)r.rem, (ULong)(r.quot & 0xffff)};
 }

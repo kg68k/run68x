@@ -60,14 +60,13 @@ static Long Ioctrl(short, Long);
 static Long Dup(short);
 static Long Dup2(short, short);
 static Long Dskfre(short, Long);
-static Long Open(char *, short);
 static Long Close(short);
 static Long Fgets(Long, short);
 static Long Write(short, Long, Long);
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Write_conv(short, void *, size_t);
+static Long Write_conv(short, void*, size_t);
 #endif
-static Long Delete(char *);
+static Long Delete(char*);
 static Long Rename(Long, Long);
 static Long Chmod(Long, short);
 static Long Files(Long, Long, short);
@@ -91,24 +90,16 @@ static Long Exec3(ULong, Long, Long);
 static void Exec4(Long);
 
 #ifndef _WIN32
-void CloseHandle(FILE *fp) { fclose(fp); }
-
-int _dos_getfileattr(char *name, void *ret) {
+int _dos_getfileattr(char* name, void* ret) {
   printf("_dos_getfileattr(\"%s\")\n", name);
 
   return 1;
 }
 
-int _dos_setfileattr(char *name, short attr) {
+int _dos_setfileattr(char* name, short attr) {
   printf("_dos_setfileattr(\"%s\", %d)\n", name, attr);
 
   return 1;
-}
-
-int _dos_write(int fd, void *data, int size, size_t *res) {
-  //	printf("_dos_write()\n" );
-  *res = write(fd, data, size);
-  return 0;
 }
 
 void _flushall() {
@@ -125,12 +116,12 @@ char _getche() {
   return getchar();
 }
 
-void dos_getdrive(Long *drv) {
+void dos_getdrive(Long* drv) {
   //	printf("dos_getdrive(%p)\n", drv );
   *drv = 1;  // 1 = A:
 }
 
-void dos_setdrive(Long drv, Long *dmy) {
+void dos_setdrive(Long drv, Long* dmy) {
   //	printf("dos_setdrive(%d, %p)\n", drv, dmy );
 }
 
@@ -150,7 +141,7 @@ char ungetch(char c) {
 }
 #endif
 
-static int fgetcFromOnmemory(FILEINFO *finfop) {
+static int fgetcFromOnmemory(FILEINFO* finfop) {
   Long pos = finfop->onmemory.position;
   if (pos >= finfop->onmemory.length) return DOSE_ILGFNC;
 
@@ -163,7 +154,7 @@ static Long DosFgetc(ULong param) {
   UWord fileno = ReadParamUWord(&param);
   if (fileno >= FILE_MAX) return DOSE_MFILE;
 
-  FILEINFO *finfop = &finfo[fileno];
+  FILEINFO* finfop = &finfo[fileno];
   if (!finfop->is_opened) return DOSE_BADF;
 
   if (finfop->onmemory.buffer) return (Long)fgetcFromOnmemory(finfop);
@@ -227,7 +218,15 @@ static Long DosCreate(ULong param) {
   ULong file = ReadParamULong(&param);
   UWord atr = ReadParamUWord(&param);
 
-  return CreateNewFile(file, atr, false);
+  return CreateNewfile(file, atr, false);
+}
+
+// DOS _OPEN (0xff3d)
+static Long DosOpen(ULong param) {
+  ULong file = ReadParamULong(&param);
+  UWord mode = ReadParamUWord(&param);
+
+  return OpenExistingFile(file, mode);
 }
 
 // DOS _SEEK (0xff42)
@@ -240,7 +239,7 @@ static Long DosSeek(ULong param) {
 }
 
 // DOS _CURDIR (0xff47)
-static Long Curdir(short drv, char *buf_ptr) {
+static Long Curdir(short drv, char* buf_ptr) {
   return HOST_DOS_CURDIR(drv, buf_ptr);
 }
 
@@ -265,7 +264,7 @@ static Long DosGetenv(ULong param) {
   ULong env = ReadParamULong(&param);
   ULong buf = ReadParamULong(&param);
 
-  const char *s = Getenv(GetStringSuper(name), env);
+  const char* s = Getenv(GetStringSuper(name), env);
   if (!s) return DOSE_ILGFNC;
 
   WriteStringSuper(buf, s);
@@ -273,7 +272,7 @@ static Long DosGetenv(ULong param) {
 }
 
 // 環境変数領域から環境変数を検索する。
-const char *Getenv(const char *name, ULong env) {
+const char* Getenv(const char* name, ULong env) {
   if (env == 0) {
     env = ReadULongSuper(psp[nest_cnt] + PSP_ENV_PTR);
   }
@@ -284,7 +283,7 @@ const char *Getenv(const char *name, ULong env) {
   const size_t len = strlen(name);
 
   for (;;) {
-    char *p = GetStringSuper(kv);
+    char* p = GetStringSuper(kv);
     if (*p == '\0') break;
 
     if (memcmp(p, name, len) == 0 && p[len] == '=') {
@@ -326,7 +325,7 @@ static Long DosNewfile(ULong param) {
   ULong file = ReadParamULong(&param);
   UWord atr = ReadParamUWord(&param);
 
-  return CreateNewFile(file, atr, true);
+  return CreateNewfile(file, atr, true);
 }
 
 // DOS _MALLOC3 (0xff60, 0xff90)
@@ -391,22 +390,10 @@ static Long DosBusErr(ULong param) {
 }
 
 // ファイルを閉じてFILEINFOを未使用状態に戻す
-static bool CloseFile(FILEINFO *finfop) {
+static bool CloseFile(FILEINFO* finfop) {
   finfop->is_opened = false;
   FreeOnmemoryFile(finfop);
   return HOST_CLOSE_FILE(finfop);
-}
-
-// 開いている(オープン中でない)ファイル番号を探す
-static Long find_free_file(void) {
-  int i;
-
-  for (i = HUMAN68K_USER_FILENO_MIN; i < FILE_MAX; i++) {
-    if (!finfo[i].is_opened) {
-      return (Long)i;
-    }
-  }
-  return (Long)-1;
 }
 
 // 現在のプロセスが開いたファイルを全て閉じる
@@ -414,7 +401,7 @@ void close_all_files(void) {
   int i;
 
   for (i = HUMAN68K_USER_FILENO_MIN; i < FILE_MAX; i++) {
-    FILEINFO *finfop = &finfo[i];
+    FILEINFO* finfop = &finfo[i];
     if (finfop->is_opened && finfop->nest == nest_cnt) {
       CloseFile(finfop);
     }
@@ -443,7 +430,7 @@ static bool Exit2(Long exit_code) {
          false = 実行継続
  */
 bool dos_call(UByte code) {
-  char *data_ptr = 0;
+  char* data_ptr = 0;
   Long data;
   Long buf;
   Long len;
@@ -477,7 +464,7 @@ bool dos_call(UByte code) {
       // 出力する1文字の直後に必ずNUL文字を置くこと。
       char c[2] = {(char)ReadUWordSuper(stack_adr), '\0'};
 #ifdef _WIN32
-      FILEINFO *finfop = &finfo[1];
+      FILEINFO* finfop = &finfo[1];
       if (GetConsoleMode(finfop->host.handle, &st) != 0) {
         // 非リダイレクト
         WriteW32(1, finfop->host.handle, c, 1);
@@ -497,7 +484,7 @@ bool dos_call(UByte code) {
       srt &= 0xFF;
       if (srt >= 0xFE) {
 #ifdef _WIN32
-        FILEINFO *finfop = &finfo[0];
+        FILEINFO* finfop = &finfo[0];
         INPUT_RECORD ir[3];
         DWORD read_len = 0;
         rd[0] = 0;
@@ -548,7 +535,7 @@ bool dos_call(UByte code) {
       len = strlen(data_ptr);
 #ifdef _WIN32
       {
-        FILEINFO *finfop = &finfo[1];
+        FILEINFO* finfop = &finfo[1];
         if (GetConsoleMode(finfop->host.handle, &st) != 0) {
           WriteW32(1, finfop->host.handle, data_ptr, len);
         } else {
@@ -669,7 +656,7 @@ bool dos_call(UByte code) {
       char c[2] = {(char)ReadUWordSuper(stack_adr), '\0'};
       fhdl = (short)mem_get(stack_adr + 2, S_WORD);
 #ifdef _WIN32
-      FILEINFO *finfop = &finfo[fhdl];
+      FILEINFO* finfop = &finfo[fhdl];
       if (GetConsoleMode(finfop->host.handle, &st) != 0 &&
           (fhdl == 1 || fhdl == 2)) {
         // 非リダイレクトで標準出力か標準エラー出力
@@ -814,10 +801,8 @@ bool dos_call(UByte code) {
     case 0x3c:  // CREATE
       rd[0] = DosCreate(stack_adr);
       break;
-    case 0x3D: /* OPEN */
-      data = mem_get(stack_adr, S_LONG);
-      srt = (short)mem_get(stack_adr + 4, S_WORD);
-      rd[0] = Open(GetStringSuper(data), srt);
+    case 0x3D:  // OPEN
+      rd[0] = DosOpen(stack_adr);
       break;
     case 0x3E: /* CLOSE */
       srt = (short)mem_get(stack_adr, S_WORD);
@@ -1093,7 +1078,7 @@ static Long Ioctrl(short mode, Long stack_adr) {
 static Long Dup(short org) {
   if (org < 5) return (-14);
 
-  Long ret = find_free_file();
+  Long ret = FindFreeFileNo();
   if (ret < 0) return -4;  // オープンしているファイルが多すぎる
 
   finfo[ret] = finfo[org];
@@ -1151,11 +1136,11 @@ static Long Dskfre(short drv, Long buf) {
 }
 
 #ifndef _WIN32
-static char *to_slash(size_t size, char *buf, const char *path) {
+static char* to_slash(size_t size, char* buf, const char* path) {
   if (strlen(path) >= size) return NULL;
 
-  char *p = strncpy(buf, path, size);
-  char *root = (p[0] && p[1] == ':') ? p + strlen("A:") : p;
+  char* p = strncpy(buf, path, size);
+  char* root = (p[0] && p[1] == ':') ? p + strlen("A:") : p;
   do {
     if (*p == '\\') *p = '/';
   } while (*p++);
@@ -1163,151 +1148,6 @@ static char *to_slash(size_t size, char *buf, const char *path) {
   return root;
 }
 #endif
-
-// ファイル名後ろの空白をつめる。
-static void trimRight(char *s) {
-  for (char *t = s + strlen(s) - 1; s <= t && *t == ' '; t -= 1) *t = '\0';
-}
-
-// 新しいファイルを作成する。
-Long CreateNewFile(ULong file, UWord atr, bool newfile) {
-  const char *filename = GetStringSuper(file);
-
-  // パス名の加工用にバッファを確保してコピーする。
-  size_t bufSize = strlen(filename) + 1;
-  char *buf = malloc(bufSize);
-  if (!buf) return DOSE_ILGFNAME;
-#ifdef _WIN32
-  char *p = strcpy(buf, filename);
-#else
-  char *p = to_slash(bufSize, buf, filename);
-  if (!p) {
-    free(buf);
-    return DOSE_ILGFNAME;
-  }
-#endif
-  trimRight(p);
-
-  Human68kPathName hpn;
-  if (!HOST_CANONICAL_PATHNAME(p, &hpn)) {
-    free(buf);
-    return DOSE_ILGFNAME;
-  }
-  free(buf);
-
-  // ホスト上のファイルをオープンするためのパス名を作る。
-  char fullpath[HUMAN68K_PATH_MAX + 1];
-#ifdef _WIN32
-  p = strcat(strcpy(fullpath, hpn.path), hpn.name);
-#else
-  {
-    char fullpath2[HUMAN68K_PATH_MAX + 1];
-    strcat(strcpy(fullpath, hpn.path), hpn.name);
-    p = to_slash(sizeof(fullpath2), fullpath2, fullpath);
-    if (!p) return DOSE_ILGFNAME;
-    if (!HOST_CONVERT_FROM_SJIS(p, fullpath, sizeof(fullpath)))
-      return DOSE_ILGFNAME;
-    p = fullpath;
-  }
-#endif
-
-  Long ret = find_free_file();
-  if (ret < 0) return DOSE_MFILE;  // オープンしているファイルが多すぎる
-
-#ifdef _WIN32
-  DWORD dwCreationDisposition = newfile ? CREATE_NEW : CREATE_ALWAYS;
-  HANDLE handle =
-      CreateFile(p, GENERIC_WRITE | GENERIC_READ, 0, NULL,
-                 dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (handle == INVALID_HANDLE_VALUE) {
-    DWORD e = GetLastError();
-    return (e == ERROR_FILE_EXISTS) ? DOSE_EXISTFILE : DOSE_DISKFULL;
-  }
-  HostFileInfoMember hostfile = {handle};
-#else
-  if (newfile) {
-    FILE *fp = fopen(p, "rb");
-    if (fp != NULL) {
-      fclose(fp);
-      return DOSE_EXISTFILE;  // 既に存在している
-    }
-  }
-  FILE *fp = fopen(p, "w+b");
-  if (fp == NULL) return DOSE_DISKFULL;
-  HostFileInfoMember hostfile = {fp};
-#endif
-
-  SetFinfo(ret, hostfile, OPENMODE_READ_WRITE, nest_cnt);
-  return ret;
-}
-
-/*
- 　機能：DOSCALL OPENを実行する
- 戻り値：ファイルハンドル(負ならエラーコード)
- */
-static Long Open(char *p, short mode) {
-#ifndef _WIN32
-  char buf[89];
-  p = to_slash(sizeof(buf), buf, p);
-  if (p == NULL) return DOSE_ILGFNAME;
-    // printf("Open(\"%s\", 0x%02x)\n", p, mode);
-#endif
-
-  switch (mode) {
-    case OPENMODE_READ:  // 読み込みオープン
-      break;
-    case OPENMODE_WRITE:  // 書き込みオープン
-    {
-#ifdef _WIN32
-      HANDLE handle = CreateFile(p, GENERIC_READ, 0, NULL, OPEN_EXISTING,
-                                 FILE_ATTRIBUTE_NORMAL, NULL);
-      if (handle == INVALID_HANDLE_VALUE) return DOSE_NOENT;
-      CloseHandle(handle);
-#else
-      FILE *fp = fopen(p, "rb");
-      if (fp == NULL) return DOSE_NOENT;  // ファイルは見つからない
-      fclose(fp);
-#endif
-    } break;
-    case OPENMODE_READ_WRITE:  // 読み書きオープン
-      break;
-
-    default:
-      return DOSE_ILGARG;  // アクセスモードが異常
-  }
-  FileOpenMode openMode = (FileOpenMode)mode;
-
-  /* ファイル名後ろの空白をつめる */
-  int len = strlen(p);
-  for (int i = len - 1; i >= 0 && p[i] == ' '; i--) p[i] = '\0';
-
-  if ((len = strlen(p)) > 88) return DOSE_ILGFNAME;  // ファイル名の指定誤り
-
-  Long ret = find_free_file();
-  if (ret < 0) return DOSE_MFILE;  // オープンしているファイルが多すぎる
-
-#ifdef _WIN32
-  static const DWORD md[] =  //
-      {GENERIC_READ, GENERIC_WRITE, GENERIC_READ | GENERIC_WRITE};
-
-  HANDLE handle = CreateFile(p, md[openMode], 0, NULL, OPEN_EXISTING,
-                             FILE_ATTRIBUTE_NORMAL, NULL);
-  if (handle == INVALID_HANDLE_VALUE)
-    return (openMode == OPENMODE_WRITE) ? DOSE_DISKFULL : DOSE_NOENT;
-  HostFileInfoMember hostfile = {handle};
-#else
-  static const char mdstr[][4] = {"rb", "r+b", "r+b"};
-
-  FILE *fp = fopen(p, mdstr[openMode]);
-  if (fp == NULL)
-    return (openMode == OPENMODE_WRITE) ? DOSE_DISKFULL : DOSE_NOENT;
-  HostFileInfoMember hostfile = {fp};
-#endif
-
-  FILEINFO *finfop = SetFinfo(ret, hostfile, openMode, nest_cnt);
-  ReadOnmemoryFile(finfop, openMode);
-  return ret;
-}
 
 /*
  　機能：DOSCALL CLOSEを実行する
@@ -1322,7 +1162,7 @@ static Long Close(short hdl) {
   return 0;
 }
 
-static Long fgetsFromOnmemory(FILEINFO *finfop, ULong adr) {
+static Long fgetsFromOnmemory(FILEINFO* finfop, ULong adr) {
   UByte rest = ReadUByteSuper(adr + 0);
   ULong write = adr + 2;
   Long len = 0;
@@ -1355,7 +1195,7 @@ static Long Fgets(Long adr, short hdl) {
   char buf[257];
   size_t len;
 
-  FILEINFO *finfop = &finfo[hdl];
+  FILEINFO* finfop = &finfo[hdl];
 
   if (!finfop->is_opened) return -6;  // オープンされていない
   if (finfop->mode == 1) return (-1);
@@ -1388,8 +1228,8 @@ static Long Fgets(Long adr, short hdl) {
 #else
   {
     if (fgets(buf, max, finfop->host.fp) == NULL) return -1;
-    char *s = buf;
-    char *d = buf;
+    char* s = buf;
+    char* d = buf;
     char c;
     while ((c = *s++) != '\0') {
       if (c != '\r' && c != '\n') *d++ = c;
@@ -1435,9 +1275,9 @@ static Long Write(short hdl, Long buf, Long len) {
 }
 
 #if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Write_conv(short hdl, void *buf, size_t size) {
+static Long Write_conv(short hdl, void* buf, size_t size) {
   Long write_len;
-  FILE *fp = finfo[hdl].host.fp;
+  FILE* fp = finfo[hdl].host.fp;
 
   if (fp == NULL) return (-6);
 
@@ -1454,9 +1294,9 @@ static Long Write_conv(short hdl, void *buf, size_t size) {
       char sjis_buf[2048];
       char utf8_buf[4096];
       size_t sjis_buf_size;
-      char *sjis_buf_p;
+      char* sjis_buf_p;
       size_t sjis_bytes;
-      char *utf8_buf_p = utf8_buf;
+      char* utf8_buf_p = utf8_buf;
       size_t utf8_bytes = sizeof(utf8_buf);
       size_t utf8_bytes_prev = utf8_bytes;
       int res;
@@ -1500,7 +1340,7 @@ static Long Write_conv(short hdl, void *buf, size_t size) {
  　機能：DOSCALL DELETEを実行する
  戻り値：ファイルハンドル(負ならエラーコード)
  */
-static Long Delete(char *p) {
+static Long Delete(char* p) {
   if (remove(p) != 0) return (errno == ENOENT) ? DOSE_NOENT : DOSE_ILGFNAME;
   return DOSE_SUCCESS;
 }
@@ -1510,8 +1350,8 @@ static Long Delete(char *p) {
  戻り値：エラーコード
  */
 static Long Rename(Long old, Long new1) {
-  char *old_ptr = GetStringSuper(old);
-  char *new_ptr = GetStringSuper(new1);
+  char* old_ptr = GetStringSuper(old);
+  char* new_ptr = GetStringSuper(new1);
 
   errno = 0;
   if (rename(old_ptr, new_ptr) != 0) {
@@ -1529,7 +1369,7 @@ static Long Rename(Long old, Long new1) {
  戻り値：エラーコード
  */
 static Long Chmod(Long adr, short atr) {
-  char *name_ptr = GetStringSuper(adr);
+  char* name_ptr = GetStringSuper(adr);
 
   if (atr == -1) {
     /* 読み出し */
@@ -1568,7 +1408,7 @@ static Long Chmod(Long adr, short atr) {
      エラーコード
  */
 static Long Files(Long buf, Long name, short atr) {
-  char *name_ptr = GetStringSuper(name);
+  char* name_ptr = GetStringSuper(name);
 
   ULong bufSize = 53;
   bool exMode = (buf & 0x80000000) ? true : false;
@@ -1580,7 +1420,7 @@ static Long Files(Long buf, Long name, short atr) {
 
   Span mem = GetWritableMemorySuper(buf, bufSize);
   if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
-  char *buf_ptr = mem.bufptr;
+  char* buf_ptr = mem.bufptr;
 
 #ifdef _WIN32
   WIN32_FIND_DATA f_data;
@@ -1595,9 +1435,9 @@ static Long Files(Long buf, Long name, short atr) {
   /* 最初のファイルを検索する。*/
   handle = FindFirstFile(name_ptr, &f_data);
   /* 予約領域をセット */
-  buf_ptr[0] = atr;                  /* ファイルの属性 */
-  buf_ptr[1] = 0;                    /* ドライブ番号(not used) */
-  *((HANDLE *)&buf_ptr[2]) = handle; /* サーチハンドル */
+  buf_ptr[0] = atr;                 /* ファイルの属性 */
+  buf_ptr[1] = 0;                   /* ドライブ番号(not used) */
+  *((HANDLE*)&buf_ptr[2]) = handle; /* サーチハンドル */
   {
     bool b = handle != INVALID_HANDLE_VALUE;
     /* 属性の一致するファイルが見つかるまで繰返し検索する。*/
@@ -1648,15 +1488,15 @@ static Long Files(Long buf, Long name, short atr) {
   if (name_ptr == NULL) return DOSE_ILGFNAME;
 
   {
-    FILE *fp = fopen(name_ptr, "rb");
+    FILE* fp = fopen(name_ptr, "rb");
     if (fp != NULL) {
       fclose(fp);
 
       /* 予約領域をセット */
       buf_ptr[0] = atr; /* ファイルの属性 */
       buf_ptr[1] = 0;   /* ドライブ番号(not used) */
-                        //			*((HANDLE*)&buf_ptr[2]) = handle; /*
-                        // サーチハンドル */
+      //			*((HANDLE*)&buf_ptr[2]) = handle; /*
+      // サーチハンドル */
       /* DATEとTIMEをセット */
       {
         /*
@@ -1687,9 +1527,9 @@ static Long Files(Long buf, Long name, short atr) {
     }
   }
 
-  char *path = name_ptr;
-  DIR *dir;
-  struct dirent *dent;
+  char* path = name_ptr;
+  DIR* dir;
+  struct dirent* dent;
 
   dir = opendir(path);
   printf("opendir(%s)=%p\n", path, dir);
@@ -1716,7 +1556,7 @@ static Long Nfiles(Long buf) {
 
 #ifdef _WIN32
   WIN32_FIND_DATA f_data;
-  char *buf_ptr = mem.bufptr;
+  char* buf_ptr = mem.bufptr;
   short atr = buf_ptr[0]; /* 検索すべきファイルの属性 */
 
   {
@@ -1725,11 +1565,11 @@ static Long Nfiles(Long buf) {
     SYSTEMTIME st;
     unsigned short s;
 
-    s = *((unsigned short *)&buf_ptr[24]);
+    s = *((unsigned short*)&buf_ptr[24]);
     st.wYear = ((s & 0xfe00) >> 9) + 1980;
     st.wMonth = (s & 0x01e0) >> 5;
     st.wDay = (s & 0x1f);
-    s = *((unsigned short *)&buf_ptr[22]);
+    s = *((unsigned short*)&buf_ptr[22]);
     st.wHour = (s & 0xf800) >> 11;
     st.wMinute = (s & 0x07e0) >> 5;
     st.wSecond = (s & 0x001f);
@@ -1737,9 +1577,9 @@ static Long Nfiles(Long buf) {
     SystemTimeToFileTime(&st, &f_data.ftLastWriteTime);
 
     f_data.nFileSizeHigh = 0;
-    f_data.nFileSizeLow = *((ULong *)&buf_ptr[29]);
+    f_data.nFileSizeLow = *((ULong*)&buf_ptr[29]);
     /* ファイルのハンドルをバッファから取得する。*/
-    HANDLE handle = *((HANDLE *)&buf_ptr[2]);
+    HANDLE handle = *((HANDLE*)&buf_ptr[2]);
     bool b = FindNextFile(handle, &f_data) != FALSE;
     /* 属性の一致するファイルが見つかるまで繰返し検索する。*/
     while (b) {
@@ -1907,11 +1747,11 @@ static Long Settim2(Long tim) {
 static Long Namests(Long name, Long buf) {
   char nbuf[256];
   int wild = 0;
-  const char *name_ptr = GetStringSuper(name);
+  const char* name_ptr = GetStringSuper(name);
 
   Span mem = GetWritableMemorySuper(buf, SIZEOF_NAMESTS);
   if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
-  char *buf_ptr = mem.bufptr;
+  char* buf_ptr = mem.bufptr;
   memset(buf_ptr, 0x00, SIZEOF_NAMESTS);
 
   int len = strlen(name_ptr);
@@ -1971,7 +1811,7 @@ static Long Namests(Long name, Long buf) {
 #ifdef _WIN32
   else {
     char path[MAX_PATH];
-    GetCurrentDirectory(strlen(path), path);
+    GetCurrentDirectory(sizeof(path), path);
     UByte drv = path[0] - 'A';
   }
 #endif
@@ -2008,11 +1848,11 @@ static Long Namests(Long name, Long buf) {
 static Long Nameck(Long name, Long buf) {
   char nbuf[89];
   int ret = 0;
-  char *name_ptr = GetStringSuper(name);
+  char* name_ptr = GetStringSuper(name);
 
   Span mem = GetWritableMemorySuper(buf, SIZEOF_NAMECK);
   if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
-  char *buf_ptr = mem.bufptr;
+  char* buf_ptr = mem.bufptr;
   memset(buf_ptr, 0x00, SIZEOF_NAMECK);
 
   int len = strlen(name_ptr);
@@ -2290,7 +2130,7 @@ static Long Assign(short mode, Long stack_adr) {
   Long buf = mem_get(stack_adr + 4, S_LONG);
 
   if (mode == 0) {
-    const char *drv_ptr = GetStringSuper(drv);
+    const char* drv_ptr = GetStringSuper(drv);
 
     if (drv_ptr[1] != ':' || drv_ptr[2] != '\0') return DOSE_ILGPARM;
     short d = toupper(drv_ptr[0]) - 'A' + 1;
@@ -2365,7 +2205,7 @@ static Long Getfcb(short fhdl) {
 
 // DOS _EXECの引数(実行ファイル名)からファイルタイプを抽出する。
 //   実行ファイル名の最上位バイトをクリアする。
-static bool getExecType(ULong *refFile, ExecType *outType) {
+static bool getExecType(ULong* refFile, ExecType* outType) {
   UByte t = *refFile >> 24;
   *outType = EXEC_TYPE_DEFAULT;
 
@@ -2385,13 +2225,13 @@ static bool getExecType(ULong *refFile, ExecType *outType) {
  戻り値：エラーコード等
  */
 static Long Exec01(ULong nm, Long cmd, Long env, int md) {
-  FILE *fp;
+  FILE* fp;
   char fname[89];
 
   ExecType execType;
   if (!getExecType(&nm, &execType)) return DOSE_ILGPARM;
 
-  char *name_ptr = GetStringSuper(nm);
+  char* name_ptr = GetStringSuper(nm);
   if (strlen(name_ptr) > 88) return DOSE_ILGFNAME;  // ファイル名指定誤り
 
   strcpy(fname, name_ptr);
@@ -2450,10 +2290,10 @@ static Long Exec01(ULong nm, Long cmd, Long env, int md) {
  戻り値：エラーコード
  */
 static Long Exec2(Long nm, Long cmd, Long env) {
-  char *name_ptr = GetStringSuper(nm);
-  char *cmd_ptr = GetStringSuper(cmd);
+  char* name_ptr = GetStringSuper(nm);
+  char* cmd_ptr = GetStringSuper(cmd);
 
-  char *p = name_ptr;
+  char* p = name_ptr;
   while (*p != '\0' && *p != ' ') p++;
   if (*p != '\0') { /* コマンドラインあり */
     *p = '\0';
@@ -2463,7 +2303,7 @@ static Long Exec2(Long nm, Long cmd, Long env) {
   }
 
   /* 環境変数pathに従ってファイルを検索し、オープンする。*/
-  FILE *fp = prog_open(name_ptr, env, print);
+  FILE* fp = prog_open(name_ptr, env, print);
   if (fp == NULL) {
     return 0;
   } else {
@@ -2482,11 +2322,11 @@ static Long Exec3(ULong nm, Long adr1, Long adr2) {
   ExecType execType;
   if (!getExecType(&nm, &execType)) return DOSE_ILGPARM;
 
-  char *name_ptr = GetStringSuper(nm);
+  char* name_ptr = GetStringSuper(nm);
   if (strlen(name_ptr) > 88) return (-13); /* ファイル名指定誤り */
 
   strcpy(fname, name_ptr);
-  FILE *fp = prog_open(fname, (ULong)-1, NULL);
+  FILE* fp = prog_open(fname, (ULong)-1, NULL);
   if (fp == NULL) return -2;
 
   Long prog_size;
@@ -2513,7 +2353,7 @@ static void Exec4(Long adr) {
  　機能：getsの代わりをする
  戻り値：なし
  */
-Long gets2(char *str, int max) {
+Long gets2(char* str, int max) {
   int c;
   int cnt;
 

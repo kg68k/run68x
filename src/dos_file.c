@@ -18,12 +18,90 @@
 #include "dos_file.h"
 
 #include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "host.h"
 #include "human68k.h"
 #include "mem.h"
 #include "run68.h"
+
+// 開いている(オープン中でない)ファイル番号を探す
+Long FindFreeFileNo(void) {
+  int i;
+
+  for (i = HUMAN68K_USER_FILENO_MIN; i < FILE_MAX; i++) {
+    if (!finfo[i].is_opened) {
+      return (Long)i;
+    }
+  }
+  return (Long)-1;
+}
+
+// ファイル名後ろの空白をつめる。
+static void trimRight(char* s) {
+  for (char* t = s + strlen(s) - 1; s <= t && *t == ' '; t -= 1) *t = '\0';
+}
+
+static bool makeHuman68kPathName(ULong file, Human68kPathName* hpn) {
+  const char* filename = GetStringSuper(file);
+
+  char* buf = malloc(strlen(filename) + 1);
+  if (buf) {
+    strcpy(buf, filename);
+    trimRight(buf);
+    bool result = HOST_CANONICAL_PATHNAME(buf, hpn);
+    free(buf);
+    return result;
+  }
+
+  return false;
+}
+
+// 新しいファイルを作成する。
+Long CreateNewfile(ULong file, UWord atr, bool newfile) {
+  Human68kPathName hpn;
+  if (!makeHuman68kPathName(file, &hpn)) return DOSE_ILGFNAME;
+
+  int fileno = FindFreeFileNo();
+  if (fileno < 0) return DOSE_MFILE;  // オープンしているファイルが多すぎる。
+
+  char fullpath[HUMAN68K_PATH_MAX + 1];
+  strcat(strcpy(fullpath, hpn.path), hpn.name);
+
+  HostFileInfoMember hostfile;
+  Long err = HOST_CREATE_NEWFILE(fullpath, &hostfile, newfile);
+  if (err != 0) return err;
+
+  SetFinfo(fileno, hostfile, OPENMODE_READ_WRITE, nest_cnt);
+  return fileno;
+}
+
+// ファイルを開く。
+Long OpenExistingFile(ULong file, UWord mode) {
+  FileOpenMode rwMode = mode & 0x000f;
+  if (rwMode > OPENMODE_READ_WRITE) return DOSE_ILGARG;
+
+  // シェアリングモードは未対応(常に許可する)
+  if ((mode & 0x00f0) >= 0x0050) return DOSE_ILGARG;
+
+  Human68kPathName hpn;
+  if (!makeHuman68kPathName(file, &hpn)) return DOSE_ILGFNAME;
+
+  int fileno = FindFreeFileNo();
+  if (fileno < 0) return DOSE_MFILE;
+
+  char fullpath[HUMAN68K_PATH_MAX + 1];
+  strcat(strcpy(fullpath, hpn.path), hpn.name);
+
+  HostFileInfoMember hostfile;
+  Long err = HOST_OPEN_FILE(fullpath, &hostfile, rwMode);
+  if (err != 0) return err;
+
+  FILEINFO* finfop = SetFinfo(fileno, hostfile, rwMode, nest_cnt);
+  ReadOnmemoryFile(finfop, rwMode);
+  return fileno;
+}
 
 static Long readFile(FILEINFO* finfop, char* buffer, ULong length) {
   if (!finfop->onmemory.buffer)
@@ -103,15 +181,6 @@ Long Seek(UWord fileno, Long offset, UWord mode) {
                                  : HOST_SEEK_FILE(finfop, offset, mode);
 }
 
-// Human68kにおける2バイト文字の1バイト目の文字コードか
-//   Shift_JIS-2004 ... 0x81～0x9f、0xe0～0xfc
-//   Human68kの実際の動作 ... 0x80～0x9f、0xe0～0xff
-//     ただしDOS _MAKETMPのみ0x80～0x9f、0xe0～0xefで、これは不具合と思われる。
-//   ここではHuman68kの実際の動作を採用する
-static int is_mb_lead(char c) {
-  return (0x80 <= c && c <= 0x9f) || (0xe0 <= c);
-}
-
 // 最後のパスデリミタ(\ : /)の次のアドレスを求める
 //   パスデリミタがなければ文字列先頭を返す
 char* get_filename(char* path) {
@@ -149,7 +218,7 @@ Long Maketmp(ULong path, UWord atr) {
   replace_char(filename, '?', '0');  // ファイル名中の'?'を'0'に置き換える
 
   for (;;) {
-    Long fileno = CreateNewFile(path, atr, true);
+    Long fileno = CreateNewfile(path, atr, true);
     if (fileno != DOSE_EXISTFILE) {
       // ファイルを作成できれば終了
       // 同名ファイルが存在する以外のエラーでも終了

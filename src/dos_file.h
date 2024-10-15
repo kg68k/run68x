@@ -20,6 +20,9 @@
 
 #include "run68.h"
 
+Long FindFreeFileNo(void);
+Long CreateNewfile(ULong file, UWord atr, bool newfile);
+Long OpenExistingFile(ULong file, UWord mode);
 Long Read(UWord fileno, ULong buffer, ULong length);
 Long Seek(UWord fileno, Long offset, UWord mode);
 Long Maketmp(ULong path, UWord atr);

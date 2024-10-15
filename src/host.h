@@ -82,6 +82,20 @@ HostFileInfoMember GetStandardHostfile_generic(int fileno);
 #define HOST_GET_STANDARD_HOSTFILE GetStandardHostfile_generic
 #endif
 
+#ifndef HOST_CREATE_NEWFILE
+#define HOST_CREATE_NEWFILE_GENERIC
+Long CreateNewfile_generic(char* fullpath, HostFileInfoMember* hostfile,
+                           bool newfile);
+#define HOST_CREATE_NEWFILE CreateNewfile_generic
+#endif
+
+#ifndef HOST_OPEN_FILE
+#define HOST_OPEN_FILE_GENERIC
+Long OpenFile_generic(char* fullpath, HostFileInfoMember* hostfile,
+                      FileOpenMode mode);
+#define HOST_OPEN_FILE OpenFile_generic
+#endif
+
 #ifndef HOST_CLOSE_FILE
 #define HOST_CLOSE_FILE_GENERIC
 bool CloseFile_generic(FILEINFO* finfop);
