@@ -28,8 +28,8 @@
 #include "run68.h"
 
 // UTF-8からShift_JISへの変換
-char* utf8ToSjis(char* inbuf, size_t inbytes, size_t* outBufSize,
-                 wchar_t** outWbuf, char** outSjbuf) {
+static char* utf8ToSjis(char* inbuf, size_t inbytes, size_t* outBufSize,
+                        wchar_t** outWbuf, char** outSjbuf) {
   *outBufSize = 0;
   *outWbuf = NULL;
   *outSjbuf = NULL;

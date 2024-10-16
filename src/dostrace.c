@@ -435,7 +435,7 @@ static int codeToEscapeChar(int c) {
 #define STRING_MAX_WIDTH 32
 
 static void dumpString(const char* s) {
-  char buf[STRING_MAX_WIDTH + 16];
+  char buf[STRING_MAX_WIDTH + 16] = {0};
   char* end = &buf[STRING_MAX_WIDTH];
   char* p = buf;
 
@@ -590,7 +590,7 @@ static void printParam(const char* format, ULong* refParam) {
   }
 }
 
-const char* printFormat(const char* format, ULong* refParam) {
+static const char* printFormat(const char* format, ULong* refParam) {
   while (format[0] != '\0') {
     const char* bracket = strchr(format, '{');
     if (bracket == NULL) break;

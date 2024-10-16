@@ -329,9 +329,9 @@ static bool analyzeHimemOption(const char *arg) {
   const size_t sizes_len = sizeof(sizes) / sizeof(sizes[0]);
 
   const char *p = strchr(arg, '=');
-  char *endptr;
+  char *endptr = NULL;
   unsigned long mb = p ? strtoul(p + 1, &endptr, 10) : 0;
-  if (*endptr) mb = 0;
+  if (endptr && *endptr) mb = 0;
 
   for (size_t i = 0; i < sizes_len; ++i) {
     if (sizes[i] == mb) {
@@ -383,8 +383,7 @@ Restart:
             }
             /* トラップするPCのアドレスを取得する。*/
             int tpc = 0;
-            sscanf(p, "%x", &tpc);
-            settings.trapPc = (ULong)tpc;
+            settings.trapPc = (sscanf(p, "%x", &tpc) == 1) ? (ULong)tpc : 0;
             printFmt("MPU命令トラップフラグ=ON ADDR=$%08x\n", settings.trapPc);
           } else {
             invalid_flag = true;

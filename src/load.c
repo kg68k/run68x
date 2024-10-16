@@ -53,7 +53,7 @@ static char *GetAPath(const char **path_p, size_t bufSize, char *buf) {
       /* 2バイトコードのスキップ */
       ;
     }
-    size_t skip = i + (((*path_p)[i] == '\0') ? 0 : 1);
+    int skip = i + (((*path_p)[i] == '\0') ? 0 : 1);
     if (i >= (bufSize - 1)) {  // パスデリミタを追加する分を差し引いておく
       *path_p += skip;
       continue;
@@ -88,7 +88,7 @@ static void onErrorDummy(const char *message) {
     !NULL = 実行ファイルのファイルポインタ
 */
 FILE *prog_open(char *fname, ULong envptr, void (*err)(const char *)) {
-  char dir[MAX_PATH], fullname[MAX_PATH], cwd[MAX_PATH];
+  char dir[MAX_PATH], fullname[MAX_PATH] = {0}, cwd[MAX_PATH];
   FILE *fp = 0;
   char *exp = strrchr(fname, '.');
   void (*onError)(const char *) = err ? err : onErrorDummy;
@@ -341,8 +341,11 @@ void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
               ULong parentSsp, const ProgramSpec *progSpec,
               const Human68kPathName *pathname) {
   Span mem = GetWritableMemorySuper(psp, SIZEOF_PSP);
-  if (mem.bufptr)
+  if (mem.bufptr) {
     memset(mem.bufptr + SIZEOF_MEMBLK, 0, SIZEOF_PSP - SIZEOF_MEMBLK);
+    strcpy(mem.bufptr + PSP_EXEFILE_PATH, pathname->path);
+    strcpy(mem.bufptr + PSP_EXEFILE_NAME, pathname->name);
+  }
 
   WriteULongSuper(psp + PSP_ENV_PTR, envptr);
   WriteULongSuper(psp + PSP_CMDLINE, cmdline);
@@ -353,9 +356,6 @@ void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
 
   WriteULongSuper(psp + PSP_PARENT_SSP, parentSsp);
   WriteUWordSuper(psp + PSP_PARENT_SR, parentSr);
-
-  strcpy(mem.bufptr + PSP_EXEFILE_PATH, pathname->path);
-  strcpy(mem.bufptr + PSP_EXEFILE_NAME, pathname->name);
 }
 
 /* $Id: load.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */

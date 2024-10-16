@@ -31,8 +31,10 @@ static void put_fnckey2(int, char *);
 */
 void get_fnckey(int no, char *p) {
   if (no == 0) {
-    memcpy(p, fnc_key1, 20 * 32);
-    memcpy(p + 20 * 32, fnc_key2, 12 * 6);
+    size_t size1 = (size_t)20 * 32;  // FNO=1～20 (F01～F10、SHIFT+F01～F10)
+    size_t size2 = (size_t)12 * 6;   // FNO=21～32 (Fnn以外のキー)
+    memcpy(p, fnc_key1, size1);
+    memcpy(p + size1, fnc_key2, size2);
   }
   if (no >= 1 && no <= 20) memcpy(p, fnc_key1[no - 1], 32);
   if (no >= 21 && no <= 32) memcpy(p, fnc_key2[no - 21], 6);

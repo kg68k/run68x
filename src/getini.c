@@ -93,7 +93,7 @@ void readenv_from_ini(char *path, ULong envbuf) {
   FILE *fp;
   int len;
   int env_len = 0; /* 環境の長さ */
-  const size_t envSize = ReadULongSuper(envbuf);
+  const int envSize = ReadULongSuper(envbuf);
 
   /* INIファイルの名前(パス含む)を得る */
   strcpy(buf, path);
@@ -120,8 +120,8 @@ void readenv_from_ini(char *path, ULong envbuf) {
     if (env_flag) {
       /* 環境変数はiniファイルに記述する。*/
       /* bufに格納された文字列の書式を確認すべきである。*/
-      ULong len = strlen(buf) + 1;
-      if (env_len + len < envSize - 5) {
+      int len = (int)strlen(buf) + 1;
+      if ((env_len + len) < (envSize - 5)) {
         ULong s = envbuf + 4 + env_len;  // 文字列を書き込むアドレス
         Span mem = GetWritableMemorySuper(s, len + 1);
         if (!mem.bufptr) break;

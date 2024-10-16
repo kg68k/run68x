@@ -1,3 +1,12 @@
+# run68x 2.0.2 (2024-10-17)
+
+* `DOS _CREATE`、`DOS _NEWFILE`、`DOS _OPEN`の処理を書き直した。
+  * (win32) `DOS _OPEN`でオープン済みファイルを更にオープンできるようにした。
+  * (generic) `DOS _CREATE`、`DOS _NEWFILE`でキャラクタデバイスをオープン
+    できないようにした。
+* (generic) `DOS _FILES`でファイルサイズを取得するようにした。
+
+
 # run68x 2.0.1 (2024-06-12)
 
 * `MOVEM (An)+,An`命令で`An`レジスタの値が正しくない不具合を修正。

@@ -183,7 +183,7 @@ Long Seek(UWord fileno, Long offset, UWord mode) {
 
 // 最後のパスデリミタ(\ : /)の次のアドレスを求める
 //   パスデリミタがなければ文字列先頭を返す
-char* get_filename(char* path) {
+static char* get_filename(char* path) {
   char* filename = path;
   char* p = path;
   char c;

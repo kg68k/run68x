@@ -29,7 +29,7 @@ int WriteW32(short _type, HANDLE handle, const char *_buf, size_t _len) {
   DWORD written, csize;
   CONSOLE_CURSOR_INFO cci;
   CONSOLE_SCREEN_BUFFER_INFO csbi;
-  COORD coord;
+  COORD coord = {0};
   const char *ptr;
 
   if (_type == 1) {
@@ -54,8 +54,8 @@ int WriteW32(short _type, HANDLE handle, const char *_buf, size_t _len) {
   while (*ptr) {
     if (*ptr == '\033') {
       unsigned char c;
-      int i, n = 0, m, v[6], w, h;
-      for (i = 0; i < 6; i++) v[i] = -1;
+      int i, n = 0, m = 0, w, h;
+      int v[6] = { -1, -1, -1, -1, -1, -1 };
       ptr++;
     retry:
       if ((c = *ptr++) == 0) break;

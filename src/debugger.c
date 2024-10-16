@@ -89,8 +89,7 @@ static UWord watchcode(int argc, char **argv) {
     debuggerError("watchcode:Instruction code expression error.\n");
     return 0x4afc;
   }
-  sscanf(&argv[1][1], "%hx", &wcode);
-  return (UWord)wcode;
+  return (sscanf(&argv[1][1], "%hx", &wcode) == 1) ? (UWord)wcode : 0;
 }
 
 /*
@@ -409,8 +408,7 @@ static void set_breakpoint(int argc, char **argv) {
 
   {
     long unsigned int a;
-    sscanf(&argv[1][1], "%lx", &a);
-    settings.trapPc = (ULong)a;
+    settings.trapPc = (sscanf(&argv[1][1], "%lx", &a) == 1) ? (ULong)a : 0;
   }
 }
 
@@ -423,7 +421,7 @@ static void display_history(int argc, char **argv) {
   } else if (determine_string(argv[1]) != 1) {
     debuggerError("history:Argument error.\n");
   } else {
-    sscanf(argv[1], "%d", &n);
+    n = (sscanf(argv[1], "%d", &n) == 1) ? n : 10;
   }
   OPBuf_display(n);
 }
@@ -448,12 +446,14 @@ static void display_list(int argc, char **argv) {
   }
   if (2 <= argc) {
     if (argc == 2 && determine_string(argv[1]) == 1) {
-      sscanf(argv[1], "%d", &n);
+      n = (sscanf(argv[1], "%d", &n) == 1) ? n : 10;
     } else if (argc >= 2 && determine_string(argv[1]) == 2) {
-      sscanf(&argv[1][1], "%x", &addr);
+      addr = (sscanf(&argv[1][1], "%x", &addr) == 1) ? addr
+             : (list_addr == 0)                      ? pc
+                                                     : list_addr;
     }
     if (argc == 3 && determine_string(argv[2]) == 1) {
-      sscanf(argv[2], "%d", &n);
+      n = (sscanf(argv[2], "%d", &n) == 1) ? n : 10;
     }
   }
   for (i = 0; i < n; i++) {
@@ -495,8 +495,7 @@ static ULong get_stepcount(int argc, char **argv) {
     return 0;
   } else if (determine_string(argv[1]) == 1) {
     long unsigned int a;
-    sscanf(argv[1], "%lu", &a);
-    count = (ULong)a;
+    count = (sscanf(argv[1], "%lu", &a) == 1) ? (ULong)a : 0;
   }
   return count;
 }

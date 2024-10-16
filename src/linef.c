@@ -148,9 +148,7 @@ static Long Dtol(Long d0, Long d1) {
  戻り値：なし
 */
 static Long Ltof(Long d0) {
-  FLT fl;
-
-  fl.flt = (float)d0;
+  FLT fl = {.flt = (float)d0};
 
   d0 = (fl.c[3] << 24);
   d0 |= (fl.c[2] << 16);
@@ -160,18 +158,18 @@ static Long Ltof(Long d0) {
   return (d0);
 }
 
+static FLT LongToFLT(Long d0) {
+  FLT fl = {.c = {(d0 & 0xFF), ((d0 >> 8) & 0xFF), ((d0 >> 16) & 0xFF),
+                  ((d0 >> 24) & 0xFF)}};
+  return fl;
+}
+
 /*
  　機能：FEFUNC _FTOLを実行する(エラーは未サポート)
  戻り値：変換された整数
 */
 static Long Ftol(Long d0) {
-  FLT fl;
-
-  fl.c[0] = (d0 & 0xFF);
-  fl.c[1] = ((d0 >> 8) & 0xFF);
-  fl.c[2] = ((d0 >> 16) & 0xFF);
-  fl.c[3] = ((d0 >> 24) & 0xFF);
-
+  FLT fl = LongToFLT(d0);
   return ((Long)fl.flt);
 }
 
@@ -180,15 +178,8 @@ static Long Ftol(Long d0) {
  戻り値：なし
 */
 static void Ftod(Long d0) {
-  DBL ret;
-  FLT arg;
-
-  arg.c[0] = (d0 & 0xFF);
-  arg.c[1] = ((d0 >> 8) & 0xFF);
-  arg.c[2] = ((d0 >> 16) & 0xFF);
-  arg.c[3] = ((d0 >> 24) & 0xFF);
-
-  ret.dbl = arg.flt;
+  FLT arg = LongToFLT(d0);
+  DBL ret = {.dbl = arg.flt};
 
   From_dbl(&ret, 0);
 }
@@ -200,8 +191,9 @@ static void Ftod(Long d0) {
 static int Strl(char *p, int base) {
   int l;
 
-  for (l = 0; p[l] == ' '; l++)
-    ;
+  for (l = 0; p[l] == ' '; l++) {
+    // 空白を飛ばす。
+  }
   switch (base) {
     case 10:
       for (; p[l] != '\0'; l++) {
@@ -266,10 +258,9 @@ static Long Stol(Long adr) {
 */
 static void Stod(Long adr) {
   char *p = GetStringSuper(adr);
-  DBL ret;
 
   errno = 0;
-  ret.dbl = atof(p);
+  DBL ret = {.dbl = atof(p)};
   if (errno == ERANGE) {
     CCR_V_C_ON();
     CCR_N_OFF();
@@ -293,9 +284,7 @@ static void Stod(Long adr) {
  戻り値：なし
 */
 static void Ltod(Long num) {
-  DBL arg1;
-
-  arg1.dbl = num;
+  DBL arg1 = {.dbl = num};
 
   From_dbl(&arg1, 0);
 }
@@ -352,7 +341,7 @@ static void Otos(Long num, Long adr) {
  戻り値：なし
 */
 static void Btos(Long num, Long adr) {
-  char buf[48];
+  char buf[48] = {0};
   char *p = buf;
 
   if (num == 0) {
@@ -377,7 +366,7 @@ static void Btos(Long num, Long adr) {
  戻り値：なし
 */
 static void Val(Long str) {
-  DBL ret;
+  DBL ret = {0.0};
   char *p = GetStringSuper(str);
   int base = 10;
 
@@ -709,11 +698,8 @@ static void Dfloor(Long d0, Long d1) {
 */
 static void Sin(Long d0, Long d1) {
   DBL arg;
-  DBL ans;
-
   To_dbl(&arg, d0, d1);
-
-  ans.dbl = sin(arg.dbl);
+  DBL ans = {.dbl = sin(arg.dbl)};
 
   From_dbl(&ans, 0);
 }
@@ -724,11 +710,8 @@ static void Sin(Long d0, Long d1) {
 */
 static void Cos(Long d0, Long d1) {
   DBL arg;
-  DBL ans;
-
   To_dbl(&arg, d0, d1);
-
-  ans.dbl = cos(arg.dbl);
+  DBL ans = {.dbl = cos(arg.dbl)};
 
   From_dbl(&ans, 0);
 }
@@ -739,11 +722,8 @@ static void Cos(Long d0, Long d1) {
 */
 static void Tan(Long d0, Long d1) {
   DBL arg;
-  DBL ans;
-
   To_dbl(&arg, d0, d1);
-
-  ans.dbl = tan(arg.dbl);
+  DBL ans = {.dbl = tan(arg.dbl)};
   CCR_C_OFF();
 
   From_dbl(&ans, 0);
@@ -755,11 +735,8 @@ static void Tan(Long d0, Long d1) {
 */
 static void Atan(Long d0, Long d1) {
   DBL arg;
-  DBL ans;
-
   To_dbl(&arg, d0, d1);
-
-  ans.dbl = atan(arg.dbl);
+  DBL ans = {.dbl = atan(arg.dbl)};
 
   From_dbl(&ans, 0);
 }
@@ -770,7 +747,6 @@ static void Atan(Long d0, Long d1) {
 */
 static void Log(Long d0, Long d1) {
   DBL arg;
-  DBL ans;
 
   To_dbl(&arg, d0, d1);
 
@@ -779,7 +755,7 @@ static void Log(Long d0, Long d1) {
     return;
   }
 
-  ans.dbl = log(arg.dbl);
+  DBL ans = {.dbl = log(arg.dbl)};
   CCR_C_OFF();
 
   From_dbl(&ans, 0);
@@ -791,7 +767,6 @@ static void Log(Long d0, Long d1) {
 */
 static void Exp(Long d0, Long d1) {
   DBL arg;
-  DBL ans;
 
   To_dbl(&arg, d0, d1);
 
@@ -802,7 +777,7 @@ static void Exp(Long d0, Long d1) {
   }
 
   errno = 0;
-  ans.dbl = exp(arg.dbl);
+  DBL ans = {.dbl = exp(arg.dbl)};
   CCR_C_OFF();
 
   From_dbl(&ans, 0);
@@ -814,7 +789,6 @@ static void Exp(Long d0, Long d1) {
 */
 static void Sqr(Long d0, Long d1) {
   DBL arg;
-  DBL ans;
 
   To_dbl(&arg, d0, d1);
 
@@ -822,7 +796,7 @@ static void Sqr(Long d0, Long d1) {
     CCR_C_ON();
     return;
   }
-  ans.dbl = sqrt(arg.dbl);
+  DBL ans = {.dbl = sqrt(arg.dbl)};
   CCR_C_OFF();
 
   From_dbl(&ans, 0);
@@ -833,12 +807,7 @@ static void Sqr(Long d0, Long d1) {
  戻り値：なし
 */
 static void Ftst(Long d0) {
-  FLT arg;
-
-  arg.c[0] = (d0 & 0xFF);
-  arg.c[1] = ((d0 >> 8) & 0xFF);
-  arg.c[2] = ((d0 >> 16) & 0xFF);
-  arg.c[3] = ((d0 >> 24) & 0xFF);
+  FLT arg = LongToFLT(d0);
 
   if (arg.flt == 0) {
     CCR_Z_ON();
@@ -857,18 +826,8 @@ static void Ftst(Long d0) {
  戻り値：演算結果
 */
 static Long Fmul(Long d0, Long d1) {
-  FLT arg1;
-  FLT arg2;
-
-  arg1.c[0] = (d0 & 0xFF);
-  arg1.c[1] = ((d0 >> 8) & 0xFF);
-  arg1.c[2] = ((d0 >> 16) & 0xFF);
-  arg1.c[3] = ((d0 >> 24) & 0xFF);
-
-  arg2.c[0] = (d1 & 0xFF);
-  arg2.c[1] = ((d1 >> 8) & 0xFF);
-  arg2.c[2] = ((d1 >> 16) & 0xFF);
-  arg2.c[3] = ((d1 >> 24) & 0xFF);
+  FLT arg1 = LongToFLT(d0);
+  FLT arg2 = LongToFLT(d1);
 
   CCR_C_OFF();
   arg1.flt = arg1.flt * arg2.flt;
@@ -886,18 +845,8 @@ static Long Fmul(Long d0, Long d1) {
  戻り値：なし
 */
 static Long Fdiv(Long d0, Long d1) {
-  FLT arg1;
-  FLT arg2;
-
-  arg1.c[0] = (d0 & 0xFF);
-  arg1.c[1] = ((d0 >> 8) & 0xFF);
-  arg1.c[2] = ((d0 >> 16) & 0xFF);
-  arg1.c[3] = ((d0 >> 24) & 0xFF);
-
-  arg2.c[0] = (d1 & 0xFF);
-  arg2.c[1] = ((d1 >> 8) & 0xFF);
-  arg2.c[2] = ((d1 >> 16) & 0xFF);
-  arg2.c[3] = ((d1 >> 24) & 0xFF);
+  FLT arg1 = LongToFLT(d0);
+  FLT arg2 = LongToFLT(d1);
 
   if (arg2.flt == 0) {
     CCR_Z_C_ON();
@@ -1042,16 +991,11 @@ static void Cumod(ULong adr) {
  戻り値：なし
 */
 static void Cltod(Long adr) {
-  DBL arg1;
-  Long num;
-  Long d0;
-  Long d1;
+  Long num = mem_get(adr, S_LONG);
+  DBL arg1 = {.dbl = num};
 
-  num = mem_get(adr, S_LONG);
-  arg1.dbl = num;
-
-  d0 = rd[0];
-  d1 = rd[1];
+  Long d0 = rd[0];
+  Long d1 = rd[1];
   From_dbl(&arg1, 0);
   mem_set(adr, rd[0], S_LONG);
   mem_set(adr + 4, rd[1], S_LONG);
@@ -1082,18 +1026,11 @@ static void Cdtol(Long adr) {
  戻り値：なし
 */
 static void Cftod(Long adr) {
-  DBL db;
-  FLT fl;
-  Long d0;
+  Long d0 = mem_get(adr, S_LONG);
   Long d1;
 
-  d0 = mem_get(adr, S_LONG);
-  fl.c[0] = (d0 & 0xFF);
-  fl.c[1] = ((d0 >> 8) & 0xFF);
-  fl.c[2] = ((d0 >> 16) & 0xFF);
-  fl.c[3] = ((d0 >> 24) & 0xFF);
-
-  db.dbl = fl.flt;
+  FLT fl = LongToFLT(d0);
+  DBL db = {.dbl = fl.flt};
 
   d0 = rd[0];
   d1 = rd[1];
@@ -1110,7 +1047,6 @@ static void Cftod(Long adr) {
 */
 static void Cdtof(Long adr) {
   DBL arg;
-  FLT fl;
   Long d0;
   Long d1;
 
@@ -1122,7 +1058,7 @@ static void Cdtof(Long adr) {
   rd[0] = d0;
   rd[1] = d1;
 
-  fl.flt = (float)arg.dbl;
+  FLT fl = {.flt = (float)arg.dbl};
   CCR_C_OFF();
 
   d0 = (fl.c[3] << 24);
@@ -1172,8 +1108,8 @@ static void Cdcmp(Long adr) {
  戻り値：なし
 */
 static void Cdadd(Long adr) {
-  DBL a;
-  DBL b;
+  DBL a = {0.0};
+  DBL b = {0.0};
   int i;
 
   for (i = 0; i < 8; i++) {
@@ -1191,8 +1127,8 @@ static void Cdadd(Long adr) {
  戻り値：なし
 */
 static void Cdsub(Long adr) {
-  DBL a;
-  DBL b;
+  DBL a = {0.0};
+  DBL b = {0.0};
   int i;
 
   for (i = 0; i < 8; i++) {
@@ -1210,8 +1146,8 @@ static void Cdsub(Long adr) {
  戻り値：なし
 */
 static void Cdmul(Long adr) {
-  DBL a;
-  DBL b;
+  DBL a = {0.0};
+  DBL b = {0.0};
   int i;
 
   for (i = 0; i < 8; i++) {
@@ -1229,8 +1165,8 @@ static void Cdmul(Long adr) {
  戻り値：なし
 */
 static void Cddiv(Long adr) {
-  DBL a;
-  DBL b;
+  DBL a = {0.0};
+  DBL b = {0.0};
   int i;
 
   for (i = 0; i < 8; i++) {
@@ -1251,12 +1187,11 @@ static void Cddiv(Long adr) {
 
 static void Pow(Long d0, Long d1, Long d2, Long d3) {
   DBL arg0, arg1;
-  DBL ans;
 
   To_dbl(&arg0, d0, d1);
   To_dbl(&arg1, d2, d3);
 
-  ans.dbl = pow(arg0.dbl, arg1.dbl);
+  DBL ans = {.dbl = pow(arg0.dbl, arg1.dbl)};
   CCR_C_OFF();
 
   From_dbl(&ans, 0);

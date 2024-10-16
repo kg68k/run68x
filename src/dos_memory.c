@@ -114,7 +114,7 @@ static ULong tryMalloc(UByte mode, ULong sizeWithHeader, ULong parent,
 
   ULong memoryEnd = ReadULongSuper(OSWORK_MEMORY_END);
   ULong memblk = ReadULongSuper(OSWORK_ROOT_PSP);
-  ULong next;
+  ULong next = 0;
   for (; memblk != 0; memblk = next) {
     next = ReadULongSuper(memblk + MEMBLK_NEXT);
 
@@ -206,8 +206,8 @@ Long Mfree(ULong adr) {
 
 // 指定したプロセスが確保したメモリブロックを全て解放する
 static void MfreeAll(ULong psp) {
-  ULong next, m;
-  for (m = ReadULongSuper(OSWORK_ROOT_PSP);; m = next) {
+  ULong next = 0;
+  for (ULong m = ReadULongSuper(OSWORK_ROOT_PSP);; m = next) {
     next = ReadULongSuper(m + MEMBLK_NEXT);
 
     ULong parent = ReadULongSuper(m + MEMBLK_PARENT);
@@ -281,8 +281,8 @@ Long SetblockHuge(ULong adr, ULong size) {
 static bool is_valid_memblk(ULong memblk, ULong* nextptr) {
   if (nextptr != NULL) *nextptr = 0;
 
-  ULong next, m;
-  for (m = ReadULongSuper(OSWORK_ROOT_PSP);; m = next) {
+  ULong next = 0;
+  for (ULong m = ReadULongSuper(OSWORK_ROOT_PSP);; m = next) {
     next = ReadULongSuper(m + MEMBLK_NEXT);
     if (m == memblk) break;
     if (next == 0) return false;

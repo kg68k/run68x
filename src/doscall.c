@@ -59,7 +59,7 @@ static Long Gets(Long);
 static Long Kflush(short);
 static Long Ioctrl(short, Long);
 static Long Dup(short);
-static Long Dup2(short, short);
+static Long Dup2(short org, short new);
 static Long Dskfre(short, Long);
 static Long Close(short);
 static Long Fgets(Long, short);
@@ -91,13 +91,13 @@ static Long Exec3(ULong, Long, Long);
 static void Exec4(Long);
 
 #ifndef _WIN32
-int _dos_getfileattr(char* name, void* ret) {
+static int _dos_getfileattr(char* name, void* ret) {
   printf("_dos_getfileattr(\"%s\")\n", name);
 
   return 1;
 }
 
-int _dos_setfileattr(char* name, short attr) {
+static int _dos_setfileattr(char* name, short attr) {
   printf("_dos_setfileattr(\"%s\", %d)\n", name, attr);
 
   return 1;
@@ -117,12 +117,12 @@ char _getche() {
   return getchar();
 }
 
-void dos_getdrive(Long* drv) {
+static void dos_getdrive(Long* drv) {
   //	printf("dos_getdrive(%p)\n", drv );
   *drv = 1;  // 1 = A:
 }
 
-void dos_setdrive(Long drv, Long* dmy) {
+static void dos_setdrive(Long drv, Long* dmy) {
   //	printf("dos_setdrive(%d, %p)\n", drv, dmy );
 }
 
@@ -136,7 +136,7 @@ int kbhit() {
   return 1;
 }
 
-char ungetch(char c) {
+static char ungetch(char c) {
   printf("ungetch()\n");
   return 0;
 }
@@ -161,7 +161,7 @@ static Long DosFgetc(ULong param) {
   if (finfop->onmemory.buffer) return (Long)fgetcFromOnmemory(finfop);
 
 #ifdef _WIN32
-  char c;
+  char c = 0;
   DWORD read_len = 0;
   if (GetFileType(finfop->host.handle) == FILE_TYPE_CHAR) {
     /* 標準入力のハンドルがキャラクタタイプだったら、ReadConsoleを試してみる。*/
@@ -171,7 +171,8 @@ static Long DosFgetc(ULong param) {
           ReadConsoleInput(finfop->host.handle, &ir, 1, (LPDWORD)&read_len);
       if (b == FALSE) {
         /* コンソールではなかった。*/
-        ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL);
+        if (!ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL))
+          c = 0;
         break;
       }
       if (read_len == 1 && ir.EventType == KEY_EVENT &&
@@ -181,7 +182,8 @@ static Long DosFgetc(ULong param) {
       }
     }
   } else {
-    ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL);
+    if (!ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL))
+      c = 0;
   }
   return (read_len == 0) ? DOSE_ILGFNC : c;
 #else
@@ -470,7 +472,7 @@ bool dos_call(UByte code) {
         // 非リダイレクト
         WriteW32(1, finfop->host.handle, c, 1);
       } else {
-        Long nwritten;
+        Long nwritten = 0;
         /* Win32API */
         WriteFile(finfop->host.handle, c, 1, (LPDWORD)&nwritten, NULL);
       }
@@ -540,7 +542,7 @@ bool dos_call(UByte code) {
         if (GetConsoleMode(finfop->host.handle, &st) != 0) {
           WriteW32(1, finfop->host.handle, data_ptr, len);
         } else {
-          Long nwritten;
+          Long nwritten = 0;
           /* Win32API */
           WriteFile(finfop->host.handle, data_ptr, len, (LPDWORD)&nwritten,
                     NULL);
@@ -1115,8 +1117,8 @@ static Long Dup2(short org, short new) {
  */
 static Long Dskfre(short drv, Long buf) {
 #ifdef _WIN32
-  ULong SectorsPerCluster, BytesPerSector, NumberOfFreeClusters,
-      TotalNumberOfClusters;
+  ULong SectorsPerCluster = 0, BytesPerSector = 0, NumberOfFreeClusters = 0,
+        TotalNumberOfClusters = 0;
 
   BOOL b = GetDiskFreeSpaceA(
       NULL, (LPDWORD)&SectorsPerCluster, (LPDWORD)&BytesPerSector,
@@ -1193,7 +1195,7 @@ static Long fgetsFromOnmemory(FILEINFO* finfop, ULong adr) {
  戻り値：エラーコード
  */
 static Long Fgets(Long adr, short hdl) {
-  char buf[257];
+  char buf[257] = {0};
   size_t len;
 
   FILEINFO* finfop = &finfo[hdl];
@@ -1208,8 +1210,8 @@ static Long Fgets(Long adr, short hdl) {
   {
     int i = 0;
     while (i < max) {
-      DWORD read_len;
-      char c;
+      DWORD read_len = 0;
+      char c = 0;
 
       if (ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL) ==
           FALSE)
@@ -1263,7 +1265,7 @@ static Long Write(short hdl, Long buf, Long len) {
   }
 
 #ifdef _WIN32
-  unsigned len2;
+  unsigned len2 = 0;
   WriteFile(finfo[hdl].host.handle, mem.bufptr, mem.length, &len2, NULL);
   write_len = len2;
   if (finfo[hdl].host.handle == GetStdHandle(STD_OUTPUT_HANDLE))
@@ -1563,25 +1565,24 @@ static Long Nfiles(Long buf) {
   if (!mem.bufptr) throwBusErrorOnWrite(buf + mem.length);
 
 #ifdef _WIN32
-  WIN32_FIND_DATA f_data;
+  WIN32_FIND_DATA f_data = {0};
   char* buf_ptr = mem.bufptr;
   short atr = buf_ptr[0]; /* 検索すべきファイルの属性 */
 
   {
     /* todo:buf_ptrの指す領域から必要な情報を取り出して、f_dataにコピーする。*/
     /* 2秒→100nsに変換する。*/
-    SYSTEMTIME st;
-    unsigned short s;
-
-    s = *((unsigned short*)&buf_ptr[24]);
-    st.wYear = ((s & 0xfe00) >> 9) + 1980;
-    st.wMonth = (s & 0x01e0) >> 5;
-    st.wDay = (s & 0x1f);
-    s = *((unsigned short*)&buf_ptr[22]);
-    st.wHour = (s & 0xf800) >> 11;
-    st.wMinute = (s & 0x07e0) >> 5;
-    st.wSecond = (s & 0x001f);
-    st.wMilliseconds = 0;
+    unsigned short s1 = *((unsigned short*)&buf_ptr[24]);
+    unsigned short s2 = *((unsigned short*)&buf_ptr[22]);
+    SYSTEMTIME st = {
+        .wYear = ((s1 & 0xfe00) >> 9) + 1980,
+        .wMonth = (s1 & 0x01e0) >> 5,
+        .wDay = (s1 & 0x1f),
+        .wHour = (s2 & 0xf800) >> 11,
+        .wMinute = (s2 & 0x07e0) >> 5,
+        .wSecond = (s2 & 0x001f),
+        .wMilliseconds = 0,
+    };
     SystemTimeToFileTime(&st, &f_data.ftLastWriteTime);
 
     f_data.nFileSizeHigh = 0;
@@ -1673,15 +1674,16 @@ static Long Getdate() {
  */
 static Long Setdate(short dt) {
 #ifdef _WIN32
-  SYSTEMTIME stime;
-  BOOL b;
-  stime.wYear = (dt >> 9) & 0x7F + 1980;
-  stime.wMonth = (dt >> 5) & 0xF;
-  stime.wDay = dt & 0x1f;
-  stime.wSecond = 0;
-  stime.wMilliseconds = 0;
-  // b = SetSystemTime(&stime);
-  b = SetLocalTime(&stime);
+  SYSTEMTIME stime = {
+      .wYear = (dt >> 9) & 0x7F + 1980,
+      .wMonth = (dt >> 5) & 0xF,
+      .wDay = dt & 0x1f,
+      .wSecond = 0,
+      .wMilliseconds = 0,
+  };
+
+  // BOOL b = SetSystemTime(&stime);
+  BOOL b = SetLocalTime(&stime);
   if (!b) return -14; /* パラメータ不正 */
 #else
   printf("DOSCALL SETDATE:not defined yet %s %d\n", __FILE__, __LINE__);
@@ -1731,14 +1733,15 @@ static Long Gettime(int flag) {
  */
 static Long Settim2(Long tim) {
 #ifdef _WIN32
-  SYSTEMTIME stime;
-  BOOL b;
-  stime.wYear = (tim >> 16) & 0x1F;
-  stime.wMonth = (tim >> 8) & 0x3F;
-  stime.wDay = tim & 0x3f;
-  stime.wSecond = 0;
-  stime.wMilliseconds = 0;
-  b = SetSystemTime(&stime);
+  SYSTEMTIME stime = {
+      .wYear = (tim >> 16) & 0x1F,
+      .wMonth = (tim >> 8) & 0x3F,
+      .wDay = tim & 0x3f,
+      .wSecond = 0,
+      .wMilliseconds = 0,
+  };
+
+  BOOL b = SetSystemTime(&stime);
   if (!b) return -14; /* パラメータ不正 */
 #else
   printf("DOSCALL SETTIM2:not defined yet %s %d\n", __FILE__, __LINE__);
@@ -2374,7 +2377,7 @@ Long gets2(char* str, int max) {
   }
   if (c == EOF) str[cnt++] = EOF;
 #ifdef _WIN32
-  unsigned dmy;
+  DWORD dmy = 0;
   WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), "\x01B[1A", 4, &dmy, NULL);
 #endif
   /* printf("%c[1A", 0x1B); */ /* カーソルを１行上に */
