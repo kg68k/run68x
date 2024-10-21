@@ -103,13 +103,13 @@ static bool Unlk(char code) {
          false = 実行継続
 */
 static bool Tas(char code) {
-  char mode;
-  char reg;
   Long data;
   int work_mode;
 
-  mode = ((code & 0x38) >> 3);
-  reg = (code & 0x07);
+  char mode = ((code & 0x38) >> 3);
+  char reg = (code & 0x07);
+
+  if (mode == EA_AD || (mode == 7 && reg > 1)) return IllegalInstruction();
 
   /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
   if (mode == EA_AIPI) {
@@ -832,24 +832,38 @@ static bool Jsr(char code) {
          false = 実行継続
 */
 static bool Trap(char code) {
-  int no = code & 0x0f;
+  static const char* const messages[15] = {
+      "trap #0命令を実行しました",  "trap #1命令を実行しました",
+      "trap #2命令を実行しました",  "trap #3命令を実行しました",
+      "trap #4命令を実行しました",  "trap #5命令を実行しました",
+      "trap #6命令を実行しました",  "trap #7命令を実行しました",
+      "trap #8命令を実行しました",  "trap #9命令を実行しました",
+      "trap #10命令を実行しました", "trap #11命令を実行しました",
+      "trap #12命令を実行しました", "trap #13命令を実行しました",
+      "trap #14命令を実行しました",
+      // "trap #15命令を実行しました",
+  };
 
+  unsigned int no = code & 0x0f;
   if (no == 15) {
     return iocs_call();
   }
 
   if (no <= 8) {
-    SR_S_ON();
-    ra[7] -= 4;
-    mem_set(ra[7], pc, S_LONG);
-    ra[7] -= 2;
-    mem_set(ra[7], sr, S_WORD);
-
-    pc = ReadULongSuper(0x80 + no * 4);
-    return false;
+    unsigned int vecno = VECNO_TRAP0 + no;
+    ULong adr = ReadULongSuper(vecno * 4);
+    if (adr != DefaultExceptionHandler[vecno]) {
+      SR_S_ON();
+      ra[7] -= 4;
+      mem_set(ra[7], pc, S_LONG);
+      ra[7] -= 2;
+      mem_set(ra[7], sr, S_WORD);
+      pc = adr;
+      return false;
+    }
   }
 
-  err68a("未定義の例外処理を実行しました", __FILE__, __LINE__);
+  err68(messages[no]);
 }
 
 /*
@@ -936,12 +950,8 @@ static bool Nbcd(char code2) {
   }
 
   /* ソースのアドレッシングモードに応じた処理 */
-  if (work_mode == EA_AD) {
-    err68a("nbcd には アドレスレジスタ直接はありません。", __FILE__, __LINE__);
-  }
-  if (get_data_at_ea(EA_All, work_mode, src_reg, size, &src_data)) {
-    return true;
-  }
+  if (work_mode == EA_AD) return IllegalInstruction();  // NBCD Anは不可
+  if (get_data_at_ea(EA_All, work_mode, src_reg, size, &src_data)) return true;
 
 #ifdef TRACE
   printf("trace: nbcd     src=%d PC=%06lX\n", src_data, save_pc);
@@ -1002,7 +1012,7 @@ static bool Nbcd(char code2) {
  戻り値： true = 実行終了
          false = 実行継続
 */
-bool line4(char *pc_ptr) {
+bool line4(char* pc_ptr) {
   char code1, code2;
   code1 = *(pc_ptr++);
   code2 = *pc_ptr;
@@ -1081,7 +1091,7 @@ bool line4(char *pc_ptr) {
       break;
   }
 
-  err68a("未定義命令を実行しました", __FILE__, __LINE__);
+  return IllegalInstruction();
 }
 
 /* $Id: line4.c,v 1.6 2009-08-08 06:49:44 masamic Exp $ */

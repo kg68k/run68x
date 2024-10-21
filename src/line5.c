@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -90,14 +90,10 @@ static int Addq(char code1, char code2) {
   reg = (code2 & 0x07);
 
   if (mode == EA_AD) {
-    if (size == S_BYTE) {
-      err68a("不正な命令: addq.b #<data>, An を実行しようとしました。",
-             __FILE__, __LINE__);
-    } else {
-      /* アドレスレジスタ直接モードの時のアクセスサイズは必ずロングワードになる
-       */
-      size = S_LONG;
-    }
+    if (size == S_BYTE) return IllegalInstruction();  // ADDQ.B #Imm,Anは不可
+
+    // アドレスレジスタ直接モードの時のアクセスサイズは必ずロングワードになる
+    size = S_LONG;
   }
 
   /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
@@ -154,14 +150,10 @@ static int Subq(char code1, char code2) {
   reg = (code2 & 0x07);
 
   if (mode == EA_AD) {
-    if (size == S_BYTE) {
-      err68a("不正な命令: subq.b #<data>, An を実行しようとしました。",
-             __FILE__, __LINE__);
-    } else {
-      /* アドレスレジスタ直接モードの時のアクセスサイズは必ずロングワードになる
-       */
-      size = S_LONG;
-    }
+    if (size == S_BYTE) return IllegalInstruction();  // SUBQ.B #Imm,Anは不可
+
+    // アドレスレジスタ直接モードの時のアクセスサイズは必ずロングワードになる
+    size = S_LONG;
   }
 
   /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */

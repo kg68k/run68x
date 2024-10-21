@@ -25,6 +25,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/getini.c
   src/host.c
   src/host.h
+  src/human68k.c
   src/human68k.h
   src/hupair.c
   src/hupair.h

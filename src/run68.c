@@ -32,6 +32,8 @@
 #include "mem.h"
 #include "operate.h"
 
+ULong DefaultExceptionHandler[256];
+
 EXEC_INSTRUCTION_INFO OP_info;
 FILEINFO finfo[FILE_MAX];
 const char size_char[3] = {'b', 'w', 'l'};
@@ -91,7 +93,7 @@ static void print_usage(void) {
 }
 
 typedef struct {
-  ULong vector;
+  ULong vecno;
   ULong handler;
 } VectorSet;
 
@@ -100,72 +102,34 @@ typedef struct {
  戻り値：なし
 */
 static void trap_table_make(void) {
-  enum {
-    rte = HUMAN_WORK,
-    rts = HUMAN_WORK + 2,
-  };
   static const VectorSet vectors[] = {
-      {0x28, rte},         // A系列命令
-      {0x2c, rte},         // F系列命令
-      {0x80, TRAP0_WORK},  // trap #0
-      {0x84, TRAP1_WORK},  // trap #1
-      {0x88, TRAP2_WORK},  // trap #2
-      {0x8c, TRAP3_WORK},  // trap #3
-      {0x90, TRAP4_WORK},  // trap #4
-      {0x94, TRAP5_WORK},  // trap #5
-      {0x98, TRAP6_WORK},  // trap #6
-      {0x9c, TRAP7_WORK},  // trap #7
-      {0xa0, TRAP8_WORK},  // trap #8
-      {0x118, 0},          // V-DISP
-      {0x138, 0},          // CRTC-IRQ
+      {VECNO_TRAP0, TRAP0_WORK}, {VECNO_TRAP1, TRAP1_WORK},
+      {VECNO_TRAP2, TRAP2_WORK}, {VECNO_TRAP3, TRAP3_WORK},
+      {VECNO_TRAP4, TRAP4_WORK}, {VECNO_TRAP5, TRAP5_WORK},
+      {VECNO_TRAP6, TRAP6_WORK}, {VECNO_TRAP7, TRAP7_WORK},
+      {VECNO_TRAP8, TRAP8_WORK}, {VECNO_VDISP, 0},
+      {VECNO_CRTCRAS, 0},
   };
 
-  WriteUWordSuper(rte, 0x4e73);
-  WriteUWordSuper(rts, 0x4e75);
+  memset(DefaultExceptionHandler, 0, sizeof(DefaultExceptionHandler));
 
   // 割り込みルーチンの処理先設定
   const int len = sizeof(vectors) / sizeof(vectors[0]);
   for (int i = 0; i < len; i += 1) {
+    ULong vecno = vectors[i].vecno;
     ULong h = vectors[i].handler;
 
     // 最上位にベクタ番号を入れたアドレスがハイメモリ空間を指してしまうなら
     // ベクタ番号は取り除く。
     h = (ToPhysicalAddress(h) < BASE_ADDRESS_MAX) ? h : (h & ADDRESS_MASK);
 
-    WriteULongSuper(vectors[i].vector, h);
-  }
-
-  // IOCSコールベクタの設定
-  for (int i = 0; i < 256; i++) {
-    WriteULongSuper(0x400 + i * 4, rts);
+    WriteULongSuper(vecno * 4, h);
+    DefaultExceptionHandler[vecno] = h;
   }
 
   // IOCSワークの設定
   WriteUWordSuper(0x970, 79);  // 画面の桁数-1
   WriteUWordSuper(0x972, 24);  // 画面の行数-1
-
-  // DOSコールベクタの設定
-  for (int i = 0; i < 256; i++) {
-    WriteULongSuper(0x1800 + i * 4, rts);
-  }
-}
-
-// 指定したデバイスヘッダをメモリに書き込む
-static void WriteDrviceHeader(ULong adr, const DeviceHeader dev) {
-  WriteULongSuper(adr + DEVHEAD_NEXT, dev.next);
-  WriteUWordSuper(adr + DEVHEAD_ATTRIBUTE, dev.attribute);
-  WriteULongSuper(adr + DEVHEAD_STRATEGY, dev.strategy);
-  WriteULongSuper(adr + DEVHEAD_INTERRUPT, dev.interrupt_);
-
-  Span mem = GetWritableMemorySuper(adr + DEVHEAD_NAME, sizeof(dev.name));
-  if (mem.bufptr) memcpy(mem.bufptr, dev.name, mem.length);
-}
-
-// 全てのデバイスヘッダをメモリに書き込む
-//   ダミーのNULデバイスのみ実装している。
-static void WriteDrviceHeaders(void) {
-  static const DeviceHeader nuldev = {0xffffffff, 0x8024, 0, 0, "NUL     "};
-  WriteDrviceHeader(NUL_DEVICE_HEADER, nuldev);
 }
 
 /*
@@ -230,8 +194,7 @@ static int exec_notrap(bool *restart) {
           settings.debug = true;
           goto NextInstruction;
         case RUN68_COMMAND_QUIT:
-          cont_flag = false;
-          goto NextInstruction;
+          goto EndOfFunc;
       }
     } else if (stepcount != 0) {
       stepcount--;
@@ -443,23 +406,9 @@ Restart:
   if (!initMachineMemory(&settings, &himemAdr)) return EXIT_FAILURE;
   trap_table_make();
 
-  // Human68kのPSPを作成
-  const ULong humanPsp = HUMAN_HEAD;
-  const ULong humanCodeSize = HUMAN_TAIL - (humanPsp + SIZEOF_PSP);
-  BuildMemoryBlock(humanPsp, 0, 0, HUMAN_TAIL, 0);
-  const ProgramSpec humanSpec = {humanCodeSize, 0};
-  const Human68kPathName humanName = {"A:\\", "HUMAN.SYS", 0, 0};
-  BuildPsp(humanPsp, -1, 0, 0x2000, humanPsp, &humanSpec, &humanName);
-  WriteULongSuper(OSWORK_ROOT_PSP, humanPsp);
+  const ULong humanPsp = HUMAN_PSP;
+  if (InitHuman68k(humanPsp) != 0) return EXIT_FAILURE;
   nest_cnt = 0;
-
-  WriteDrviceHeaders();
-
-  // メインメモリの0番地からHuman68kの末尾までをスーパーバイザ領域に設定する。
-  // エリアセットレジスタの仕様上は8KB単位。
-  // Human68kの使用メモリを動的に変更する場合は、メモリブロックの末尾アドレスも
-  // 同期させること。
-  SetSupervisorArea(HUMAN_TAIL);
 
   linkHimemToMemblkLink(himemAdr, settings.highMemorySize, humanPsp);
 

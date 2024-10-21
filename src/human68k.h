@@ -22,11 +22,22 @@
 
 #include "m68k.h"
 
+#define IOCSCALL_ADRS_TABLE 0x0400
+#define DOSCALL_ADRS_TABLE 0x1800
+
 // ワークエリア
 #define OSWORK_TOP 0x1c00
 #define OSWORK_MEMORY_END 0x1c00
 #define OSWORK_ROOT_PSP 0x1c04
+#define OSWORK_HUMAN_TAIL 0x1c24
 #define SIZEOF_OSWORK 1024
+
+// Human68k ver3.02内部アドレス
+#define HUMAN_PSP 0x008372
+#define NUL_DEVICE_HEADER 0xfa50
+#define HUMAN_TAIL 0x01407a
+
+#define HUMAN_MAX_TAIL ((1024 - 64) * 1024)
 
 // デバイスドライバ
 typedef struct {
@@ -42,8 +53,6 @@ typedef struct {
 #define DEVHEAD_STRATEGY 6
 #define DEVHEAD_INTERRUPT 10
 #define DEVHEAD_NAME 14
-
-#define NUL_DEVICE_HEADER 0xfa50
 
 // DOSコールエラー番号
 #define DOSE_SUCCESS 0
@@ -139,6 +148,7 @@ typedef struct {
 #define SIZEOF_NAMESTS 88
 #define SIZEOF_NAMECK 91
 #define SIZEOF_FILES 53
+#define SIZEOF_FCB 96
 
 // DOS _EXEC
 typedef enum {
@@ -173,5 +183,8 @@ typedef enum {
 static inline int is_mb_lead(char c) {
   return (0x80 <= c && c <= 0x9f) || (0xe0 <= c);
 }
+
+ULong GetFcbAddress(UWord handle);
+int InitHuman68k(ULong humanPSP);
 
 #endif

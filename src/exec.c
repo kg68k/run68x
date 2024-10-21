@@ -30,8 +30,8 @@ static bool linea(char *pc_ptr) {
   short save_s = SR_S_REF();
   SR_S_ON();
 
-  Long adr = mem_get(0x28, S_LONG);
-  if (adr != HUMAN_WORK) {
+  Long adr = mem_get(VECNO_ALINE * 4, S_LONG);
+  if (adr != DefaultExceptionHandler[VECNO_ALINE]) {
     ra[7] -= 4;
     mem_set(ra[7], pc, S_LONG);
     ra[7] -= 2;
@@ -92,9 +92,11 @@ bool prog_exec() {
       return (linef(pc_ptr));
 
     default:
-      pc += 2;
-      err68("おかしな命令を実行しました");
+      break;
   }
+
+  // not reached
+  return false;
 }
 
 /*
@@ -170,7 +172,7 @@ static int begin_undefined(const char *s) {
  　機能：実行時エラーメッセージを表示する
  戻り値：なし
 */
-void err68(char *mes) {
+void err68(const char *mes) {
   OPBuf_insert(&OP_info);
   printFmt("run68 exec error: %s PC=%06X\n", mes, pc);
   if (begin_undefined(mes)) printFmt("code = %08X\n", mem_get(pc - 4, S_LONG));
@@ -185,7 +187,7 @@ void err68(char *mes) {
          int    line  <in>    行番号
  戻り値：なし
 */
-void err68a(char *mes, char *file, int line) {
+void err68a(const char *mes, char *file, int line) {
   OPBuf_insert(&OP_info);
   printFmt("run68 exec error: %s PC=%06X\n", mes, pc);
   printFmt("\tAt %s:%d\n", file, line);
@@ -208,6 +210,32 @@ void err68b(char *mes, Long pc, Long ppc) {
   if (begin_undefined(mes)) printFmt("code = %08X\n", mem_get(pc - 4, S_LONG));
   OPBuf_display(10);
   run68_abort(pc);
+}
+
+bool IllegalInstruction(void) {
+  pc -= 2;  // 呼び出し元で pc += 2; しているので戻す
+
+  ULong vec = ReadULongSuper(VECNO_ILLEGAL * 4);
+  if (DefaultExceptionHandler[VECNO_ILLEGAL] != vec) {
+    UWord saveSr = sr;
+    SR_S_ON();
+    ra[7] -= 4;
+    WriteULongSuper(ra[7], pc);
+    ra[7] -= 2;
+    WriteUWordSuper(ra[7], saveSr);
+    pc = vec;
+    return false;
+  }
+
+  OPBuf_insert(&OP_info);
+  UWord code = ReadUWordSuper(pc);
+  printFmt(
+      "run68 exec error: 不当な命令を実行しました PC=$%08x, code = $%04x\n", pc,
+      code);
+  OPBuf_display(10);
+  run68_abort(pc);
+
+  // not reached
 }
 
 /*

@@ -39,12 +39,8 @@ static bool Suba(char code1, char code2) {
   src_reg = (code2 & 0x07);
 
   /* ソースのアドレッシングモードに応じた処理 */
-  if (size == S_BYTE) {
-    err68a("不正な命令: suba.b <ea>, An を実行しようとしました。", __FILE__,
-           __LINE__);
-  } else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-    return true;
-  }
+  if (size == S_BYTE) return IllegalInstruction();  // SUBA.B <ea>,Anは不可
+  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) return true;
 
   if (size == S_WORD) src_data = extl(src_data);
 
@@ -181,12 +177,9 @@ static bool Sub2(char code1, char code2) {
   int dst_reg = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
 
-  if (mode == EA_AD && size == S_BYTE) {
-    err68a("不正な命令: sub.b An, Dn を実行しようとしました。", __FILE__,
-           __LINE__);
-  } else if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-    return true;
-  }
+  if (mode == EA_AD && size == S_BYTE)
+    return IllegalInstruction();  // SUB.B An,Dnは不可
+  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) return true;
 
   /* レジスタへの格納である為、Long
    * で値を得ておかないと、格納時に上位ワードを破壊してしまう */

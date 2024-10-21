@@ -40,13 +40,9 @@ static bool Cmp(char code1, char code2) {
   dst_reg = ((code1 & 0x0E) >> 1);
 
   /* ソースのアドレッシングモードに応じた処理 */
-  if (mode == EA_AD && size == S_BYTE) {
-    err68a("不正な命令: cmp.b An, Dn を実行しようとしました。", __FILE__,
-           __LINE__);
-  }
-  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-    return true;
-  }
+  if (mode == EA_AD && size == S_BYTE)
+    return IllegalInstruction();  // CMP.B An,Dnは不可
+  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) return true;
 
   /* ディスティネーションのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dest_data)) {
@@ -98,13 +94,8 @@ static bool Cmpa(char code1, char code2) {
   int dst_reg = ((code1 & 0x0E) >> 1);
 
   /* ソースのアドレッシングモードに応じた処理 */
-  if (size == S_BYTE) {
-    err68a("不正な命令: cmp.b <ea>, An を実行しようとしました。", __FILE__,
-           __LINE__);
-  }
-  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-    return true;
-  }
+  if (size == S_BYTE) return IllegalInstruction();  // CMP.B <ea>,Anは不可
+  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) return true;
 
   /* ディスティネーションのアドレッシングモードに応じた処理 */
   if (get_data_at_ea(EA_All, EA_AD, dst_reg, size, &dest_data)) {

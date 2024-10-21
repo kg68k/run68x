@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -1199,7 +1199,7 @@ bool linee(char *pc_ptr) {
         case 0x06:
           return (Rol2(code2)); /* rol{.w} <ea> */
         default:
-          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
+          break;
       }
     } else {
       switch (code2 & 0x18) {
@@ -1212,7 +1212,7 @@ bool linee(char *pc_ptr) {
         case 0x18:
           return (Rol(code1, code2));
         default:
-          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
+          break;
       }
     }
   } else {
@@ -1229,7 +1229,7 @@ bool linee(char *pc_ptr) {
         case 0x06:
           return (Ror2(code2)); /* ror{.w} <ea> */
         default:
-          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
+          break;
       }
     } else {
       switch (code2 & 0x18) {
@@ -1242,12 +1242,12 @@ bool linee(char *pc_ptr) {
         case 0x18:
           return (Ror(code1, code2));
         default:
-          err68a("おかしな命令を実行しました", __FILE__, __LINE__);
+          break;
       }
     }
   }
 
-  err68a("未定義命令を実行しました", __FILE__, __LINE__);
+  return IllegalInstruction();
 }
 
 /* $Id: linee.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */

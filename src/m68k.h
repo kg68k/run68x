@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -51,6 +51,20 @@ typedef struct {
 #define CCR_V 0x0002
 #define CCR_C 0x0001
 #define CCR_MASK 0x001f
+
+// ベクタ番号
+#define VECNO_ILLEGAL 0x04
+#define VECNO_ALINE 0x0a
+#define VECNO_FLINE 0x0b
+#define VECNO_TRAP0 0x20
+#define VECNO_TRAP1 0x21
+#define VECNO_TRAP2 0x22
+#define VECNO_TRAP3 0x23
+#define VECNO_TRAP4 0x24
+#define VECNO_TRAP5 0x25
+#define VECNO_TRAP6 0x26
+#define VECNO_TRAP7 0x27
+#define VECNO_TRAP8 0x28
 
 // 浮動小数点数
 typedef union {

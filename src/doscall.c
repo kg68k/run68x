@@ -182,8 +182,7 @@ static Long DosFgetc(ULong param) {
       }
     }
   } else {
-    if (!ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL))
-      c = 0;
+    if (!ReadFile(finfop->host.handle, &c, 1, (LPDWORD)&read_len, NULL)) c = 0;
   }
   return (read_len == 0) ? DOSE_ILGFNC : c;
 #else
@@ -2161,7 +2160,7 @@ static Long Assign(short mode, Long stack_adr) {
  戻り値：FCBのアドレス
  */
 static Long Getfcb(short fhdl) {
-  static unsigned char fcb[4][0x60] = {
+  static unsigned char fcb[4][SIZEOF_FCB] = {
       {0x01, 0xC1, 0x00, 0x02, 0xC6, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2195,21 +2194,20 @@ static Long Getfcb(short fhdl) {
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}};
 
-  ULong adr = FCB_WORK;
-  ULong len = 0x60;
+  ULong adr = GetFcbAddress((UWord)fhdl);
 
-  Span mem = GetWritableMemorySuper(adr, len);
+  Span mem = GetWritableMemorySuper(adr, SIZEOF_FCB);
   if (!mem.bufptr) throwBusErrorOnWrite(adr + mem.length);
 
   switch (fhdl) {
     case 0:
     case 1:
     case 2:
-      memcpy(mem.bufptr, fcb[fhdl], len);
+      memcpy(mem.bufptr, fcb[fhdl], SIZEOF_FCB);
       return adr;
     default:
       fcb[3][14] = (unsigned char)fhdl;
-      memcpy(mem.bufptr, fcb[3], len);
+      memcpy(mem.bufptr, fcb[3], SIZEOF_FCB);
       return adr;
   }
 }

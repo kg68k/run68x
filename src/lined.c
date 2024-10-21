@@ -39,13 +39,8 @@ static bool Adda(char code1, char code2) {
   src_reg = (code2 & 0x07);
 
   /* ソースのアドレッシングモードに応じた処理 */
-  if (size == S_BYTE) {
-    err68a("不正な命令: adda.b <ea>, An を実行しようとしました。", __FILE__,
-           __LINE__);
-  }
-  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-    return true;
-  }
+  if (size == S_BYTE) return IllegalInstruction();  // ADDA.B <ea>,Anは不可
+  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) return true;
 
   if (size == S_WORD) {
     if ((src_data & 0x8000) != 0) {
@@ -178,13 +173,9 @@ static bool Add2(char code1, char code2) {
   int dst_reg = ((code1 & 0x0E) >> 1);
   size = ((code2 >> 6) & 0x03);
 
-  if (mode == EA_AD && size == S_BYTE) {
-    err68a("不正な命令: sub.b An, Dn を実行しようとしました。", __FILE__,
-           __LINE__);
-  }
-  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) {
-    return true;
-  }
+  if (mode == EA_AD && size == S_BYTE)
+    return IllegalInstruction();  // ADD.b An,Dnは不可
+  if (get_data_at_ea(EA_All, mode, src_reg, size, &src_data)) return true;
 
   if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dest_data)) {
     return true;

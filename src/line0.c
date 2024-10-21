@@ -30,14 +30,12 @@ static bool Ori(char code) {
   Long src_data;
   char mode;
   char reg;
-  char size;
   int work_mode;
   Long data;
 
-  size = ((code >> 6) & 0x03);
-  if (size == 3) {
-    err68a("不正なアクセスサイズです", __FILE__, __LINE__);
-  }
+  char size = ((code >> 6) & 0x03);
+  if (size == 3) return IllegalInstruction();
+
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
   src_data = imi_get(size);
@@ -121,14 +119,12 @@ static bool Andi(char code) {
   Long src_data;
   char mode;
   char reg;
-  char size;
   Long work_mode;
   Long data;
 
-  size = ((code >> 6) & 0x03);
-  if (size == 3) {
-    err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-  }
+  char size = ((code >> 6) & 0x03);
+  if (size == 3) IllegalInstruction();
+
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
 
@@ -213,14 +209,12 @@ static bool Addi(char code) {
   Long src_data;
   char mode;
   char reg;
-  char size;
   int work_mode;
   Long dest_data;
 
-  size = ((code >> 6) & 0x03);
-  if (size == 3) {
-    err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-  }
+  char size = ((code >> 6) & 0x03);
+  if (size == 3) return IllegalInstruction();
+
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
 
@@ -274,14 +268,12 @@ static bool Subi(char code) {
   Long src_data;
   char mode;
   char reg;
-  char size;
   int work_mode;
   Long dest_data;
 
-  size = ((code >> 6) & 0x03);
-  if (size == 3) {
-    err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-  }
+  char size = ((code >> 6) & 0x03);
+  if (size == 3) return IllegalInstruction();
+
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
 
@@ -339,9 +331,7 @@ static bool Eori(char code) {
   Long work_mode;
 
   char size = ((code >> 6) & 0x03);
-  if (size == 3) {
-    err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-  }
+  if (size == 3) return IllegalInstruction();
 
   mode = ((code & 0x38) >> 3);
   reg = (code & 0x07);
@@ -402,15 +392,13 @@ static bool Eori_t_ccr() {
 static bool Cmpi(char code) {
   char mode;
   char reg;
-  char size;
   Long src_data;
   short save_x;
   Long dest_data;
 
-  size = ((code >> 6) & 0x03);
-  if (size == 3) {
-    err68a("不正なアクセスサイズです。", __FILE__, __LINE__);
-  }
+  char size = ((code >> 6) & 0x03);
+  if (size == 3) return IllegalInstruction();
+
   mode = (code & 0x38) >> 3;
   reg = (code & 0x07);
   save_x = CCR_X_REF();
@@ -1006,7 +994,7 @@ bool line0(char *pc_ptr) {
     case 0x0A:
       if (code2 == 0x3C) return (Eori_t_ccr());
       if (code2 == 0x7C) { /* eori to SR */
-        err68a("未定義命令を実行しました", __FILE__, __LINE__);
+        break;
       }
       return (Eori(code2));
     case 0x0C:
@@ -1029,6 +1017,8 @@ bool line0(char *pc_ptr) {
           return (Bset(code1, code2));
       }
   }
+
+  return IllegalInstruction();
 }
 
 /* $Id: line0.c,v 1.2 2009-08-08 06:49:44 masamic Exp $ */

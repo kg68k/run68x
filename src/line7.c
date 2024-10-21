@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,9 +29,8 @@
 bool line7(char *pc_ptr) {
   char code = *(pc_ptr++);
   pc += 2;
-  if ((code & 0x01) != 0) {
-    err68a("おかしな命令を実行しました", __FILE__, __LINE__);
-  }
+  if ((code & 0x01) != 0) return IllegalInstruction();
+
   int reg = (code >> 1) & 0x07;
   rd[reg] = extbl((Byte)*pc_ptr);
 

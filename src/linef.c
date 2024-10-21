@@ -1209,8 +1209,8 @@ static bool fefunc(UByte code) {
   /* F系列のベクタが書き換えられているかどうか検査 */
   save_s = SR_S_REF();
   SR_S_ON();
-  adr = mem_get(0x2C, S_LONG);
-  if (adr != HUMAN_WORK) {
+  adr = mem_get(VECNO_FLINE * 4, S_LONG);
+  if (adr != DefaultExceptionHandler[VECNO_FLINE]) {
     ra[7] -= 4;
     mem_set(ra[7], pc - 2, S_LONG);
     ra[7] -= 2;

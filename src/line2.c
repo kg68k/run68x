@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -54,24 +54,18 @@ bool line2(char *pc_ptr) {
       size = S_LONG;
       break;
     default:
-      err68a("存在しないアクセスサイズです。", __FILE__, __LINE__);
+      return IllegalInstruction();
   }
 
   /* ソースのアドレッシングモードに応じた処理 */
-  if (src_mode == EA_AD && size == S_BYTE) {
-    err68a("不正な命令: move[a].b An, <ea> を実行しようとしました。", __FILE__,
-           __LINE__);
-  }
-  if (get_data_at_ea(EA_All, src_mode, src_reg, size, &src_data)) {
-    return true;
-  }
+  if (src_mode == EA_AD && size == S_BYTE)
+    return IllegalInstruction();  // MOVE.B An,<ea>は不可
+  if (get_data_at_ea(EA_All, src_mode, src_reg, size, &src_data)) return true;
 
   /* movea 実効時の処理 */
   if (dst_mode == EA_AD) {
-    if (size == S_BYTE) {
-      err68a("不正な命令: movea.b <ea>, An を実行しようとしました。", __FILE__,
-             __LINE__);
-    }
+    if (size == S_BYTE) return IllegalInstruction();  // MOVEA.B <ea>,Anは不可
+
     if (size == S_WORD) {
       if (src_data & 0x8000) {
         src_data |= 0xffff0000;

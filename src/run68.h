@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "2.0.2"
+#define RUN68X_VERSION "2.0.3-beta.1"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if defined(__GNUC__)
@@ -60,11 +60,7 @@
 #define DEFAULT_STACK_SIZE (64 * 1024)
 #define DEFAULT_ENV_SIZE (8 * 1024)
 
-#define XHEAD_SIZE 0x40     /* Xファイルのヘッダサイズ */
-#define HUMAN_HEAD 0x6800   /* Humanのメモリ管理ブロック位置 */
-#define FCB_WORK 0x20F00    /* DOSCALL GETFCB用ワーク領域 */
-#define HUMAN_WORK 0x21000  /* 割り込み処理先等のワーク領域 */
-#define HUMAN_TAIL 0x21C00  // Human68kの末尾 8*1024の倍数であること
+#define XHEAD_SIZE 0x40 /* Xファイルのヘッダサイズ */
 
 #define TRAP0_WORK 0x20FF0000 /* TRAP割り込み処理先等のワーク領域 */
 #define TRAP1_WORK 0x21FF0000 /* TRAP割り込み処理先等のワーク領域 */
@@ -75,6 +71,9 @@
 #define TRAP6_WORK 0x26FF0000 /* TRAP割り込み処理先等のワーク領域 */
 #define TRAP7_WORK 0x27FF0000 /* TRAP割り込み処理先等のワーク領域 */
 #define TRAP8_WORK 0x28FF0000 /* TRAP割り込み処理先等のワーク領域 */
+
+#define VECNO_VDISP 0x46
+#define VECNO_CRTCRAS 0x4e
 
 #define NEST_MAX 20
 #define FILE_MAX 20
@@ -202,6 +201,7 @@ bool get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size,
                           Long *data);
 
 /* run68.c */
+extern ULong DefaultExceptionHandler[256];
 extern EXEC_INSTRUCTION_INFO OP_info;  // 命令実行情報
 extern FILEINFO finfo[FILE_MAX];       // ファイル管理テーブル
 extern Settings settings;
@@ -242,9 +242,10 @@ void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
 /* exec.c */
 bool prog_exec(void);
 bool get_cond(char);
-NORETURN void err68(char *);
-NORETURN void err68a(char *mes, char *file, int line);
+NORETURN void err68(const char *);
+NORETURN void err68a(const char *mes, char *file, int line);
 NORETURN void err68b(char *mes, Long pc, Long ppc);
+bool IllegalInstruction(void);
 void text_color(short);
 Long get_locate(void);
 void OPBuf_insert(const EXEC_INSTRUCTION_INFO *op);
