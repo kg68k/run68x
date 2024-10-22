@@ -912,97 +912,24 @@ static bool Rts() {
   return false;
 }
 
-// Nbcd
-//
-// 4805            0100_1000_00 00_0 mmm  nbcd dm
-// 4808 1234 5678  0100_1000_00 00_1 000  link.l a0,$12345678
-// 4813            0100_1000_00 01_0 mmm  nbcd (am)
-// 481c            0100_1000_00 01_1 mmm  nbcd (am)+
-// 4824            0100_1000_00 10_0 mmm  nbcd -(am)
-// 482c 000a       0100_1000_00 10_1 mmm  nbcd 10(am)
-// 4834 3005       0100_1000_00 11_0 mmm  nbcd 5(am,d3.w)
-// 4834 3805       0100_1000_00 11_0 mmm  nbcd 5(am,d3.l)
-// 4839 1234 5678  0100_1000_00 11_1 001  nbcd $12345678
 static bool Nbcd(char code2) {
-  char src_reg = (code2 & 0x7);
-  char mode = (code2 & 0x38) >> 3;
-  char work_mode;
-  char size = 0; /* S_BYTE 固定 */
-  Long src_data;
-  Long dst_data;
-  Long kekka;
-  Long X;
+  int mode = (code2 >> 3) & 7;
+  int reg = code2 & 7;
 
-  // 0: 2byte: dm
-  // 1: 6byte: Link命令
-  // 2: 2byte: (am)
-  // 3: 2byte: (am)+
-  // 4: 2byte: -(am)
-  // 5: 4byte: 10(am)
-  // 6: 4byte: 5(am,d3.w)  5(am,d3.l)
-  // 7: 6byte: 絶対アドレスロング
+  if (mode == EA_AD) return IllegalInstruction();  // NBCD.B Anは不可
 
-  /* アドレッシングモードがポストインクリメント間接の場合は間接でデータの取得 */
-  if (mode == EA_AIPI) {
-    work_mode = EA_AI;
-  } else {
-    work_mode = mode;
-  }
+  Long val = 0;
 
-  /* ソースのアドレッシングモードに応じた処理 */
-  if (work_mode == EA_AD) return IllegalInstruction();  // NBCD Anは不可
-  if (get_data_at_ea(EA_All, work_mode, src_reg, size, &src_data)) return true;
+  // NBCD.B
+  // (An)+は(An)としてメモリの値を読み込む(書き込み時にインクリメントする)
+  int readMode = (mode == EA_AIPI) ? EA_AI : mode;
+  if (get_data_at_ea(EA_All, readMode, reg, S_BYTE, &val)) return true;
 
-#ifdef TRACE
-  printf("trace: nbcd     src=%d PC=%06lX\n", src_data, save_pc);
-#endif
+  Long result = SubBcd(0, val);
 
-  /* 0 - <ea> - X  */
-  dst_data = 0;
-  X = (CCR_X_REF() != 0) ? 1 : 0;
-  kekka = dst_data - src_data - X;
-
-  if ((dst_data & 0xff) < ((src_data & 0xff) + X)) kekka -= 0x60;
-
-  if ((dst_data & 0x0f) < ((src_data & 0x0f) + X)) kekka -= 0x06;
-
-  if ((dst_data ^ kekka) & 0x100) {
-    CCR_X_C_ON();
-  } else {
-    CCR_X_C_OFF();
-  }
-
-  dst_data = kekka & 0xff;
-
-  /* 0 以外の値になった時のみ、Z フラグをリセットする */
-  if (dst_data != 0) {
-    CCR_Z_OFF();
-  }
-
-  /* Nフラグは結果に応じて立てる */
-  if (dst_data & 0x80) {
-    CCR_N_ON();
-  } else {
-    CCR_N_OFF();
-  }
-
-  /* Vフラグ */
-  if ((dst_data ^ src_data) & 0x80) {
-    CCR_V_OFF();
-  } else {
-    CCR_V_ON();
-  }
-
-  /* アドレッシングモードがプレデクリメント間接の場合は間接でデータの設定 */
-  if (mode == EA_AIPD) {
-    work_mode = EA_AI;
-  } else {
-    work_mode = mode;
-  }
-
-  if (set_data_at_ea(EA_All, work_mode, src_reg, size, dst_data)) {
-    return true;
-  }
+  // NBCD.B -(An)は(An)としてメモリに値を書き込む(読み込み時にデクリメント済み)
+  int writeMode = (mode == EA_AIPD) ? EA_AI : mode;
+  if (set_data_at_ea(EA_All, writeMode, reg, S_BYTE, result)) return true;
 
   return false;
 }

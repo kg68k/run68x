@@ -217,6 +217,55 @@ static bool Or2(char code1, char code2) {
   return false;
 }
 
+static bool Sbcd(UByte code1, UByte code2) {
+  int srcReg = code2 & 7;
+  int dstReg = (code1 >> 1) & 7;
+  int memToMem = code2 & 0x08;
+
+  Long srcVal = 0;
+  Long dstVal = 0;
+
+  const int readMode = memToMem ? EA_AIPD : EA_DD;
+  if (get_data_at_ea(EA_All, readMode, srcReg, S_BYTE, &srcVal)) return true;
+  if (get_data_at_ea(EA_All, readMode, dstReg, S_BYTE, &dstVal)) return true;
+
+  Long result = SubBcd(dstVal, srcVal);
+
+  const int writeMode = memToMem ? EA_AI : EA_DD;
+  if (set_data_at_ea(EA_All, writeMode, dstReg, S_BYTE, result)) return true;
+
+  return false;
+}
+
+Long SubBcd(Long x, Long y) {
+  Long ccrX = CCR_X_REF() ? 1 : 0;
+  Long t = (x & 0xff) - (y & 0xff) - ccrX;
+  Long result = t;
+
+  if ((x & 0x0f) < ((y & 0x0f) + ccrX)) result = result - 0x10 + 10;
+  if (result < 0) {
+    if (t < 0) result = result - 0x100 + (10 << 4);
+    CCR_X_C_ON();
+  } else
+    CCR_X_C_OFF();
+
+  result &= 0xff;
+  if (result != 0) CCR_Z_OFF();
+
+  if (result & 0x80)
+    CCR_N_ON();
+  else
+    CCR_N_OFF();
+
+  Long a = result - t;
+  if (((t ^ result) & (a ^ result)) & 0x80)
+    CCR_V_ON();
+  else
+    CCR_V_OFF();
+
+  return result;
+}
+
 /*
  　機能：8ライン命令を実行する
  戻り値： true = 実行終了
@@ -235,85 +284,8 @@ bool line8(char *pc_ptr) {
     else
       return (Divs(code1, code2));
   }
-  if (((code1 & 0x01) == 0x01) && ((code2 & 0xF0) == 0)) {
-    /* sbcd */
-    char src_reg = (code2 & 0x7);
-    char dst_reg = ((code1 & 0xE) >> 1);
-    char size = 0; /* S_BYTE 固定 */
-    Long src_data;
-    Long dst_data;
-    Long kekka;
-    Long X;
-
-    if ((code2 & 0x8) != 0) {
-      /* -(am),-(an); */
-      if (get_data_at_ea(EA_All, EA_AIPD, src_reg, size, &src_data)) {
-        return true;
-      }
-      if (get_data_at_ea(EA_All, EA_AIPD, dst_reg, size, &dst_data)) {
-        return true;
-      }
-    } else {
-      /* dm,dn; */
-      if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
-        return true;
-      }
-      if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dst_data)) {
-        return true;
-      }
-    }
-
-    X = (CCR_X_REF() != 0) ? 1 : 0;
-
-    kekka = dst_data - src_data - X;
-
-    if ((dst_data & 0xff) < ((src_data & 0xff) + X)) kekka -= 0x60;
-
-    if ((dst_data & 0x0f) < ((src_data & 0x0f) + X)) kekka -= 0x06;
-
-    if ((dst_data ^ kekka) & 0x100) {
-      CCR_X_C_ON();
-    } else {
-      CCR_X_C_OFF();
-    }
-
-    kekka &= 0xff;
-
-    /* 0 以外の値になった時のみ、Z フラグをリセットする */
-    if (kekka != 0) {
-      CCR_Z_OFF();
-    }
-
-    /* Nフラグは結果に応じて立てる */
-    if (kekka & 0x80) {
-      CCR_N_ON();
-    } else {
-      CCR_N_OFF();
-    }
-
-    /* Vフラグ */
-    if ((dst_data <= kekka) && (0x20 <= kekka) && (kekka < 0x80)) {
-      CCR_V_ON();
-    } else {
-      CCR_V_OFF();
-    }
-
-    dst_data = kekka;
-
-    if ((code2 & 0x8) != 0) {
-      /* -(am),-(an); */
-      if (set_data_at_ea(EA_All, EA_AI, dst_reg, size, dst_data)) {
-        return true;
-      }
-    } else {
-      /* dm,dn; */
-      if (set_data_at_ea(EA_All, EA_DD, dst_reg, size, dst_data)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
+  if (((code1 & 0x01) == 0x01) && ((code2 & 0xF0) == 0))
+    return Sbcd(code1, code2);
 
   if ((code1 & 0x01) == 0x01)
     return (Or1(code1, code2));

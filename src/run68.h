@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "2.0.3-beta.1"
+#define RUN68X_VERSION "2.0.3"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if defined(__GNUC__)
@@ -281,6 +281,9 @@ bool linec(char *);
 bool lined(char *);
 bool linee(char *);
 bool linef(char *);
+
+// line8.c
+Long SubBcd(Long x, Long y);
 
 /* debugger.c */
 extern ULong stepcount;
