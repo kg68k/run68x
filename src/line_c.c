@@ -233,128 +233,76 @@ static bool Muls(char code1, char code2) {
   return false;
 }
 
+// BCD加算
+// Makoto Kamada氏のXEiJ (https://stdkmd.net/xeij/)
+//   MC68000.javaを参考にしています。
+static Long AddBcd(Long x, Long y) {
+  Long ccrX = CCR_X_REF() ? 1 : 0;
+  Long t = (x & 0xff) + (y & 0xff) + ccrX;
+  Long result = t;
+
+  if (10 <= ((x & 0x0f) + (y & 0x0f) + ccrX)) result = result + 0x10 - 10;
+  if ((10 << 4) <= result) {
+    result = result + 0x100 - (10 << 4);
+    CCR_X_C_ON();
+  } else
+    CCR_X_C_OFF();
+
+  result &= 0xff;
+  if (result != 0) CCR_Z_OFF();
+
+  if (result & 0x80)
+    CCR_N_ON();
+  else
+    CCR_N_OFF();
+
+  Long a = result - t;
+  if (((t ^ result) & (a ^ result)) & 0x80)
+    CCR_V_ON();
+  else
+    CCR_V_OFF();
+
+  return result;
+}
+
+static bool Abcd(UByte code1, UByte code2) {
+  int srcReg = code2 & 7;
+  int dstReg = (code1 >> 1) & 7;
+  int memToMem = code2 & 0x08;
+
+  Long srcVal = 0;
+  Long dstVal = 0;
+
+  const int readMode = memToMem ? EA_AIPD : EA_DD;
+  if (get_data_at_ea(EA_All, readMode, srcReg, S_BYTE, &srcVal)) return true;
+  if (get_data_at_ea(EA_All, readMode, dstReg, S_BYTE, &dstVal)) return true;
+
+  Long result = AddBcd(dstVal, srcVal);
+
+  const int writeMode = memToMem ? EA_AI : EA_DD;
+  if (set_data_at_ea(EA_All, writeMode, dstReg, S_BYTE, result)) return true;
+
+  return false;
+}
+
 /*
  　機能：Cライン命令を実行する
  戻り値： true = 実行終了
          false = 実行継続
 */
 bool linec(char *pc_ptr) {
-  char code1, code2;
-
-  code1 = *(pc_ptr++);
-  code2 = *pc_ptr;
+  char code1 = *(pc_ptr++);
+  char code2 = *pc_ptr;
   pc += 2;
+
   if ((code1 & 0x01) == 0) {
-    if ((code2 & 0xC0) == 0xC0) return (Mulu(code1, code2));
-    return (And2(code1, code2));
-  } else {
-    if ((code2 & 0xC0) == 0xC0) return (Muls(code1, code2));
-    if ((code2 & 0xF0) == 0x00) {
-      /* abcd */
-      char src_reg = (code2 & 0x7);
-      char dst_reg = ((code1 & 0xE) >> 1);
-      char size = 0; /* S_BYTE 固定 */
-      Long src_data;
-      Long dst_data;
-      Long low;
-      Long high;
-      Long kekka;
-      Long X;
-
-      if ((code2 & 0x8) != 0) {
-        /* -(am),-(an); */
-        if (get_data_at_ea(EA_All, EA_AIPD, src_reg, size, &src_data)) {
-          return true;
-        }
-        if (get_data_at_ea(EA_All, EA_AIPD, dst_reg, size, &dst_data)) {
-          return true;
-        }
-      } else {
-        /* dm,dn; */
-        if (get_data_at_ea(EA_All, EA_DD, src_reg, size, &src_data)) {
-          return true;
-        }
-        if (get_data_at_ea(EA_All, EA_DD, dst_reg, size, &dst_data)) {
-          return true;
-        }
-      }
-
-      X = (CCR_X_REF() != 0) ? 1 : 0;
-
-      low = (src_data & 0x0f) + (dst_data & 0x0f) + X;
-      if (low >= 0x0a) {
-        low += 0x06;
-      }
-
-      high = (src_data & 0xf0) + (dst_data & 0xf0) + (low & 0xf0);
-      if (high >= 0xa0) {
-        high += 0x60;
-      }
-
-      if (high >= 0x100) {
-        CCR_X_C_ON();
-      } else {
-        CCR_X_C_OFF();
-      }
-
-      kekka = (high & 0xf0) | (low & 0x0f);
-
-      /* 0 以外の値になった時のみ、Z フラグをリセットする */
-      if (kekka != 0) {
-        CCR_Z_OFF();
-      }
-
-      /* Nフラグは結果に応じて立てる */
-      if (kekka & 0x80) {
-        CCR_N_ON();
-      } else {
-        CCR_N_OFF();
-      }
-
-      /* Vフラグ */
-      if (dst_data < 0x80) {
-        if (5 <= (dst_data & 0x0f)) {
-          if ((0x80 <= kekka) && (kekka <= 0x85)) {
-            CCR_V_ON();
-          } else {
-            CCR_V_OFF();
-          }
-        } else {
-          if ((0x80 <= kekka) && (kekka <= (0x80 + (dst_data & 0x0f)))) {
-            CCR_V_ON();
-          } else {
-            CCR_V_OFF();
-          }
-        }
-      } else {
-        if ((0x80 <= kekka) && (kekka <= dst_data)) {
-          CCR_V_ON();
-        } else {
-          CCR_V_OFF();
-        }
-      }
-
-      dst_data = kekka;
-
-      if ((code2 & 0x8) != 0) {
-        /* -(am),-(an); */
-        if (set_data_at_ea(EA_All, EA_AI, dst_reg, size, dst_data)) {
-          return true;
-        }
-      } else {
-        /* dm,dn; */
-        if (set_data_at_ea(EA_All, EA_DD, dst_reg, size, dst_data)) {
-          return true;
-        }
-      }
-
-      return false;
-    }
-    if ((code2 & 0x30) == 0x00) {
-      return (Exg(code1, code2));
-    }
-    return (And1(code1, code2));
+    if ((code2 & 0xC0) == 0xC0) return Mulu(code1, code2);
+    return And2(code1, code2);
   }
+  if ((code2 & 0xC0) == 0xC0) return Muls(code1, code2);
+  if ((code2 & 0xF0) == 0x00) return Abcd(code1, code2);
+  if ((code2 & 0x30) == 0x00) return Exg(code1, code2);
+  return (And1(code1, code2));
 }
 
 /* $Id: linec.c,v 1.3 2009-08-08 06:49:44 masamic Exp $ */

@@ -217,6 +217,9 @@ static bool Or2(char code1, char code2) {
   return false;
 }
 
+// BCD減算
+// Makoto Kamada氏のXEiJ (https://stdkmd.net/xeij/)
+//   MC68000.javaを参考にしています。
 static bool Sbcd(UByte code1, UByte code2) {
   int srcReg = code2 & 7;
   int dstReg = (code1 >> 1) & 7;
