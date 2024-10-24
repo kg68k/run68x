@@ -282,7 +282,7 @@ bool lined(char *);
 bool linee(char *);
 bool linef(char *);
 
-// line8.c
+// line_8.c
 Long SubBcd(Long x, Long y);
 
 /* debugger.c */

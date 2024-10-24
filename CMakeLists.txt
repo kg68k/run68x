@@ -31,19 +31,19 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/hupair.h
   src/key.c
   src/iocscall.c
-  src/line0.c
-  src/line2.c
-  src/line4.c
-  src/line5.c
-  src/line6.c
-  src/line7.c
-  src/line8.c
-  src/line9.c
-  src/lineb.c
-  src/linec.c
-  src/lined.c
-  src/linee.c
-  src/linef.c
+  src/line_0.c
+  src/line_2.c
+  src/line_4.c
+  src/line_5.c
+  src/line_6.c
+  src/line_7.c
+  src/line_8.c
+  src/line_9.c
+  src/line_b.c
+  src/line_c.c
+  src/line_d.c
+  src/line_e.c
+  src/line_f.c
   src/load.c
   src/m68k.h
   src/mem.c
@@ -77,7 +77,7 @@ if(MSVC)
 else()
   target_compile_options(${PROJECT_NAME} PRIVATE -funsigned-char -O3 -Wall -Wextra -Werror -Wno-unused-parameter)
 
-  # linef.c uses math functions.
+  # line_f.c uses math functions.
   target_link_libraries(${PROJECT_NAME} PRIVATE m)
 endif()
 
