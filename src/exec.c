@@ -30,7 +30,7 @@ static bool linea(char *pc_ptr) {
   short save_s = SR_S_REF();
   SR_S_ON();
 
-  Long adr = mem_get(VECNO_ALINE * 4, S_LONG);
+  ULong adr = mem_get(VECNO_ALINE * 4, S_LONG);
   if (adr != DefaultExceptionHandler[VECNO_ALINE]) {
     ra[7] -= 4;
     mem_set(ra[7], pc, S_LONG);

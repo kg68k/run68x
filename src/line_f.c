@@ -1203,13 +1203,11 @@ static void Pow(Long d0, Long d1, Long d2, Long d3) {
          false = 実行継続
 */
 static bool fefunc(UByte code) {
-  Long adr;
-  short save_s;
+  short save_s = SR_S_REF();
+  SR_S_ON();
 
   /* F系列のベクタが書き換えられているかどうか検査 */
-  save_s = SR_S_REF();
-  SR_S_ON();
-  adr = mem_get(VECNO_FLINE * 4, S_LONG);
+  ULong adr = mem_get(VECNO_FLINE * 4, S_LONG);
   if (adr != DefaultExceptionHandler[VECNO_FLINE]) {
     ra[7] -= 4;
     mem_set(ra[7], pc - 2, S_LONG);

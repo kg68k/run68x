@@ -17,6 +17,9 @@
 
 #include "human68k.h"
 
+#include <string.h>
+
+#include "dos_memory.h"
 #include "mem.h"
 #include "run68.h"
 
