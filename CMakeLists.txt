@@ -12,23 +12,16 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/debugger.c
   src/disassemble.c
   src/dos_file.c
-  src/dos_file.h
   src/dos_memory.c
-  src/dos_memory.h
   src/doscall.c
   src/dostrace.c
-  src/dostrace.h
   src/eaaccess.c
   src/exec.c
   src/fefunc.c
-  src/fefunc.h
   src/getini.c
   src/host.c
-  src/host.h
   src/human68k.c
-  src/human68k.h
   src/hupair.c
-  src/hupair.h
   src/key.c
   src/iocscall.c
   src/line_0.c
@@ -45,25 +38,18 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/line_e.c
   src/line_f.c
   src/load.c
-  src/m68k.h
   src/mem.c
-  src/mem.h
-  src/operate.h
   src/run68.c
-  src/run68.h
 )
 if(WIN32)
   target_sources(${PROJECT_NAME} PRIVATE
     src/ansicolor-w32.c
-    src/ansicolor-w32.h
     src/host_win32.c
-    src/host_win32.h
   )
 endif()
 if(APPLE OR EMSCRIPTEN)
   target_sources(${PROJECT_NAME} PRIVATE
     src/host_misc.c
-    src/host_misc.h
   )
 endif()
 
