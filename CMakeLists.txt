@@ -70,7 +70,9 @@ endif()
 target_compile_features(${PROJECT_NAME} PRIVATE c_std_11)
 
 if(MSVC)
-  target_compile_options(${PROJECT_NAME} PRIVATE /source-charset:utf-8 /J)
+  target_compile_options(${PROJECT_NAME} PRIVATE /source-charset:utf-8 /execution-charset:shift_jis)
+  target_compile_options(${PROJECT_NAME} PRIVATE /d1trimfile:${CMAKE_CURRENT_SOURCE_DIR}\\)
+  target_compile_options(${PROJECT_NAME} PRIVATE /J)
 
   # PathAddBackslashA()
   target_link_libraries(${PROJECT_NAME} PRIVATE shlwapi)
