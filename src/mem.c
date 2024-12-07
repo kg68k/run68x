@@ -72,9 +72,6 @@ void FreeMachineMemory(void) {
 // メインメモリをスーパーバイザ領域として設定する。
 void SetSupervisorArea(ULong adr) { supervisorEnd = adr; }
 
-static inline ULong ulmin(ULong a, ULong b) {
-  return (a < b) ? a : b;
-}
 // アクセス可能なメモリ範囲を調べる。
 //   指定範囲の先頭部分がアクセス可能ならtrueを返す。
 //   現在のところ読み書きを区別しない。
