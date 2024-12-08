@@ -256,8 +256,7 @@ static ULong init_env(ULong size, ULong parent) {
 static void setHuman68kPathName(Human68kPathName *hpn, const char *path,
                                 const char *name, const char *ext) {
   strncpy(hpn->path, path, sizeof(hpn->path));
-  strncpy(hpn->name, name, sizeof(hpn->name));
-  strncat(hpn->name, ext, sizeof(hpn->name) - strlen(hpn->name));
+  snprintf(hpn->name, sizeof(hpn->name), "%s%s", name, ext);
   hpn->nameLen = strlen(name);
   hpn->extLen = strlen(ext);
 }
