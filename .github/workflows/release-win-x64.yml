@@ -1,0 +1,34 @@
+# Once released, build and upload the win-x64 binary.
+name: Release win-x64 binary
+
+on:
+  release:
+    types: [published]
+
+env:
+  BUILD_TYPE: MinSizeRel
+  ARCHIVE_FILENAME: ${{github.event.repository.name}}-${{github.ref_name}}-win-x64.zip
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    # Allow write permission for action-gh-release
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+      - name: Create archive
+        run: Compress-Archive -Path ${{github.workspace}}/build/${{env.BUILD_TYPE}}/run68.exe -Destination ${{env.ARCHIVE_FILENAME}}
+      - name: Upload binary
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{env.ARCHIVE_FILENAME}}
+
