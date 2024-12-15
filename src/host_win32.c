@@ -20,12 +20,17 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <windows.h>
 
 #include "host.h"
 #include "human68k.h"
 #include "mem.h"
 #include "run68.h"
+
+struct tm* ToLocaltime_win32(const time_t* timer, struct tm* result) {
+  return localtime_s(result, timer) == 0 ? result : NULL;
+}
 
 // UTF-8からShift_JISへの変換
 static char* utf8ToSjis(char* inbuf, size_t inbytes, size_t* outBufSize,

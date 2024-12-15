@@ -20,8 +20,13 @@
 
 #ifdef _WIN32
 
+#include <time.h>
+
 #include "human68k.h"
 #include "run68.h"
+
+struct tm* ToLocaltime_win32(const time_t* timer, struct tm* result);
+#define HOST_TO_LOCALTIME ToLocaltime_win32
 
 char* Utf8ToSjis2_win32(char* inbuf, size_t inbytes, size_t* outBufSize);
 #define HOST_UTF8_TO_SJIS Utf8ToSjis2_win32

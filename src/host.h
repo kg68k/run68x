@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2024 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,10 +18,18 @@
 #ifndef HOST_H
 #define HOST_H
 
+#include <time.h>
+
 #include "host_misc.h"
 #include "host_win32.h"
 #include "human68k.h"
 #include "run68.h"
+
+#ifndef HOST_TO_LOCALTIME
+#define HOST_TO_LOCALTIME_GENERIC
+struct tm* ToLocaltime_generic(const time_t* timer, struct tm* result);
+#define HOST_TO_LOCALTIME ToLocaltime_generic
+#endif
 
 #ifndef HOST_UTF8_TO_SJIS
 #ifdef USE_ICONV

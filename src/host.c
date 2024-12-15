@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #ifdef USE_ICONV
 #include <iconv.h>
@@ -30,6 +31,12 @@
 
 #define ROOT_SLASH_LEN 1  // "/"
 #define DEFAULT_DRV_CLN "A:"
+
+#ifdef HOST_TO_LOCALTIME_GENERIC
+struct tm* ToLocaltime_generic(const time_t* timer, struct tm* result) {
+  return localtime_r(timer, result);
+}
+#endif
 
 #ifdef HOST_UTF8_TO_SJIS_GENERIC_ICONV
 // UTF-8からShift_JISへの変換

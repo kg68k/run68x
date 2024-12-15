@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "host.h"
 #include "mem.h"
@@ -28,13 +29,9 @@
 #include <iconv.h>
 #endif
 
-#include <time.h>
-
 static Long Putc(UWord);
 static Long Color(short);
 static void Putmes(void);
-static Long Dateget(void);
-static Long Timeget(void);
 static Long Datebin(Long);
 static Long Timebin(Long);
 static Long Dateasc(Long, Long);
@@ -42,6 +39,57 @@ static Long Timeasc(Long, Long);
 static Long Dayasc(Long, Long);
 static Long Intvcs(Long, Long);
 static void Dmamove(Long, Long, Long, Long);
+
+typedef time_t (*TimeFunc)(time_t *);
+
+static struct tm toLocalTime(time_t timer) {
+  struct tm result;
+
+  if (timer == (time_t)-1 || HOST_TO_LOCALTIME(&timer, &result) == NULL) {
+    result = (struct tm){
+        .tm_sec = 0,
+        .tm_min = 0,
+        .tm_hour = 0,
+        .tm_mday = 1,
+        .tm_mon = 0,
+        .tm_year = 1980 - 1900,
+        .tm_wday = 2,
+        .tm_yday = 0,
+        .tm_isdst = 0,
+    };
+  }
+  return result;
+}
+
+static int intToBcd(int n) { return ((n / 10) << 4) + n % 10; }
+
+// IOCS _DATEGET (0x54)
+// 日付データ(BCD)を返す。
+static ULong Dateget(TimeFunc timeFunc) {
+  struct tm t = toLocalTime(timeFunc(NULL));
+
+  // 1980年(または直前のxx80年)からの経過年数(0～99)
+  const int dif = 1980 - 1900;
+  int y = t.tm_year % 100;
+  y = y + ((y < dif) ? 100 : 0) - dif;
+
+  return (t.tm_wday << 24)                //
+         | (intToBcd(y) << 16)            //
+         | (intToBcd(t.tm_mon + 1) << 8)  //
+         | intToBcd(t.tm_mday);
+}
+
+// IOCS _TIMEGET (0x54)
+// 時刻データ(BCD)を返す。
+static ULong Timeget(TimeFunc timeFunc) {
+  struct tm t = toLocalTime(timeFunc(NULL));
+  const int fmt = 1;  // 24時間計
+
+  return (fmt << 24)                    //
+         | (intToBcd(t.tm_hour) << 16)  //
+         | (intToBcd(t.tm_min) << 8)    //
+         | intToBcd(t.tm_sec);
+}
 
 // IOCS _ONTIME (0x7f)
 static RegPair IocsOntime(void) { return HOST_IOCS_ONTIME(); }
@@ -107,13 +155,13 @@ bool iocs_call() {
       Putmes();
       break;
     case 0x54: /* DATEGET */
-      rd[0] = Dateget();
+      rd[0] = Dateget(time);
       break;
     case 0x55: /* DATEBIN */
       rd[0] = Datebin(rd[1]);
       break;
     case 0x56: /* TIMEGET */
-      rd[0] = Timeget();
+      rd[0] = Timeget(time);
       break;
     case 0x57: /* TIMEBIN */
       rd[0] = Timebin(rd[1]);
@@ -268,39 +316,6 @@ static void Putmes() {
   printf("%s", temp);
 
   ra[1] += len;
-}
-
-/*
- 　機能：日付を得る
- 戻り値：BCDの日付データ
-*/
-static Long Dateget() {
-  time_t now = time(NULL);
-  struct tm *t = localtime(&now);
-
-  return (t->tm_wday << 24)                  //
-         | (((t->tm_year - 80) / 10) << 20)  //
-         | (((t->tm_year - 80) % 10) << 16)  //
-         | ((t->tm_mon / 10) << 12)          //
-         | ((t->tm_mon % 10) << 8)           //
-         | ((t->tm_mday / 10) << 4)          //
-         | (t->tm_mday % 10);
-}
-
-/*
- 　機能：時刻を得る
- 戻り値：BCDの時刻データ
-*/
-static Long Timeget() {
-  time_t now = time(NULL);
-  struct tm *t = localtime(&now);
-
-  return ((t->tm_hour / 10) << 20)    //
-         | ((t->tm_hour % 10) << 16)  //
-         | ((t->tm_min / 10) << 12)   //
-         | ((t->tm_min % 10) << 8)    //
-         | ((t->tm_sec / 10) << 4)    //
-         | (t->tm_sec % 10);
 }
 
 /*
