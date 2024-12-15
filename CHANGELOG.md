@@ -2,6 +2,11 @@
 
 * `IOCS _DATEGET`で月の値が1小さい不具合を修正。
 * `IOCS _TIMEGET`で24時間計を示すフラグが0になっている不具合を修正。
+* 下記IOCSコールを実装。
+  * `IOCS _DATEBCD`
+  * `IOCS _DATESET` (ホスト環境への設定は行わず0を返すのみ)
+  * `IOCS _TIMEBCD`
+  * `IOCS _TIMESET` (ホスト環境への設定は行わず0を返すのみ)
 
 
 # run68x 2.0.4 (2024-10-24)

@@ -42,6 +42,69 @@ static void Dmamove(Long, Long, Long, Long);
 
 typedef time_t (*TimeFunc)(time_t *);
 
+static int intToBcd(int n) { return ((n / 10) << 4) + n % 10; }
+
+// IOCS _DATEBCD (0x50)
+// 日付データのバイナリ→BCD変換。
+static ULong Datebcd(ULong b) {
+  const int y = ((b >> 16) & 0xfff) - 1980;
+  const int m = (b >> 8) & 0xff;
+  const int d = b & 0xff;
+  const int leapCount = y & 3;
+
+  if (y < 0 || 99 < y || m < 1 || 12 < m || d < 1 || 31 < d) {
+    return (ULong)-1;
+  }
+  if (m == 2) {
+    // 2月は28日(閏年は29日)までしかない。
+    const int lim = leapCount ? 28 : 29;
+    if (lim < d) return (ULong)-1;
+  } else if (d == 31) {
+    // 4,6,9,11月は30日までしかない。
+    if (m == 4 || m == 6 || m == 9 || m == 11) return (ULong)-1;
+  }
+
+  static const uint8_t wtable1[12] = {0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5};
+  static const uint8_t wtable1Leap[12] = {0, 3, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6};
+  static const uint8_t wtable2[7] = {2, 0, 5, 3, 1, 6, 4};
+  static const uint8_t wtable3[4] = {0, 2, 3, 4};
+  int w = (leapCount ? wtable1 : wtable1Leap)[m - 1];  // 1980年m月1日の曜日
+  w += wtable2[(y / 4) % 7] + wtable3[leapCount] + (d - 1);  // y年m月d日の曜日
+
+  return (leapCount << 28) | ((w % 7) << 24) | (intToBcd(y) << 16) |
+         (intToBcd(m) << 8) | intToBcd(d);
+}
+
+// IOCS _DATESET (0x51)
+// 日付の設定。
+static ULong Dateset(void) {
+  // 下記理由によりホスト環境への設定は行わず、単に0を返す。
+  // 1. 時計の変更はホスト環境への影響が大きすぎる。
+  // 2. 変更してもネットワーク経由で自動的に修正されるため意味がない。
+  return 0;
+}
+
+// IOCS _TIMEBCD (0x52)
+// 時刻データのバイナリ→BCD変換。
+static ULong Timebcd(ULong b) {
+  const int hh = (b >> 16) & 0xff;
+  const int mm = (b >> 8) & 0xff;
+  const int ss = b & 0xff;
+  const int fmt = 1;  // 24時間計
+
+  if (hh > 23 || mm > 59 || ss > 59) return (ULong)-1;
+
+  return (fmt << 24) | (intToBcd(hh) << 16) | (intToBcd(mm) << 8) |
+         intToBcd(ss);
+}
+
+// IOCS _TIMESET (0x53)
+// 時刻の設定。
+static ULong Timeset(void) {
+  // IOCS _DATESETと同じ理由によりホスト環境への設定は行わず、単に0を返す。
+  return 0;
+}
+
 static struct tm toLocalTime(time_t timer) {
   struct tm result;
 
@@ -60,8 +123,6 @@ static struct tm toLocalTime(time_t timer) {
   }
   return result;
 }
-
-static int intToBcd(int n) { return ((n / 10) << 4) + n % 10; }
 
 // IOCS _DATEGET (0x54)
 // 日付データ(BCD)を返す。
@@ -153,6 +214,18 @@ bool iocs_call() {
       break;
     case 0x2F: /* B_PUTMES */
       Putmes();
+      break;
+    case 0x50:  // _DATEBCD
+      rd[0] = Datebcd(rd[1]);
+      break;
+    case 0x51:  // _DATESET
+      rd[0] = Dateset();
+      break;
+    case 0x52:  // _TIMEBCD
+      rd[0] = Timebcd(rd[1]);
+      break;
+    case 0x53:  // _TIMESET
+      rd[0] = Timeset();
       break;
     case 0x54: /* DATEGET */
       rd[0] = Dateget(time);
