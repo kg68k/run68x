@@ -15,12 +15,15 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
+#include "iocscall.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
 #include "host.h"
+#include "iocscall.h"
 #include "mem.h"
 #include "operate.h"
 #include "run68.h"
@@ -32,21 +35,17 @@
 static Long Putc(UWord);
 static Long Color(short);
 static void Putmes(void);
-static Long Datebin(Long);
-static Long Timebin(Long);
 static Long Dateasc(Long, Long);
 static Long Timeasc(Long, Long);
 static Long Dayasc(Long, Long);
 static Long Intvcs(Long, Long);
 static void Dmamove(Long, Long, Long, Long);
 
-typedef time_t (*TimeFunc)(time_t *);
-
 static int intToBcd(int n) { return ((n / 10) << 4) + n % 10; }
 
 // IOCS _DATEBCD (0x50)
 // 日付データのバイナリ→BCD変換。
-static ULong Datebcd(ULong b) {
+ULong Datebcd(ULong b) {
   const int y = ((b >> 16) & 0xfff) - 1980;
   const int m = (b >> 8) & 0xff;
   const int d = b & 0xff;
@@ -77,7 +76,7 @@ static ULong Datebcd(ULong b) {
 
 // IOCS _DATESET (0x51)
 // 日付の設定。
-static ULong Dateset(void) {
+ULong Dateset(UNUSED ULong b) {
   // 下記理由によりホスト環境への設定は行わず、単に0を返す。
   // 1. 時計の変更はホスト環境への影響が大きすぎる。
   // 2. 変更してもネットワーク経由で自動的に修正されるため意味がない。
@@ -86,7 +85,7 @@ static ULong Dateset(void) {
 
 // IOCS _TIMEBCD (0x52)
 // 時刻データのバイナリ→BCD変換。
-static ULong Timebcd(ULong b) {
+ULong Timebcd(ULong b) {
   const int hh = (b >> 16) & 0xff;
   const int mm = (b >> 8) & 0xff;
   const int ss = b & 0xff;
@@ -100,7 +99,7 @@ static ULong Timebcd(ULong b) {
 
 // IOCS _TIMESET (0x53)
 // 時刻の設定。
-static ULong Timeset(void) {
+ULong Timeset(UNUSED ULong b) {
   // IOCS _DATESETと同じ理由によりホスト環境への設定は行わず、単に0を返す。
   return 0;
 }
@@ -126,7 +125,7 @@ static struct tm toLocalTime(time_t timer) {
 
 // IOCS _DATEGET (0x54)
 // 日付データ(BCD)を返す。
-static ULong Dateget(TimeFunc timeFunc) {
+ULong Dateget(TimeFunc timeFunc) {
   struct tm t = toLocalTime(timeFunc(NULL));
 
   // 1980年(または直前のxx80年)からの経過年数(0～99)
@@ -142,7 +141,7 @@ static ULong Dateget(TimeFunc timeFunc) {
 
 // IOCS _TIMEGET (0x54)
 // 時刻データ(BCD)を返す。
-static ULong Timeget(TimeFunc timeFunc) {
+ULong Timeget(TimeFunc timeFunc) {
   struct tm t = toLocalTime(timeFunc(NULL));
   const int fmt = 1;  // 24時間計
 
@@ -219,13 +218,13 @@ bool iocs_call() {
       rd[0] = Datebcd(rd[1]);
       break;
     case 0x51:  // _DATESET
-      rd[0] = Dateset();
+      rd[0] = Dateset(rd[1]);
       break;
     case 0x52:  // _TIMEBCD
       rd[0] = Timebcd(rd[1]);
       break;
     case 0x53:  // _TIMESET
-      rd[0] = Timeset();
+      rd[0] = Timeset(rd[1]);
       break;
     case 0x54: /* DATEGET */
       rd[0] = Dateget(time);
@@ -395,7 +394,7 @@ static void Putmes() {
  　機能：BCD表現の日付データをバイナリ表現に直す
  戻り値：バイナリの日付データ
 */
-static Long Datebin(Long bcd) {
+ULong Datebin(Long bcd) {
   unsigned int youbi;
   unsigned int year;
   unsigned int month;
@@ -413,7 +412,7 @@ static Long Datebin(Long bcd) {
  　機能：BCD表現の時刻データをバイナリ表現に直す
  戻り値：バイナリの時刻データ
 */
-static Long Timebin(Long bcd) {
+ULong Timebin(Long bcd) {
   unsigned int hh;
   unsigned int mm;
   unsigned int ss;

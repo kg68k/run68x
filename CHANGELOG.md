@@ -1,12 +1,15 @@
 # run68x 2.0.5-beta.1
 
-* `IOCS _DATEGET`で月の値が1小さい不具合を修正。
+* `DOS _SETTIM2`、`DOS _SETDATE`でホスト環境の時計を変更しないように仕様変更。
+  エラー時の返り値を-1に変更。
+* (generic) `IOCS _DATEGET`で月の値が1小さい不具合を修正。
 * `IOCS _TIMEGET`で24時間計を示すフラグが0になっている不具合を修正。
-* 下記IOCSコールを実装。
+* 下記DOSコール、IOCSコールを実装。
+  * `DOS _SETTIME` (ホスト環境の時計を変更せず、0またはエラーコードを返すのみ)
   * `IOCS _DATEBCD`
-  * `IOCS _DATESET` (ホスト環境への設定は行わず0を返すのみ)
+  * `IOCS _DATESET` (ホスト環境の時計を変更せず、0を返すのみ)
   * `IOCS _TIMEBCD`
-  * `IOCS _TIMESET` (ホスト環境への設定は行わず0を返すのみ)
+  * `IOCS _TIMESET` (ホスト環境の時計を変更せず、0を返すのみ)
 
 
 # run68x 2.0.4 (2024-10-24)

@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #if !defined(__GNUC__)
 #include <conio.h>
@@ -34,7 +35,6 @@
 #else
 #include <dirent.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
 #endif
 
@@ -51,6 +51,7 @@
 #include "dostrace.h"
 #include "host.h"
 #include "human68k.h"
+#include "iocscall.h"
 #include "mem.h"
 #include "operate.h"
 #include "run68.h"
@@ -72,10 +73,6 @@ static Long Rename(Long, Long);
 static Long Chmod(Long, short);
 static Long Files(Long, Long, short);
 static Long Nfiles(Long);
-static Long Getdate(void);
-static Long Setdate(short);
-static Long Gettime(int);
-static Long Settim2(Long);
 static Long Namests(Long, Long);
 static Long Nameck(Long, Long);
 static Long Conctrl(short, Long);
@@ -189,6 +186,76 @@ static Long DosFgetc(ULong param) {
   int ch = fgetc(finfop->host.fp);
   return (0 <= ch && ch <= 0xff) ? ch : DOSE_ILGFNC;
 #endif
+}
+
+// DOS _GETTIM2 (0xff27)
+static Long Gettim2(TimeFunc timeFunc) { return Timebin(Timeget(timeFunc)); }
+
+// DOS _SETTIM2 (0xff28)
+static Long Settim2(ULong param) {
+  const ULong t = ReadParamULong(&param);
+
+  const ULong bcd = Timebcd(t);
+  if (bcd == (ULong)-1) return DOSE_ILGFNC;
+
+  // 現状の仕様ではIOCS _TIMESETがホスト環境への設定を行わないため、
+  // DOS _SETTIM2でも設定は行われない。
+  Timeset(bcd);
+  return DOSE_SUCCESS;
+}
+
+// DOS _GETDATE (0xff2a)
+static Long Getdate(TimeFunc timeFunc) {
+  const ULong date = Datebin(Dateget(timeFunc));
+
+  const int w = (date >> 28) & 7;
+  const int y = ((date >> 16) & 0xfff) - 1980;
+  const int m = (date >> 8) & 0xf;
+  const int d = date & 0x1f;
+  return (w << 16) | (y << 9) | (m << 5) | d;
+}
+
+// DOS _SETDATE (0xff2b)
+static Long Setdate(ULong param) {
+  const UWord date = ReadParamUWord(&param);
+
+  const int y = (date >> 9) + 1980;
+  const int m = (date >> 5) & 0xf;
+  const int d = date & 0x1f;
+  const ULong bcd = Datebcd((y << 16) | (m << 8) | d);
+  if (bcd == (ULong)-1) return DOSE_ILGFNC;
+
+  // 現状の仕様ではIOCS _DATESETがホスト環境への設定を行わないため、
+  // DOS _SETDATEでも設定は行われない。
+  Dateset(bcd);
+  return DOSE_SUCCESS;
+}
+
+// DOS _GETTIME (0xff2c)
+static Long Gettime(TimeFunc timeFunc) {
+  const ULong t = Gettim2(timeFunc);
+
+  const int h = t >> 16;
+  const int m = (t >> 8) & 0x3f;
+  const int s = (t & 0x3f) / 2;
+  return (h << 11) | (m << 5) | s;
+}
+
+// DOS _SETTIME (0xff2d)
+static Long Settime(ULong param) {
+  const UWord t = ReadParamUWord(&param);
+
+  const int h = t >> 11;
+  const int m = (t >> 5) & 0x3f;
+  const int s = (t & 0x1f) * 2;
+
+  const ULong bcd = Timebcd((h << 16) | (m << 8) | s);
+  if (bcd == (ULong)-1) return DOSE_ILGFNC;
+
+  // 現状の仕様ではIOCS _TIMESETがホスト環境への設定を行わないため、
+  // DOS _SETTIMEでも設定は行われない。
+  Timeset(bcd);
+  return DOSE_SUCCESS;
 }
 
 // DOS _MKDIR (0xff39)
@@ -739,12 +806,11 @@ bool dos_call(UByte code) {
       data = mem_get(stack_adr + 2, S_LONG);
       rd[0] = Intvcs(srt, data);
       break;
-    case 0x27: /* GETTIM2 */
-      rd[0] = Gettime(1);
+    case 0x27:  // GETTIM2
+      rd[0] = Gettim2(time);
       break;
-    case 0x28: /* SETTIM2 */
-      data = mem_get(stack_adr, S_LONG);
-      rd[0] = Settim2(data);
+    case 0x28:  // SETTIM2
+      rd[0] = Settim2(stack_adr);
       break;
     case 0x29: /* NAMESTS */
       data = mem_get(stack_adr, S_LONG);
@@ -752,14 +818,16 @@ bool dos_call(UByte code) {
       rd[0] = Namests(data, buf);
       break;
     case 0x2A: /* GETDATE */
-      rd[0] = Getdate();
+      rd[0] = Getdate(time);
       break;
-    case 0x2B: /* SETDATE */
-      srt = (short)mem_get(stack_adr, S_WORD);
-      rd[0] = Setdate(srt);
+    case 0x2B:  // SETDATE
+      rd[0] = Setdate(stack_adr);
       break;
-    case 0x2C: /* GETTIME */
-      rd[0] = Gettime(0);
+    case 0x2C:  // GETTIME
+      rd[0] = Gettime(time);
+      break;
+    case 0x2D:  // SETTIME
+      rd[0] = Settime(stack_adr);
       break;
     case 0x30: /* VERNUM */
       rd[0] = 0x36380302;
@@ -1638,114 +1706,6 @@ static Long Nfiles(Long buf) {
   printf("DOSCALL NFILES:not defined yet %s %d\n", __FILE__, __LINE__);
   return -1;
 #endif
-}
-
-/*
- 　機能：DOSCALL GETDATEを実行する
- 戻り値：現在の日付
- */
-static Long Getdate() {
-  Long ret;
-
-#ifdef _WIN32
-  SYSTEMTIME stime;
-  // GetSystemTime(&stime);
-  GetLocalTime(&stime);
-  ret = ((Long)(stime.wDayOfWeek) << 16) + (((Long)(stime.wYear) - 1980) << 9) +
-        ((Long)(stime.wMonth) << 5) + (Long)(stime.wDay);
-#else
-  struct tm tm;
-  time_t t = time(NULL);
-  localtime_r(&t, &tm);
-  //	printf("%04d/%02d/%02d %d %02d:%02d:%02d\n",
-  //		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-  //		   tm.tm_wday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-  ret = (tm.tm_wday << 16) + ((tm.tm_year + (1980 - 1900)) << 9) +
-        (tm.tm_mon << 5) + tm.tm_mday;
-
-#endif
-  return (ret);
-}
-
-/*
- 　機能：DOSCALL SETDATEを実行する
- 戻り値：エラーコード
- */
-static Long Setdate(short dt) {
-#ifdef _WIN32
-  SYSTEMTIME stime = {
-      .wYear = (dt >> 9) & 0x7F + 1980,
-      .wMonth = (dt >> 5) & 0xF,
-      .wDay = dt & 0x1f,
-      .wSecond = 0,
-      .wMilliseconds = 0,
-  };
-
-  // BOOL b = SetSystemTime(&stime);
-  BOOL b = SetLocalTime(&stime);
-  if (!b) return -14; /* パラメータ不正 */
-#else
-  printf("DOSCALL SETDATE:not defined yet %s %d\n", __FILE__, __LINE__);
-#endif
-  return (0);
-}
-
-/*
- 　機能：DOSCALL GETTIME / GETTIME2を実行する
- 戻り値：現在の時刻
- */
-static Long Gettime(int flag) {
-  Long ret;
-#ifdef _WIN32
-  SYSTEMTIME stime;
-  // GetSystemTime(&stime);
-  GetLocalTime(&stime);
-  if (flag == 0)
-    // ret = stime.wHour << 11 + stime.wMinute << 5 + stime.wSecond >> 1;
-    ret = ((Long)(stime.wHour) << 11) + ((Long)(stime.wMinute) << 5) +
-          ((Long)(stime.wSecond) >> 1);
-  else
-    // ret = stime.wHour << 16 + stime.wMinute << 8 + stime.wSecond;
-    ret = ((Long)(stime.wHour) << 16) + ((Long)(stime.wMinute) << 8) +
-          (Long)(stime.wSecond);
-#else
-
-  struct tm tm;
-  time_t t = time(NULL);
-  localtime_r(&t, &tm);
-  //	printf("%04d/%02d/%02d %d %02d:%02d:%02d\n",
-  //		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-  //		   tm.tm_wday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-
-  if (flag == 0)
-    ret = (tm.tm_hour << 11) + (tm.tm_min << 5) + (tm.tm_sec >> 1);
-  else
-    ret = (tm.tm_hour << 16) + (tm.tm_min << 8) + tm.tm_sec;
-
-#endif
-  return (ret);
-}
-
-/*
- 　機能：DOSCALL SETTIM2を実行する
- 戻り値：エラーコード
- */
-static Long Settim2(Long tim) {
-#ifdef _WIN32
-  SYSTEMTIME stime = {
-      .wYear = (tim >> 16) & 0x1F,
-      .wMonth = (tim >> 8) & 0x3F,
-      .wDay = tim & 0x3f,
-      .wSecond = 0,
-      .wMilliseconds = 0,
-  };
-
-  BOOL b = SetSystemTime(&stime);
-  if (!b) return -14; /* パラメータ不正 */
-#else
-  printf("DOSCALL SETTIM2:not defined yet %s %d\n", __FILE__, __LINE__);
-#endif
-  return (0);
 }
 
 /*
