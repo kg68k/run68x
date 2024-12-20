@@ -21,17 +21,23 @@
 #define RUN68X_VERSION "2.0.5-beta.1"
 #define RUN68VERSION "0.09a+MacOS"
 
-#if defined(__GNUC__)
+#if __STDC_VERSION__ >= 202311L
+#define NORETURN [[noreturn]]
+#define UNUSED [[maybe_unused]]
+#elif defined(__GNUC__)
 #define NORETURN __attribute__((noreturn))
-#define GCC_FORMAT(a, b) __attribute__((format(printf, a, b)))
+#define UNUSED __attribute__((unused))
 #elif defined(_MSC_VER)
 #define NORETURN __declspec(noreturn)
+#define UNUSED
+#else
+#define NORETURN /* [[noreturn]] */
+#define UNUSED   /* [[maybe_unused]] */
 #endif
 
-#ifndef NORETURN
-#define NORETURN /* [[noreturn]] */
-#endif
-#ifndef GCC_FORMAT
+#ifdef __GNUC__
+#define GCC_FORMAT(a, b) __attribute__((format(printf, a, b)))
+#else
 #define GCC_FORMAT(a, b)
 #endif
 
@@ -82,14 +88,14 @@
 #define S_WORD 1 /* WORDサイズ */
 #define S_LONG 2 /* LONGサイズ */
 
-#define MD_DD 0 /* データレジスタ直接 */
-#define MD_AD 1 /* アドレスレジスタ直接 */
-#define MD_AI 2 /* アドレスレジスタ間接 */
+#define MD_DD 0   /* データレジスタ直接 */
+#define MD_AD 1   /* アドレスレジスタ直接 */
+#define MD_AI 2   /* アドレスレジスタ間接 */
 #define MD_AIPI 3 /* ポストインクリメント・アドレスレジスタ間接 */
 #define MD_AIPD 4 /* プリデクリメント・アドレスレジスタ間接 */
-#define MD_AID 5 /* ディスプレースメント付きアドレスレジスタ間接 */
-#define MD_AIX 6 /* インデックス付きアドレスレジスタ間接 */
-#define MD_OTH 7 /* その他 */
+#define MD_AID 5  /* ディスプレースメント付きアドレスレジスタ間接 */
+#define MD_AIX 6  /* インデックス付きアドレスレジスタ間接 */
+#define MD_OTH 7  /* その他 */
 
 #define MR_SRT 0 /* 絶対ショート */
 #define MR_LNG 1 /* 絶対ロング */
@@ -98,12 +104,12 @@
 #define MR_IM 4  /* イミディエイトデータ */
 
 /* Replace from MD_xx, MR_xx */
-#define EA_DD 0 /* データレジスタ直接 */
-#define EA_AD 1 /* アドレスレジスタ直接 */
-#define EA_AI 2 /* アドレスレジスタ間接 */
+#define EA_DD 0   /* データレジスタ直接 */
+#define EA_AD 1   /* アドレスレジスタ直接 */
+#define EA_AI 2   /* アドレスレジスタ間接 */
 #define EA_AIPI 3 /* ポストインクリメント・アドレスレジスタ間接 */
 #define EA_AIPD 4 /* プリデクリメント・アドレスレジスタ間接 */
-#define EA_AID 5 /* ディスプレースメント付きアドレスレジスタ間接 */
+#define EA_AID 5  /* ディスプレースメント付きアドレスレジスタ間接 */
 #define EA_AIX 6  /* インデックス付きアドレスレジスタ間接 */
 #define EA_SRT 7  /* 絶対ショート */
 #define EA_LNG 8  /* 絶対ロング */
@@ -186,10 +192,10 @@ typedef struct {
   Long pc;
   /* 本当は全レジスタを保存しておきたい。*/
   // オペコードも保存すべき(ただし先頭ワードだけでは不十分)。
-  Long rmem;  /* READしたメモリ */
-  char rsize; /* B/W/L or N(READなし) movemの場合は最後の一つ */
-  Long wmem;  /* WRITEしたメモリ */
-  char wsize; /* B/W/L or N(WRITEなし) movemの場合は最後の一つ */
+  Long rmem;         /* READしたメモリ */
+  char rsize;        /* B/W/L or N(READなし) movemの場合は最後の一つ */
+  Long wmem;         /* WRITEしたメモリ */
+  char wsize;        /* B/W/L or N(WRITEなし) movemの場合は最後の一つ */
   char mnemonic[64]; /* ニーモニック(できれば) */
 } EXEC_INSTRUCTION_INFO;
 
@@ -215,9 +221,9 @@ extern Long superjsr_ret;       // DOSCALL SUPER_JSRの戻りアドレス
 extern Long psp[NEST_MAX];      // PSP
 extern Long nest_pc[NEST_MAX];  // 親プロセスへの戻りアドレスを保存
 extern Long nest_sp[NEST_MAX];  // 親プロセスのスタックポインタを保存
-extern unsigned int nest_cnt;  // 子プロセスを起動するたびに+1
+extern unsigned int nest_cnt;   // 子プロセスを起動するたびに+1
 extern jmp_buf jmp_when_abort;  // アボート処理のためのジャンプバッファ
-extern UWord cwatchpoint;  // 命令ウォッチ
+extern UWord cwatchpoint;       // 命令ウォッチ
 
 void print(const char *message);
 void printFmt(const char *fmt, ...) GCC_FORMAT(1, 2);
@@ -260,9 +266,6 @@ bool dos_call(UByte);
 const char *Getenv(const char *name, ULong env);
 Long gets2(char *str, int max);
 
-/* iocscall.c */
-bool iocs_call(void);
-
 /* key.c */
 void get_fnckey(int, char *);
 void put_fnckey(int, char *);
@@ -296,15 +299,15 @@ typedef enum {
   RUN68_COMMAND_HELP,    /* デバッガのヘルプ */
   RUN68_COMMAND_HISTORY, /* 命令の実行履歴 */
   RUN68_COMMAND_LIST,    /* ディスアセンブル */
-  RUN68_COMMAND_NEXT, /* STEPと同じ。ただし、サブルーチン呼出しはスキップ */
-  RUN68_COMMAND_QUIT,   /* run68を終了する */
-  RUN68_COMMAND_REG,    /* レジスタの内容を表示する */
-  RUN68_COMMAND_RUN,    /* 環境を初期化してプログラム実行 */
-  RUN68_COMMAND_SET,    /* メモリに値をセットする */
-  RUN68_COMMAND_STEP,   /* 一命令分ステップ実行 */
-  RUN68_COMMAND_WATCHC, /* 命令ウォッチ */
-  RUN68_COMMAND_NULL,   /* コマンドではない(移動禁止) */
-  RUN68_COMMAND_ERROR   /* コマンドエラー(移動禁止) */
+  RUN68_COMMAND_NEXT,    /* STEPと同じ。ただし、サブルーチン呼出しはスキップ */
+  RUN68_COMMAND_QUIT,    /* run68を終了する */
+  RUN68_COMMAND_REG,     /* レジスタの内容を表示する */
+  RUN68_COMMAND_RUN,     /* 環境を初期化してプログラム実行 */
+  RUN68_COMMAND_SET,     /* メモリに値をセットする */
+  RUN68_COMMAND_STEP,    /* 一命令分ステップ実行 */
+  RUN68_COMMAND_WATCHC,  /* 命令ウォッチ */
+  RUN68_COMMAND_NULL,    /* コマンドではない(移動禁止) */
+  RUN68_COMMAND_ERROR    /* コマンドエラー(移動禁止) */
 } RUN68_COMMAND;
 
 RUN68_COMMAND debugger(bool running);
