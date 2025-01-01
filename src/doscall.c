@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -100,9 +100,7 @@ static int _dos_setfileattr(char* name, short attr) {
   return 1;
 }
 
-void _flushall() {
-  //	printf("_flushall()\n" );
-}
+void _flushall() {}
 
 char _getch() {
   printf("_getch()\n");
@@ -115,23 +113,14 @@ char _getche() {
 }
 
 static void dos_getdrive(Long* drv) {
-  //	printf("dos_getdrive(%p)\n", drv );
   *drv = 1;  // 1 = A:
 }
 
-static void dos_setdrive(Long drv, Long* dmy) {
-  //	printf("dos_setdrive(%d, %p)\n", drv, dmy );
-}
+static void dos_setdrive(Long drv, Long* dmy) {}
 
-int _kbhit() {
-  //	printf("_kbhit()\n");
-  return 1;
-}
+int _kbhit() { return 1; }
 
-int kbhit() {
-  //	printf("kbhit()\n");
-  return 1;
-}
+int kbhit() { return 1; }
 
 static char ungetch(char c) {
   printf("ungetch()\n");
@@ -1575,22 +1564,8 @@ static Long Files(Long buf, Long name, short atr) {
       buf_ptr[1] = 0;   /* ドライブ番号(not used) */
       //			*((HANDLE*)&buf_ptr[2]) = handle; /*
       // サーチハンドル */
-      /* DATEとTIMEをセット */
-      {
-        /*
-                                        SYSTEMTIME st;
-                                        unsigned short s;
-                                        FileTimeToSystemTime(&f_data.ftLastWriteTime,
-           &st); s = (st.wHour << 11) + (st.wMinute << 5) + st.wSecond / 2;
-                                        buf_ptr[22] = (s & 0xff00) >> 8;
-                                        buf_ptr[23] = s & 0xff;
-                                        s =((st.wYear - 1980) << 9) +
-                                        (st.wMonth << 5) +
-                                        st.wDay;
-                                        buf_ptr[24] = (s & 0xff00) >> 8;
-                                        buf_ptr[25] = s & 0xff;
-        */
-      }
+      // DATEとTIMEをセット: 未実装
+
       // FILELENをセット
       buf_ptr[26] = (unsigned char)((size & 0xff000000) >> 24);
       buf_ptr[27] = (unsigned char)((size & 0x00ff0000) >> 16);
@@ -1610,9 +1585,7 @@ static Long Files(Long buf, Long name, short atr) {
 
   dir = opendir(path);
   printf("opendir(%s)=%p\n", path, dir);
-  if (dir == NULL) {
-    //		perror(path);
-  } else {
+  if (dir) {
     while ((dent = readdir(dir)) != NULL) {
       printf("%s\n", dent->d_name);
     }
@@ -1881,7 +1854,6 @@ static Long Nameck(Long name, Long buf) {
   } else {
     memcpy(buf_ptr, nbuf, 2);
   }
-  //	printf("NAMECK=%s\n", buf_ptr);
   return (ret);
 }
 

@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -327,7 +327,7 @@ Restart:
       switch (argv[i][1]) {
         case 't':
           if (strlen(argv[i]) == 2) {
-            // print("MPU命令トレースフラグ=ON\n");
+            // 削除された-tオプション。
           } else if (argv[i][2] == 'r') {
             char *p; /* アドレス文字列へのポインタ */
             if (strlen(argv[i]) == strlen("-tr")) {

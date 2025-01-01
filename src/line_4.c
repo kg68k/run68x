@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -440,12 +440,6 @@ static bool Move_t_usp(char code) {
   if (SR_S_REF() == 0) {
     err68a("特権命令を実行しました", __FILE__, __LINE__);
   }
-
-  // int reg = (code & 0x07);
-
-#ifdef TRACE
-  printf("trace: move_t_usp PC=%06lX\n", pc);
-#endif
 
   err68("MOVE TO USP命令を実行しました");
 }
