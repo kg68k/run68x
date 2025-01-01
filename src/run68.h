@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "2.1.0"
+#define RUN68X_VERSION "2.1.1-beta.1"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if __STDC_VERSION__ >= 202311L

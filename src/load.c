@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -128,7 +128,6 @@ FILE *prog_open(char *fname, ULong envptr, void (*err)(const char *)) {
   for (strcpy(dir, cwd); strlen(dir) != 0; GetAPath(&env_p, sizeof(dir), dir)) {
     size_t len = strlen(dir) + strlen("/") + strlen(fname) + strlen(".x");
     if (len >= 89) {
-      // printf("too long path: %s\n", dir);
       continue;
     }
 
