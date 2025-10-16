@@ -28,7 +28,7 @@
 /* コマンドラインの最大文字列長 */
 #define MAX_LINE 256
 
-static char *command_name[] = {
+static char* command_name[] = {
     "BREAK",   /* ブレークポイントの設定 */
     "CLEAR",   /* ブレークポイントの解除 */
     "CONT",    /* 実行の継続 */
@@ -36,28 +36,27 @@ static char *command_name[] = {
     "HELP",    /* 命令の実行履歴 */
     "HISTORY", /* 命令の実行履歴 */
     "LIST",    /* ディスアセンブル */
-    "NEXT", /* STEPと同じ。ただし、サブルーチン呼出しはスキップ */
-    "QUIT",  /* run68を終了する */
-    "REG",   /* レジスタの内容を表示する */
-    "RUN",   /* 環境を初期化してプログラム実行 */
-    "SET",   /* メモリに値をセットする */
-    "STEP",  /* 一命令分ステップ実行 */
-    "WATCHC" /* 命令ウォッチ */
+    "NEXT",    /* STEPと同じ。ただし、サブルーチン呼出しはスキップ */
+    "QUIT",    /* run68を終了する */
+    "REG",     /* レジスタの内容を表示する */
+    "RUN",     /* 環境を初期化してプログラム実行 */
+    "SET",     /* メモリに値をセットする */
+    "STEP",    /* 一命令分ステップ実行 */
+    "WATCHC"   /* 命令ウォッチ */
 };
 
 ULong stepcount;
 
-static RUN68_COMMAND analyze(const char *line, int *argc, char **argv);
 static void display_help();
-static void display_history(int argc, char **argv);
-static void display_list(int argc, char **argv);
-static void run68_dump(int argc, char **argv);
+static void display_history(int argc, char** argv);
+static void display_list(int argc, char** argv);
+static void run68_dump(int argc, char** argv);
 static void display_registers();
-static void set_breakpoint(int argc, char **argv);
+static void set_breakpoint(int argc, char** argv);
 static void clear_breakpoint();
-static ULong get_stepcount(int argc, char **argv);
-static void debuggerError(const char *fmt, ...) GCC_FORMAT(1, 2);
-static void print1line(Long addr, Long naddr, const char *opstr);
+static ULong get_stepcount(int argc, char** argv);
+static void debuggerError(const char* fmt, ...) GCC_FORMAT(1, 2);
+static void print1line(Long addr, Long naddr, const char* opstr);
 
 typedef enum {
   ARGUMENT_TYPE_NAME = 0,
@@ -67,7 +66,7 @@ typedef enum {
 } ArgumentType;
 
 // 文字列が名前か、10進数値か、16進数か、あるいは記号かを判定する。
-static ArgumentType determine_string(const char *str) {
+static ArgumentType determine_string(const char* str) {
   // とりあえずいい加減な実装をする。
   if (isupper(str[0])) {
     return ARGUMENT_TYPE_NAME;  // 名前
@@ -79,7 +78,7 @@ static ArgumentType determine_string(const char *str) {
   return ARGUMENT_TYPE_SYMBOL;  // 記号
 }
 
-static UWord watchcode(int argc, char **argv) {
+static UWord watchcode(int argc, char** argv) {
   unsigned short wcode;
 
   if (argc < 2) {
@@ -90,6 +89,59 @@ static UWord watchcode(int argc, char **argv) {
     return 0x4afc;
   }
   return (sscanf(&argv[1][1], "%hx", &wcode) == 1) ? (UWord)wcode : 0;
+}
+
+static void splitCommandLine(const char* s, char* buf, int* argc, char** argv) {
+  *argc = 0;
+
+  for (;;) {
+    // 空白文字を読み飛ばす
+    while (isblank((int)*s)) s++;
+    if (*s == '\0') break;
+
+    // トークンの先頭
+    argv[*argc] = buf;
+    *argc += 1;
+
+    // トークンの終端まで読み進む
+    while (*s != '\0' && !isblank((int)*s)) {
+      *buf++ = *s++;
+    }
+    *buf++ = '\0';
+  }
+}
+
+static char* toUpperString(char* s) {
+  char* p = s;
+  while (*p) {
+    *p = toupper((int)*p);
+    p += 1;
+  }
+  return s;
+}
+
+/*
+   機能：
+     コマンドライン文字列を解析し、コマンドとその引き数を取り出す。
+   パラメータ：
+     const char* line  <in>  コマンドライン文字列
+     int*        argc  <out> コマンドラインに含まれるトークン数
+     char**      argv  <out> トークンに分解された文字列の配列
+   戻り値：
+     COMMAND コマンドの列挙値
+ */
+static RUN68_COMMAND analyze(const char* line, int* argc, char** argv) {
+  static char cline[MAX_LINE];
+  splitCommandLine(line, cline, argc, argv);
+  if (*argc == 0) return RUN68_COMMAND_NULL;
+
+  const char* first = toUpperString(argv[0]);
+  for (RUN68_COMMAND cmd = (RUN68_COMMAND)0; cmd < RUN68_COMMAND_NULL; cmd++) {
+    if (strcmp(first, command_name[cmd]) == 0) {
+      return cmd;
+    }
+  }
+  return RUN68_COMMAND_ERROR;
 }
 
 /*
@@ -106,7 +158,7 @@ RUN68_COMMAND debugger(bool running) {
 
   if (running) {
     Long naddr, addr = pc;
-    const char *s = disassemble(addr, &naddr);
+    const char* s = disassemble(addr, &naddr);
     if (addr == naddr) naddr += 2;  // ディスアセンブルできなかった
 
     /* まず全レジスタを表示し、*/
@@ -124,7 +176,7 @@ RUN68_COMMAND debugger(bool running) {
   /* コマンドループ */
   while (true) {
     char line[MAX_LINE];
-    char *argv[MAX_LINE];
+    char* argv[MAX_LINE];
     int argc;
     print(PROMPT);
     if (fgets(line, MAX_LINE, stdin) == NULL) {
@@ -134,6 +186,9 @@ RUN68_COMMAND debugger(bool running) {
         goto EndOfLoop;
       }
     }
+    size_t len = strlen(line);
+    if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
+
     cmd = analyze(line, &argc, argv);
     if (argc == 0) {
       continue;
@@ -203,77 +258,8 @@ EndOfLoop:
   return cmd;
 }
 
-/*
-   機能：
-     コマンドライン文字列を解析し、コマンドとその引き数を取り出す。
-   パラメータ：
-     const char* line  <in>  コマンドライン文字列
-     int*        argc  <out> コマンドラインに含まれるトークン数
-     char**      argv  <out> トークンに分解された文字列の配列
-   戻り値：
-     COMMAND コマンドの列挙値
- */
-static RUN68_COMMAND analyze(const char *line, int *argc, char **argv) {
-  static char cline[MAX_LINE * 2];
-  unsigned int i;
-  char *q = cline;
-
-  *argc = 0;
-  for (i = 0; i < strlen(line); i++) {
-    /* 空白文字を読み飛ばす。*/
-    const char *p = &line[i];
-    char c = toupper(*p++);
-    if (c == ' ' || c == '\t') {
-      continue;
-    } else if ('A' <= c && c <= 'Z') {
-      /* コマンド等の名前 */
-      argv[(*argc)++] = q;
-      do {
-        *q++ = c;
-        c = toupper(*p++);
-      } while (('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '_');
-      *q++ = '\0';
-      i += strlen(argv[*argc - 1]);
-    } else if ('0' <= c && c <= '9') {
-      /* 10進数 */
-      argv[(*argc)++] = q;
-      do {
-        *(q++) = c;
-        c = toupper(*p++);
-      } while ('0' <= c && c <= '9');
-      *q++ = '\0';
-      i += strlen(argv[*argc - 1]);
-    } else if ((c == '$' && 'A' <= toupper(*p) && toupper(*p) <= 'F') ||
-               ('0' <= *p && *p <= '9')) {
-      /* 16進数は$記号を付ける。*/
-      argv[(*argc)++] = q;
-      *q++ = c;
-      c = toupper(*p++);
-      do {
-        *q++ = c;
-        c = toupper(*p++);
-      } while (('A' <= c && c <= 'F') || ('0' <= c && c <= '9'));
-      *q++ = '\0';
-      i += strlen(argv[*argc - 1]);
-    }
-  }
-  if (*argc == 0) {
-    return RUN68_COMMAND_NULL;
-  } else if ('A' <= argv[0][0] && argv[0][0] <= 'Z') {
-    RUN68_COMMAND cmd;
-    for (cmd = (RUN68_COMMAND)0; cmd < RUN68_COMMAND_NULL; cmd++) {
-      if (strcmp(argv[0], command_name[cmd]) == 0) {
-        return cmd;
-      }
-    }
-    return RUN68_COMMAND_ERROR;
-  } else {
-    return RUN68_COMMAND_ERROR;
-  }
-}
-
 static void display_help() {
-  const char *help =
+  const char* help =
       "       ============= run68 debugger commands =============\n"
       "break $adr      - Set a breakpoint.\n"
       "clear           - Clear the breakpoint.\n"
@@ -295,7 +281,7 @@ static void display_help() {
   print(help);
 }
 
-static bool scanSize(const char *s, int *sizeptr) {
+static bool scanSize(const char* s, int* sizeptr) {
   int size;
   if (sscanf(s, "%d", &size) != 1 || size <= 0 || size > 1024) return false;
 
@@ -303,16 +289,16 @@ static bool scanSize(const char *s, int *sizeptr) {
   return true;
 }
 
-static bool scanAddress(const char *s, ULong *adrptr) {
+static bool scanAddress(const char* s, ULong* adrptr) {
   int adr;
-  const char *afterDoller = s + 1;
+  const char* afterDoller = s + 1;
   if (sscanf(afterDoller, "%x", &adr) != 1) return false;
 
   *adrptr = (ULong)adr;
   return true;
 }
 
-static void run68_dump(int argc, char **argv) {
+static void run68_dump(int argc, char** argv) {
   static ULong dump_addr = 0;
   static int size = 32;
   int i, j;
@@ -393,7 +379,7 @@ static void display_registers() {
   printFmt("  PC=%08X    SR=%04X\n", pc, sr);
 }
 
-static void set_breakpoint(int argc, char **argv) {
+static void set_breakpoint(int argc, char** argv) {
   if (argc < 2) {
     if (settings.trapPc == 0) {
       debuggerError("break:No breakpoints set.\n");
@@ -414,7 +400,7 @@ static void set_breakpoint(int argc, char **argv) {
 
 static void clear_breakpoint() { settings.trapPc = 0; }
 
-static void display_history(int argc, char **argv) {
+static void display_history(int argc, char** argv) {
   int n = 0;
   if (argc == 1) {
     n = 10;
@@ -426,7 +412,7 @@ static void display_history(int argc, char **argv) {
   OPBuf_display(n);
 }
 
-static void display_list(int argc, char **argv) {
+static void display_list(int argc, char** argv) {
   static Long list_addr = 0;
   static Long old_pc = 0;
   Long addr, naddr = 0;
@@ -457,7 +443,7 @@ static void display_list(int argc, char **argv) {
     }
   }
   for (i = 0; i < n; i++) {
-    const char *s = disassemble(addr, &naddr);
+    const char* s = disassemble(addr, &naddr);
     if (addr == naddr) naddr += 2;
     print1line(addr, naddr, s);
     addr = naddr;
@@ -466,14 +452,14 @@ static void display_list(int argc, char **argv) {
 }
 
 // アドレス、16進数ダンプ、逆アセンブル結果を表示する
-static void print1line(Long addr, Long naddr, const char *opstr) {
+static void print1line(Long addr, Long naddr, const char* opstr) {
   char hex[128];
   sprintf(hex, "$%08x ", addr);
 
   Span mem = GetReadableMemorySuper(addr, naddr - addr);
   if (mem.bufptr) {
-    char *end = mem.bufptr + mem.length;
-    for (char *p = mem.bufptr; p < end; p += 2) {
+    char* end = mem.bufptr + mem.length;
+    for (char* p = mem.bufptr; p < end; p += 2) {
       sprintf(hex + strlen(hex), "%04x ", PeekW(p));
     }
   } else {
@@ -489,7 +475,7 @@ static void print1line(Long addr, Long naddr, const char *opstr) {
   printFmt("%s%s\n", hex, opstr ? opstr : "\?\?\?");
 }
 
-static ULong get_stepcount(int argc, char **argv) {
+static ULong get_stepcount(int argc, char** argv) {
   ULong count = 0;
   if (argc == 1) {
     return 0;
@@ -501,7 +487,7 @@ static ULong get_stepcount(int argc, char **argv) {
 }
 
 // エラー表示
-static void debuggerError(const char *fmt, ...) {
+static void debuggerError(const char* fmt, ...) {
   va_list ap;
 
   fputs("run68-", stderr);
