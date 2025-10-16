@@ -114,7 +114,8 @@ static void splitCommandLine(const char* s, char* buf, int* argc, char** argv) {
 static char* toUpperString(char* s) {
   char* p = s;
   while (*p) {
-    *p++ = toupper((int)*p);
+    *p = toupper((int)*p);
+    p += 1;
   }
   return s;
 }
