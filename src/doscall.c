@@ -41,7 +41,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#if defined(USE_ICONV)
+#ifdef USE_ICONV
 #include <iconv.h>
 #endif
 
@@ -65,9 +65,6 @@ static Long Dskfre(short, Long);
 static Long Close(short);
 static Long Fgets(Long, short);
 static Long Write(short, Long, Long);
-#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Write_conv(short, void*, size_t);
-#endif
 static Long Delete(char*);
 static Long Rename(Long, Long);
 static Long Chmod(Long, short);
@@ -86,6 +83,66 @@ static Long Exec01(ULong, Long, Long, int);
 static Long Exec2(Long, Long, Long);
 static Long Exec3(ULong, Long, Long);
 static void Exec4(Long);
+
+#ifndef _WIN32
+static Long Write_conv(short hdl, void* buf, size_t size) {
+  Long write_len;
+  FILE* fp = finfo[hdl].host.fp;
+
+  if (fp == NULL) return -6;
+
+#ifdef USE_ICONV
+  if (isatty(fileno(fp))) {
+    static char prev_char = 0;
+    iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
+
+    write_len = 0;
+
+    while (size > 0) {
+      char sjis_buf[2048];
+      char utf8_buf[4096];
+      size_t sjis_buf_size;
+      char* sjis_buf_p;
+      size_t sjis_bytes;
+      char* utf8_buf_p = utf8_buf;
+      size_t utf8_bytes = sizeof(utf8_buf);
+      size_t utf8_bytes_prev = utf8_bytes;
+      int res;
+
+      if (prev_char) {
+        sjis_buf[0] = prev_char;
+        sjis_buf_p = sjis_buf + 1;
+        sjis_buf_size = sizeof(sjis_buf) - 1;
+        prev_char = 0;
+      } else {
+        sjis_buf_p = sjis_buf;
+        sjis_buf_size = sizeof(sjis_buf);
+      }
+
+      sjis_bytes = size > sjis_buf_size ? sjis_buf_size : size;
+      memcpy(sjis_buf_p, buf, sjis_bytes);
+      buf += sjis_bytes;
+      size -= sjis_bytes;
+      write_len += sjis_bytes;
+      sjis_bytes += sjis_buf_p - sjis_buf;
+      sjis_buf_p = sjis_buf;
+
+      res = iconv(icd, &sjis_buf_p, &sjis_bytes, &utf8_buf_p, &utf8_bytes);
+      if (res < 0 && errno == EINVAL) {
+        prev_char = *sjis_buf_p;
+      }
+      fwrite(utf8_buf, 1, utf8_bytes_prev - utf8_bytes, fp);
+    }
+    iconv_close(icd);
+
+    fflush(fp);
+    return write_len;
+  }
+#endif
+
+  return fwrite(buf, 1, size, fp);
+}
+#endif
 
 #ifndef _WIN32
 static int _dos_getfileattr(char* name, void* ret) {
@@ -1332,68 +1389,6 @@ static Long Write(short hdl, Long buf, Long len) {
 
   return write_len;
 }
-
-#if defined(__APPLE__) || defined(__linux__) || defined(__EMSCRIPTEN__)
-static Long Write_conv(short hdl, void* buf, size_t size) {
-  Long write_len;
-  FILE* fp = finfo[hdl].host.fp;
-
-  if (fp == NULL) return (-6);
-
-  if (!isatty(fileno(fp))) {
-    write_len = fwrite(buf, 1, size, fp);
-  } else {
-#if defined(USE_ICONV)
-    static char prev_char = 0;
-    iconv_t icd = iconv_open("UTF-8", "Shift_JIS");
-
-    write_len = 0;
-
-    while (size > 0) {
-      char sjis_buf[2048];
-      char utf8_buf[4096];
-      size_t sjis_buf_size;
-      char* sjis_buf_p;
-      size_t sjis_bytes;
-      char* utf8_buf_p = utf8_buf;
-      size_t utf8_bytes = sizeof(utf8_buf);
-      size_t utf8_bytes_prev = utf8_bytes;
-      int res;
-
-      if (prev_char) {
-        sjis_buf[0] = prev_char;
-        sjis_buf_p = sjis_buf + 1;
-        sjis_buf_size = sizeof(sjis_buf) - 1;
-        prev_char = 0;
-      } else {
-        sjis_buf_p = sjis_buf;
-        sjis_buf_size = sizeof(sjis_buf);
-      }
-
-      sjis_bytes = size > sjis_buf_size ? sjis_buf_size : size;
-      memcpy(sjis_buf_p, buf, sjis_bytes);
-      buf += sjis_bytes;
-      size -= sjis_bytes;
-      write_len += sjis_bytes;
-      sjis_bytes += sjis_buf_p - sjis_buf;
-      sjis_buf_p = sjis_buf;
-
-      res = iconv(icd, &sjis_buf_p, &sjis_bytes, &utf8_buf_p, &utf8_bytes);
-      if (res < 0 && errno == EINVAL) {
-        prev_char = *sjis_buf_p;
-      }
-      fwrite(utf8_buf, 1, utf8_bytes_prev - utf8_bytes, fp);
-    }
-    iconv_close(icd);
-
-    fflush(fp);
-#else
-    write_len = fwrite(buf, 1, size, fp);
-#endif
-  }
-  return write_len;
-}
-#endif
 
 /*
  　機能：DOSCALL DELETEを実行する
