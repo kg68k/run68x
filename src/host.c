@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2023 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -469,14 +469,23 @@ Long DosFiledate_generic(UWord fileno, ULong dt) {
 #endif
 
 #ifdef HOST_IOCS_ONTIME_GENERIC
-#include <sys/sysinfo.h>
-
 // IOCS _ONTIME (0x7f)
 RegPair IocsOntime_generic(void) {
-  struct sysinfo info;
-  if (sysinfo(&info) != 0) return (RegPair){0, 0};
+  const int SECS_PER_DAY = 24 * 60 * 60;   // 1日の秒数
+  const int CS_PER_SEC = 100;              // 1秒 = 100センチ秒
 
-  ldiv_t r = ldiv(info.uptime, 24 * 60 * 60);
-  return (RegPair){(ULong)(r.rem * 100), (ULong)(r.quot & 0xffff)};
+  struct timespec ts;
+  if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return (RegPair){0, 0};
+
+  // 経過日数
+  ULong days = ts.tv_sec / SECS_PER_DAY;
+
+  // 1日未満の残り秒数を100分の1秒単位に変換
+  ULong csInDay = (ts.tv_sec % SECS_PER_DAY) * CS_PER_SEC;
+
+  // ナノ秒を100分の1秒単位に変換して加算
+  csInDay += ts.tv_nsec / 10000000L;
+
+  return (RegPair){csInDay, days & 0xffff};
 }
 #endif

@@ -47,11 +47,6 @@ if(WIN32)
     src/host_win32.c
   )
 endif()
-if(APPLE OR EMSCRIPTEN)
-  target_sources(${PROJECT_NAME} PRIVATE
-    src/host_misc.c
-  )
-endif()
 
 target_compile_features(${PROJECT_NAME} PRIVATE c_std_11)
 
