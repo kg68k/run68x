@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -96,7 +96,7 @@ static void splitCommandLine(const char* s, char* buf, int* argc, char** argv) {
 
   for (;;) {
     // 空白文字を読み飛ばす
-    while (isblank((int)*s)) s++;
+    while (isblank(*s)) s++;
     if (*s == '\0') break;
 
     // トークンの先頭
@@ -104,7 +104,7 @@ static void splitCommandLine(const char* s, char* buf, int* argc, char** argv) {
     *argc += 1;
 
     // トークンの終端まで読み進む
-    while (*s != '\0' && !isblank((int)*s)) {
+    while (*s != '\0' && !isblank(*s)) {
       *buf++ = *s++;
     }
     *buf++ = '\0';
@@ -114,7 +114,7 @@ static void splitCommandLine(const char* s, char* buf, int* argc, char** argv) {
 static char* toUpperString(char* s) {
   char* p = s;
   while (*p) {
-    *p = toupper((int)*p);
+    *p = toupper(*p);
     p += 1;
   }
   return s;

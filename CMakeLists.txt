@@ -64,6 +64,11 @@ else()
   target_link_libraries(${PROJECT_NAME} PRIVATE m)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "NetBSD")
+  # Avoid warnings in ctype functions
+  target_compile_options(${PROJECT_NAME} PRIVATE -Wno-char-subscripts)
+endif()
+
 if(USE_ICONV)
   find_package(Iconv REQUIRED)
   target_compile_definitions(${PROJECT_NAME} PRIVATE USE_ICONV)
