@@ -306,19 +306,23 @@ static int toDosError(int e, int defaultError) {
   return defaultError;
 }
 
+static inline int toHostFilename(char* fullpath, char* buf,
+                                 size_t sizeofBuf) {
+  char* p = fullpath + getDriveNameLen(fullpath);
+  to_slash(p);
+  return HOST_CONVERT_FROM_SJIS(p, buf, sizeofBuf) ? 1 : 0;
+}
+
 #ifdef HOST_CREATE_NEWFILE_GENERIC
 // ファイルを作成する
 Long CreateNewfile_generic(char* fullpath, HostFileInfoMember* hostfile,
                            bool newfile) {
-  char* p = fullpath + getDriveNameLen(fullpath);
-  to_slash(p);
-
-  char fullpath2[HUMAN68K_PATH_MAX * 4 + 1];
-  if (!HOST_CONVERT_FROM_SJIS(p, fullpath2, sizeof(fullpath2)))
+  char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
     return DOSE_ILGFNAME;
 
   struct stat st;
-  if (stat(fullpath2, &st) == 0) {
+  if (stat(hostpath, &st) == 0) {
     if (S_ISCHR(st.st_mode)) {
       return DOSE_ILGFNAME;  // 同名のキャラクタデバイスが存在する
     }
@@ -328,14 +332,14 @@ Long CreateNewfile_generic(char* fullpath, HostFileInfoMember* hostfile,
   }
 
   if (newfile) {
-    FILE* fp = fopen(fullpath2, "rb");
+    FILE* fp = fopen(hostpath, "rb");
     if (fp != NULL) {
       fclose(fp);
       return toDosError(errno, DOSE_ILGFNAME);
     }
   }
 
-  FILE* fp = fopen(fullpath2, "w+b");
+  FILE* fp = fopen(hostpath, "w+b");
   if (fp == NULL) return toDosError(errno, DOSE_ILGFNAME);
   hostfile->fp = fp;
   return 0;
@@ -345,15 +349,12 @@ Long CreateNewfile_generic(char* fullpath, HostFileInfoMember* hostfile,
 #ifdef HOST_OPEN_FILE_GENERIC
 Long OpenFile_generic(char* fullpath, HostFileInfoMember* hostfile,
                       FileOpenMode mode) {
-  char* p = fullpath + getDriveNameLen(fullpath);
-  to_slash(p);
-
-  char fullpath2[HUMAN68K_PATH_MAX * 4 + 1];
-  if (!HOST_CONVERT_FROM_SJIS(p, fullpath2, sizeof(fullpath2)))
+  char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
     return DOSE_ILGFNAME;
 
   static const char mdstr[][4] = {"rb", "r+b", "r+b"};
-  FILE* fp = fopen(p, mdstr[mode]);
+  FILE* fp = fopen(hostpath, mdstr[mode]);
   if (fp == NULL) return toDosError(errno, DOSE_NOENT);
 
   // ディレクトリをオープンしてしまった可能性がある。
@@ -471,8 +472,8 @@ Long DosFiledate_generic(UWord fileno, ULong dt) {
 #ifdef HOST_IOCS_ONTIME_GENERIC
 // IOCS _ONTIME (0x7f)
 RegPair IocsOntime_generic(void) {
-  const int SECS_PER_DAY = 24 * 60 * 60;   // 1日の秒数
-  const int CS_PER_SEC = 100;              // 1秒 = 100センチ秒
+  const int SECS_PER_DAY = 24 * 60 * 60;  // 1日の秒数
+  const int CS_PER_SEC = 100;             // 1秒 = 100センチ秒
 
   struct timespec ts;
   if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return (RegPair){0, 0};
