@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ struct tm* ToLocaltime_win32(const time_t* timer, struct tm* result) {
 }
 
 // UTF-8からShift_JISへの変換
-static char* utf8ToSjis(char* inbuf, size_t inbytes, size_t* outBufSize,
+static char* utf8ToSjis(const char* inbuf, size_t inbytes, size_t* outBufSize,
                         wchar_t** outWbuf, char** outSjbuf) {
   *outBufSize = 0;
   *outWbuf = NULL;
@@ -59,7 +59,7 @@ static char* utf8ToSjis(char* inbuf, size_t inbytes, size_t* outBufSize,
   return *outSjbuf;
 }
 
-char* Utf8ToSjis2_win32(char* inbuf, size_t inbytes, size_t* outBufSize) {
+char* Utf8ToSjis2_win32(const char* inbuf, size_t inbytes, size_t* outBufSize) {
   wchar_t* wbuf;
   char* sjbuf;
   char* buf = utf8ToSjis(inbuf, inbytes, outBufSize, &wbuf, &sjbuf);
@@ -214,6 +214,32 @@ Long SeekFile_win32(FILEINFO* finfop, Long offset, FileSeekMode mode) {
   if (result == INVALID_SET_FILE_POINTER) return DOSE_CANTSEEK;
 
   return (Long)result;
+}
+
+// これらの属性はHuman68kと同じビット位置
+enum {
+  FILE_ATTRIBUTES_MASK = FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_DIRECTORY |
+                         FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_HIDDEN |
+                         FILE_ATTRIBUTE_READONLY
+};
+
+// ファイル属性の取得: DOS _CHMOD (0xff43)
+Long GetFileAtrribute_win32(const char* path) {
+  DWORD r = GetFileAttributesA(path);
+  if (r == INVALID_FILE_ATTRIBUTES) return DOSE_NOENT;
+
+  return (Long)r & FILE_ATTRIBUTES_MASK;
+}
+
+// ファイル属性の設定: DOS _CHMOD (0xff43)
+//   シェアリングモードは未対応
+Long SetFileAtrribute_win32(const char* path, UWord atr) {
+  if (!SetFileAttributesA(path, atr & FILE_ATTRIBUTES_MASK)) {
+    DWORD e = GetLastError();
+    return toDosError(e, DOSE_ILGFNAME);
+  }
+
+  return 0;
 }
 
 // DOS _MKDIR (0xff39)

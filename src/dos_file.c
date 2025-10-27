@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -38,20 +38,25 @@ Long FindFreeFileNo(void) {
   return (Long)-1;
 }
 
-// ファイル名後ろの空白をつめる。
-static void trimRight(char* s) {
-  for (char* t = s + strlen(s) - 1; s <= t && *t == ' '; t -= 1) *t = '\0';
+static size_t strlenWithoutTrailingSpaces(const char* s) {
+  size_t len = strlen(s);
+  while (len > 0 && s[len - 1] == ' ') len--;
+  return len;
 }
 
 static bool makeHuman68kPathName(ULong file, Human68kPathName* hpn) {
+  char localBuf[128];
   const char* filename = GetStringSuper(file);
 
-  char* buf = malloc(strlen(filename) + 1);
+  size_t len = strlenWithoutTrailingSpaces(filename);
+  if (len == 0) return false;
+
+  char* buf = (len < sizeof(localBuf)) ? localBuf : malloc(len + 1);
   if (buf) {
-    strcpy(buf, filename);
-    trimRight(buf);
+    memcpy(buf, filename, len);
+    buf[len] = '\0';
     bool result = HOST_CANONICAL_PATHNAME(buf, hpn);
-    free(buf);
+    if (buf != localBuf) free(buf);
     return result;
   }
 
@@ -179,6 +184,33 @@ Long Seek(UWord fileno, Long offset, UWord mode) {
 
   return finfop->onmemory.buffer ? seekOnmemoryFile(finfop, offset, mode)
                                  : HOST_SEEK_FILE(finfop, offset, mode);
+}
+
+// DOS _CHMOD (0xff43)
+Long DosChmod(ULong param) {
+  ULong file = ReadParamULong(&param);
+  UWord atr = ReadParamUWord(&param);
+
+  Human68kPathName hpn;
+  if (!makeHuman68kPathName(file, &hpn)) return DOSE_ILGFNAME;
+
+  // パスデリミタで終わっていればエラー
+  if (hpn.name[0] == '\0') return DOSE_ILGFNAME;
+
+  // ドライブ名だけ(D:)ならエラー
+  // とりあえずの対処なのでいずれ見直す。
+  const char* filename = GetStringSuper(file);
+  if (isalpha(filename[0]) && filename[1] == ':' && filename[2] == '\0')
+    return DOSE_ILGFNAME;
+
+  // TODO: ワイルドカードを使用している場合は DOSE_ILGFNAME エラーにする。
+  // (現状はwin32では-2が返る)
+
+  char fullpath[HUMAN68K_PATH_MAX + 1];
+  strcat(strcpy(fullpath, hpn.path), hpn.name);
+
+  if (atr == (UWord)-1) return HOST_GET_FILE_ATTRIBUTE(fullpath);
+  return HOST_SET_FILE_ATTRIBUTE(fullpath, atr);
 }
 
 // 最後のパスデリミタ(\ : /)の次のアドレスを求める
