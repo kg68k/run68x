@@ -67,7 +67,6 @@ static Long Fgets(Long, short);
 static Long Write(short, Long, Long);
 static Long Delete(char*);
 static Long Rename(Long, Long);
-static Long Chmod(Long, short);
 static Long Files(Long, Long, short);
 static Long Nfiles(Long);
 static Long Namests(Long, Long);
@@ -145,18 +144,6 @@ static Long Write_conv(short hdl, void* buf, size_t size) {
 #endif
 
 #ifndef _WIN32
-static int _dos_getfileattr(char* name, void* ret) {
-  printf("_dos_getfileattr(\"%s\")\n", name);
-
-  return 1;
-}
-
-static int _dos_setfileattr(char* name, short attr) {
-  printf("_dos_setfileattr(\"%s\", %d)\n", name, attr);
-
-  return 1;
-}
-
 void _flushall() {}
 
 char _getch() {
@@ -940,10 +927,8 @@ bool dos_call(UByte code) {
     case 0x42:  // SEEK
       rd[0] = DosSeek(stack_adr);
       break;
-    case 0x43: /* CHMOD */
-      data = mem_get(stack_adr, S_LONG);
-      srt = (short)mem_get(stack_adr + 4, S_WORD);
-      rd[0] = Chmod(data, srt);
+    case 0x43:  // CHMOD
+      rd[0] = DosChmod(stack_adr);
       break;
     case 0x44: /* IOCTRL */
       srt = (short)mem_get(stack_adr, S_WORD);
@@ -1416,39 +1401,6 @@ static Long Rename(Long old, Long new1) {
   }
 
   return (0);
-}
-
-/*
- 　機能：DOSCALL CHMODを実行する
- 戻り値：エラーコード
- */
-static Long Chmod(Long adr, short atr) {
-  char* name_ptr = GetStringSuper(adr);
-
-  if (atr == -1) {
-    /* 読み出し */
-    ULong ret;
-#ifdef _WIN32
-    if ((ret = GetFileAttributesA(name_ptr)) == 0xFFFFFFFF) return -2;
-#else
-    if (_dos_getfileattr(name_ptr, &ret) != 0) return (-2); /* ファイルがない */
-#endif
-    return (ret);
-  } else {
-    atr &= 0x3F;
-    errno = 0;
-#ifdef _WIN32
-    if (SetFileAttributesA(name_ptr, atr) == FALSE) {
-#else
-    if (_dos_setfileattr(name_ptr, atr) != 0) {
-#endif
-      if (errno == ENOENT)
-        return (-2); /* ファイルがない */
-      else
-        return (-19); /* 書き込み禁止 */
-    }
-    return (atr);
-  }
 }
 
 /*

@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ Long CreateNewfile(ULong file, UWord atr, bool newfile);
 Long OpenExistingFile(ULong file, UWord mode);
 Long Read(UWord fileno, ULong buffer, ULong length);
 Long Seek(UWord fileno, Long offset, UWord mode);
+Long DosChmod(ULong param);
 Long Maketmp(ULong path, UWord atr);
 void ClearFinfo(int fileno);
 FILEINFO* SetFinfo(Long fileno, HostFileInfoMember hostfile, FileOpenMode mode,

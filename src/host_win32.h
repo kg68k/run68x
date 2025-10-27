@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 struct tm* ToLocaltime_win32(const time_t* timer, struct tm* result);
 #define HOST_TO_LOCALTIME ToLocaltime_win32
 
-char* Utf8ToSjis2_win32(char* inbuf, size_t inbytes, size_t* outBufSize);
+char* Utf8ToSjis2_win32(const char* inbuf, size_t inbytes, size_t* outBufSize);
 #define HOST_UTF8_TO_SJIS Utf8ToSjis2_win32
 
 bool CanonicalPathName_win32(const char* path, Human68kPathName* hpn);
@@ -59,6 +59,12 @@ Long ReadFileOrTty_win32(FILEINFO* finfop, char* buffer, ULong length);
 
 Long SeekFile_win32(FILEINFO* finfop, Long offset, FileSeekMode mode);
 #define HOST_SEEK_FILE SeekFile_win32
+
+Long GetFileAtrribute_win32(const char* path);
+#define HOST_GET_FILE_ATTRIBUTE GetFileAtrribute_win32
+
+Long SetFileAtrribute_win32(const char* path, UWord atr);
+#define HOST_SET_FILE_ATTRIBUTE SetFileAtrribute_win32
 
 Long DosMkdir_win32(Long name);
 #define HOST_DOS_MKDIR DosMkdir_win32

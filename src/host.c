@@ -16,6 +16,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -40,7 +41,7 @@ struct tm* ToLocaltime_generic(const time_t* timer, struct tm* result) {
 
 #ifdef HOST_UTF8_TO_SJIS_GENERIC_ICONV
 // UTF-8からShift_JISへの変換
-char* Utf8ToSjis2_generic_iconv(char* inbuf, size_t inbytes,
+char* Utf8ToSjis2_generic_iconv(const char* inbuf, size_t inbytes,
                                 size_t* outBufSize) {
   *outBufSize = 0;
 
@@ -48,10 +49,13 @@ char* Utf8ToSjis2_generic_iconv(char* inbuf, size_t inbytes,
   char* sjbuf = malloc(bufsize);
   if (!sjbuf) return NULL;
 
+  // iconv()の第2引数はchar**型なのでキャストする
+  char** inbuf_for_iconv = (char**)&inbuf;
+
   iconv_t icd = iconv_open("CP932", "UTF-8");
   char* outbuf = sjbuf;
   size_t outbytes = bufsize;
-  size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
+  size_t len = iconv(icd, inbuf_for_iconv, &inbytes, &outbuf, &outbytes);
   iconv_close(icd);
   if (len == (size_t)-1) {
     free(sjbuf);
@@ -69,11 +73,15 @@ char* Utf8ToSjis2_generic_iconv(char* inbuf, size_t inbytes,
 
 #ifdef HOST_CONVERT_TO_SJIS_GENERIC_ICONV
 // ホスト文字列(UTF-8)からShift_JIS文字列への変換
-bool Utf8ToSjis_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size) {
+bool Utf8ToSjis_generic_iconv(const char* inbuf, char* outbuf,
+                              size_t outbuf_size) {
+  // iconv()の第2引数はchar**型なのでキャストする
+  char** inbuf_for_iconv = (char**)&inbuf;
+
   iconv_t icd = iconv_open("CP932", "UTF-8");
   size_t inbytes = strlen(inbuf);
   size_t outbytes = outbuf_size - 1;
-  size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
+  size_t len = iconv(icd, inbuf_for_iconv, &inbytes, &outbuf, &outbytes);
   iconv_close(icd);
   *outbuf = '\0';
   return len != (size_t)-1;
@@ -82,11 +90,15 @@ bool Utf8ToSjis_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size) {
 
 #ifdef HOST_CONVERT_FROM_SJIS_GENERIC_ICONV
 // Shift_JIS文字列からホスト文字列(UTF-8)への変換
-bool SjisToUtf8_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size) {
+bool SjisToUtf8_generic_iconv(const char* inbuf, char* outbuf,
+                              size_t outbuf_size) {
+  // iconv()の第2引数はchar**型なのでキャストする
+  char** inbuf_for_iconv = (char**)&inbuf;
+
   iconv_t icd = iconv_open("UTF-8", "CP932");
   size_t inbytes = strlen(inbuf);
   size_t outbytes = outbuf_size - 1;
-  size_t len = iconv(icd, &inbuf, &inbytes, &outbuf, &outbytes);
+  size_t len = iconv(icd, inbuf_for_iconv, &inbytes, &outbuf, &outbytes);
   iconv_close(icd);
   *outbuf = '\0';
   return len != (size_t)-1;
@@ -96,7 +108,7 @@ bool SjisToUtf8_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size) {
 #if defined(HOST_CONVERT_TO_SJIS_GENERIC) || \
     defined(HOST_CONVERT_FROM_SJIS_GENERIC)
 // Shift_JIS文字列からShift_JIS文字列への無変換コピー
-bool SjisToSjis_generic(char* inbuf, char* outbuf, size_t outbuf_size) {
+bool SjisToSjis_generic(const char* inbuf, char* outbuf, size_t outbuf_size) {
   size_t len = strlen(inbuf);
   if (len >= outbuf_size) return false;
   strcpy(outbuf, inbuf);
@@ -306,11 +318,13 @@ static int toDosError(int e, int defaultError) {
   return defaultError;
 }
 
-static inline int toHostFilename(char* fullpath, char* buf,
+static inline int toHostFilename(const char* fullpath, char* buf,
                                  size_t sizeofBuf) {
-  char* p = fullpath + getDriveNameLen(fullpath);
-  to_slash(p);
-  return HOST_CONVERT_FROM_SJIS(p, buf, sizeofBuf) ? 1 : 0;
+  const char* p = fullpath + getDriveNameLen(fullpath);
+  if (!HOST_CONVERT_FROM_SJIS(p, buf, sizeofBuf)) return 0;
+
+  to_slash(buf);
+  return 1;
 }
 
 #ifdef HOST_CREATE_NEWFILE_GENERIC
@@ -409,6 +423,73 @@ Long SeekFile_generic(FILEINFO* finfop, Long offset, FileSeekMode mode) {
     return DOSE_CANTSEEK;
 
   return ftell(finfop->host.fp);
+}
+#endif
+
+#ifdef HOST_GET_FILE_ATTRIBUTE_GENERIC
+// DOS _CHMOD (0xff43): ファイル属性の取得
+Long GetFileAtrribute_generic(const char* fullpath) {
+  char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
+    return DOSE_ILGFNAME;
+
+  struct stat st;
+  if (stat(hostpath, &st) != 0) {
+    return toDosError(errno, DOSE_ILGFNAME);
+  }
+
+  Long atr = 0;
+  if (S_ISREG(st.st_mode)) {
+    atr |= HUMAN68K_FILEATR_ARCHIVE;
+  } else if (S_ISDIR(st.st_mode)) {
+    atr |= HUMAN68K_FILEATR_DIRECTORY;
+  } else {
+    return DOSE_ILGFNAME;
+  }
+
+  if (!(st.st_mode & S_IWUSR)) atr |= HUMAN68K_FILEATR_READONLY;
+
+  return atr;
+}
+#endif
+
+#ifdef HOST_SET_FILE_ATTRIBUTE_GENERIC
+// DOS _CHMOD (0xff43): ファイル属性の変更
+Long SetFileAtrribute_generic(const char* fullpath, UWord atr) {
+  char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
+    return DOSE_ILGFNAME;
+
+  // O_RDONLYだと読み込みできないファイルはオープンできないが、
+  // Human68kでは読み込み不可になることはないので対応外とする。
+  int fd = open(hostpath, O_RDONLY);
+  if (fd < 0) return toDosError(errno, DOSE_ILGFNAME);
+
+  struct stat st;
+  if (fstat(fd, &st) != 0) {
+    int err = errno;
+    close(fd);
+    return toDosError(err, DOSE_ILGFNAME);
+  }
+  if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode)) {
+    close(fd);
+    return DOSE_ILGFNAME;
+  }
+
+  mode_t newMode = st.st_mode;
+  if (atr & HUMAN68K_FILEATR_READONLY) {
+    newMode &= ~(S_IWUSR | S_IWGRP | S_IWOTH);
+  } else {
+    newMode |= (S_IWUSR | S_IWGRP | S_IWOTH);
+  }
+
+  if (fchmod(fd, newMode) != 0) {
+    int err = errno;
+    close(fd);
+    return toDosError(err, DOSE_ILGFNAME);
+  }
+  close(fd);
+  return 0;
 }
 #endif
 

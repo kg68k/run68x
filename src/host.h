@@ -33,7 +33,7 @@ struct tm* ToLocaltime_generic(const time_t* timer, struct tm* result);
 #ifndef HOST_UTF8_TO_SJIS
 #ifdef USE_ICONV
 #define HOST_UTF8_TO_SJIS_GENERIC_ICONV
-char* Utf8ToSjis2_generic_iconv(char* inbuf, size_t inbytes,
+char* Utf8ToSjis2_generic_iconv(const char* inbuf, size_t inbytes,
                                 size_t* outBufSize);
 #define HOST_UTF8_TO_SJIS Utf8ToSjis2_generic_iconv
 #else
@@ -44,11 +44,12 @@ char* Utf8ToSjis2_generic_iconv(char* inbuf, size_t inbytes,
 #ifndef HOST_CONVERT_TO_SJIS
 #ifdef USE_ICONV
 #define HOST_CONVERT_TO_SJIS_GENERIC_ICONV
-bool Utf8ToSjis_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size);
+bool Utf8ToSjis_generic_iconv(const char* inbuf, char* outbuf,
+                              size_t outbuf_size);
 #define HOST_CONVERT_TO_SJIS Utf8ToSjis_generic_iconv
 #else
 #define HOST_CONVERT_TO_SJIS_GENERIC
-bool SjisToSjis_generic(char* inbuf, char* outbuf, size_t outbuf_size);
+bool SjisToSjis_generic(const char* inbuf, char* outbuf, size_t outbuf_size);
 #define HOST_CONVERT_TO_SJIS SjisToSjis_generic
 #endif
 #endif
@@ -56,11 +57,12 @@ bool SjisToSjis_generic(char* inbuf, char* outbuf, size_t outbuf_size);
 #ifndef HOST_CONVERT_FROM_SJIS
 #ifdef USE_ICONV
 #define HOST_CONVERT_FROM_SJIS_GENERIC_ICONV
-bool SjisToUtf8_generic_iconv(char* inbuf, char* outbuf, size_t outbuf_size);
+bool SjisToUtf8_generic_iconv(const char* inbuf, char* outbuf,
+                              size_t outbuf_size);
 #define HOST_CONVERT_FROM_SJIS SjisToUtf8_generic_iconv
 #else
 #define HOST_CONVERT_FROM_SJIS_GENERIC
-bool SjisToSjis_generic(char* inbuf, char* outbuf, size_t outbuf_size);
+bool SjisToSjis_generic(const char* inbuf, char* outbuf, size_t outbuf_size);
 #define HOST_CONVERT_FROM_SJIS SjisToSjis_generic
 #endif
 #endif
@@ -119,6 +121,18 @@ Long ReadFileOrTty_generic(FILEINFO* finfop, char* buffer, ULong length);
 #define HOST_SEEK_FILE_GENERIC
 Long SeekFile_generic(FILEINFO* finfop, Long offset, FileSeekMode mode);
 #define HOST_SEEK_FILE SeekFile_generic
+#endif
+
+#ifndef HOST_GET_FILE_ATTRIBUTE
+#define HOST_GET_FILE_ATTRIBUTE_GENERIC
+Long GetFileAtrribute_generic(const char* path);
+#define HOST_GET_FILE_ATTRIBUTE GetFileAtrribute_generic
+#endif
+
+#ifndef HOST_SET_FILE_ATTRIBUTE
+#define HOST_SET_FILE_ATTRIBUTE_GENERIC
+Long SetFileAtrribute_generic(const char* path, UWord atr);
+#define HOST_SET_FILE_ATTRIBUTE SetFileAtrribute_generic
 #endif
 
 #ifndef HOST_DOS_MKDIR
