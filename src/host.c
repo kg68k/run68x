@@ -16,11 +16,11 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <fcntl.h>
 
 #ifdef USE_ICONV
 #include <iconv.h>
@@ -460,10 +460,10 @@ Long SetFileAtrribute_generic(const char* fullpath, UWord atr) {
   if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
     return DOSE_ILGFNAME;
 
-  int fd = open(hostpath, O_RDWR | O_NONBLOCK);
-  if (fd < 0) {
-    return toDosError(errno, DOSE_ILGFNAME);
-  }
+  // O_RDONLYだと読み込みできないファイルはオープンできないが、
+  // Human68kでは読み込み不可になることはないので対応外とする。
+  int fd = open(hostpath, O_RDONLY);
+  if (fd < 0) return toDosError(errno, DOSE_ILGFNAME);
 
   struct stat st;
   if (fstat(fd, &st) != 0) {
@@ -487,8 +487,8 @@ Long SetFileAtrribute_generic(const char* fullpath, UWord atr) {
     int err = errno;
     close(fd);
     return toDosError(err, DOSE_ILGFNAME);
-  close(fd);
   }
+  close(fd);
   return 0;
 }
 #endif
