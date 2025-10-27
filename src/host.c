@@ -20,6 +20,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <fcntl.h>
 
 #ifdef USE_ICONV
 #include <iconv.h>
@@ -459,11 +460,21 @@ Long SetFileAtrribute_generic(const char* fullpath, UWord atr) {
   if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
     return DOSE_ILGFNAME;
 
-  struct stat st;
-  if (stat(hostpath, &st) != 0) {
+  int fd = open(hostpath, O_RDWR | O_NONBLOCK);
+  if (fd < 0) {
     return toDosError(errno, DOSE_ILGFNAME);
   }
-  if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode)) return DOSE_ILGFNAME;
+
+  struct stat st;
+  if (fstat(fd, &st) != 0) {
+    int err = errno;
+    close(fd);
+    return toDosError(err, DOSE_ILGFNAME);
+  }
+  if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode)) {
+    close(fd);
+    return DOSE_ILGFNAME;
+  }
 
   mode_t newMode = st.st_mode;
   if (atr & HUMAN68K_FILEATR_READONLY) {
@@ -472,8 +483,11 @@ Long SetFileAtrribute_generic(const char* fullpath, UWord atr) {
     newMode |= (S_IWUSR | S_IWGRP | S_IWOTH);
   }
 
-  if (chmod(hostpath, newMode) != 0) {
-    return toDosError(errno, DOSE_ILGFNAME);
+  if (fchmod(fd, newMode) != 0) {
+    int err = errno;
+    close(fd);
+    return toDosError(err, DOSE_ILGFNAME);
+  close(fd);
   }
   return 0;
 }
