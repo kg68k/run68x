@@ -131,18 +131,20 @@ static Long toDosError(DWORD e, int defaultError) {
     default:
       break;
 
-    case ERROR_ACCESS_DENIED:  // ディレクトリを開こうとした場合もこのエラーになる
-      return DOSE_RDONLY;
     case ERROR_FILE_NOT_FOUND:
       return DOSE_NOENT;
     case ERROR_PATH_NOT_FOUND:
       return DOSE_NODIR;
+    case ERROR_ACCESS_DENIED:  // ディレクトリを開こうとした場合もこのエラーになる
+      return DOSE_RDONLY;
     case ERROR_SHARING_VIOLATION:
       return DOSE_LCKERR;
     case ERROR_FILE_EXISTS:
       return DOSE_EXISTFILE;
     case ERROR_DISK_FULL:
       return DOSE_DISKFULL;
+    case ERROR_ALREADY_EXISTS:
+      return DOSE_EXISTDIR;
     case ERROR_DIRECTORY:
       return DOSE_ISDIR;
   }
@@ -243,29 +245,23 @@ Long GetFileAtrribute_win32(const char* path) {
 //   シェアリングモードは未対応
 Long SetFileAtrribute_win32(const char* path, UWord atr) {
   if (!SetFileAttributesA(path, atr & FILE_ATTRIBUTES_MASK)) {
-    DWORD e = GetLastError();
-    return toDosError(e, DOSE_ILGFNAME);
+    return toDosError(GetLastError(), DOSE_ILGFNAME);
   }
-
-  return 0;
+  return DOSE_SUCCESS;
 }
 
 // DOS _MKDIR (0xff39)
 Long Mkdir_win32(const char* dirname) {
   if (CreateDirectoryA(dirname, NULL) == FALSE) {
-    if (errno == EACCES) return DOSE_EXISTDIR;  // ディレクトリは既に存在する
-    return DOSE_ILGFNAME;                       // ファイル名指定誤り
+    return toDosError(GetLastError(), DOSE_ILGFNAME);
   }
   return DOSE_SUCCESS;
 }
 
 // DOS _RMDIR (0xff3a)
 Long Rmdir_win32(const char* dirname) {
-  errno = 0;
   if (RemoveDirectoryA(dirname) == FALSE) {
-    if (errno == EACCES)
-      return DOSE_NOTEMPTY;  // ディレクトリ中にファイルがある
-    return DOSE_ILGFNAME;    // ファイル名指定誤り
+    return toDosError(GetLastError(), DOSE_ILGFNAME);
   }
   return DOSE_SUCCESS;
 }
