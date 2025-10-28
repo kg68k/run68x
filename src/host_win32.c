@@ -151,24 +151,32 @@ static Long toDosError(DWORD e, int defaultError) {
 }
 
 // ファイルを作成する
-Long CreateNewfile_win32(char* fullpath, HostFileInfoMember* hostfile,
+Long CreateNewfile_win32(char* path, HostFileInfoMember* hostfile,
                          bool newfile) {
   const DWORD dwDesiredAccess = GENERIC_WRITE | GENERIC_READ;
   const DWORD dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
   const DWORD dwCreationDisposition = newfile ? CREATE_NEW : CREATE_ALWAYS;
 
   HANDLE handle =
-      CreateFile(fullpath, dwDesiredAccess, dwShareMode, NULL,
+      CreateFile(path, dwDesiredAccess, dwShareMode, NULL,
                  dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
   if (handle == INVALID_HANDLE_VALUE) {
     return toDosError(GetLastError(), DOSE_ILGFNAME);
   }
+
+  // CON、NULなどの予約デバイス名はエラーにする
+  Human68kPathName hpn;
+  if (!CanonicalPathName_win32(path, &hpn)) {
+    CloseHandle(handle);
+    return DOSE_ILGFNAME;
+  }
+
   hostfile->handle = handle;
   return 0;
 }
 
 // ファイルを開く
-Long OpenFile_win32(char* fullpath, HostFileInfoMember* hostfile,
+Long OpenFile_win32(char* path, HostFileInfoMember* hostfile,
                     FileOpenMode mode) {
   static const DWORD md[] = {GENERIC_READ, GENERIC_WRITE,
                              GENERIC_READ | GENERIC_WRITE};
@@ -177,7 +185,7 @@ Long OpenFile_win32(char* fullpath, HostFileInfoMember* hostfile,
   const DWORD dwCreationDisposition = OPEN_EXISTING;
 
   HANDLE handle =
-      CreateFile(fullpath, dwDesiredAccess, dwShareMode, NULL,
+      CreateFile(path, dwDesiredAccess, dwShareMode, NULL,
                  dwCreationDisposition, FILE_ATTRIBUTE_NORMAL, NULL);
   if (handle == INVALID_HANDLE_VALUE) {
     return toDosError(GetLastError(), DOSE_NOENT);

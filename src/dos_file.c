@@ -63,19 +63,27 @@ static bool makeHuman68kPathName(ULong file, Human68kPathName* hpn) {
   return false;
 }
 
+static bool extractPath(ULong addr, size_t bufSize, char* buf) {
+  const char* path = GetStringSuper(addr);
+  size_t len = strlenWithoutTrailingSpaces(path);
+
+  if (bufSize <= len) return false;
+
+  memcpy(buf, path, len);
+  buf[len] = '\0';
+  return true;
+}
+
 // 新しいファイルを作成する。
 Long CreateNewfile(ULong file, UWord atr, bool newfile) {
-  Human68kPathName hpn;
-  if (!makeHuman68kPathName(file, &hpn)) return DOSE_ILGFNAME;
+  char path[HUMAN68K_PATH_MAX + 1];
+  if (!extractPath(file, sizeof(path), path)) return DOSE_ILGFNAME;
 
   int fileno = FindFreeFileNo();
   if (fileno < 0) return DOSE_MFILE;  // オープンしているファイルが多すぎる。
 
-  char fullpath[HUMAN68K_PATH_MAX + 1];
-  strcat(strcpy(fullpath, hpn.path), hpn.name);
-
   HostFileInfoMember hostfile;
-  Long err = HOST_CREATE_NEWFILE(fullpath, &hostfile, newfile);
+  Long err = HOST_CREATE_NEWFILE(path, &hostfile, newfile);
   if (err != 0) return err;
 
   SetFinfo(fileno, hostfile, OPENMODE_READ_WRITE, nest_cnt);
@@ -87,20 +95,17 @@ Long OpenExistingFile(ULong file, UWord mode) {
   FileOpenMode rwMode = mode & 0x000f;
   if (rwMode > OPENMODE_READ_WRITE) return DOSE_ILGARG;
 
-  // シェアリングモードは未対応(常に許可する)
+  // シェアリングモードは未対応
   if ((mode & 0x00f0) >= 0x0050) return DOSE_ILGARG;
 
-  Human68kPathName hpn;
-  if (!makeHuman68kPathName(file, &hpn)) return DOSE_ILGFNAME;
+  char path[HUMAN68K_PATH_MAX + 1];
+  if (!extractPath(file, sizeof(path), path)) return DOSE_ILGFNAME;
 
   int fileno = FindFreeFileNo();
   if (fileno < 0) return DOSE_MFILE;
 
-  char fullpath[HUMAN68K_PATH_MAX + 1];
-  strcat(strcpy(fullpath, hpn.path), hpn.name);
-
   HostFileInfoMember hostfile;
-  Long err = HOST_OPEN_FILE(fullpath, &hostfile, rwMode);
+  Long err = HOST_OPEN_FILE(path, &hostfile, rwMode);
   if (err != 0) return err;
 
   FILEINFO* finfop = SetFinfo(fileno, hostfile, rwMode, nest_cnt);
