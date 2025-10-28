@@ -156,12 +156,12 @@ typedef struct {
 } HostFileInfoMember;
 #else
 typedef struct {
-  FILE *fp;
+  FILE* fp;
 } HostFileInfoMember;
 #endif
 
 typedef struct {
-  char *buffer;
+  char* buffer;
   Long length;
   Long position;
 } OnmemoryFileData;
@@ -200,11 +200,11 @@ typedef struct {
 } EXEC_INSTRUCTION_INFO;
 
 /* eaaccess.c */
-bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long *data);
+bool get_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long* data);
 bool set_data_at_ea(int AceptAdrMode, int mode, int reg, int size, Long data);
-bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long *data);
+bool get_ea(Long save_pc, int AceptAdrMode, int mode, int reg, Long* data);
 bool get_data_at_ea_noinc(int AceptAdrMode, int mode, int reg, int size,
-                          Long *data);
+                          Long* data);
 
 /* run68.c */
 extern ULong DefaultExceptionHandler[256];
@@ -225,12 +225,12 @@ extern unsigned int nest_cnt;   // 子プロセスを起動するたびに+1
 extern jmp_buf jmp_when_abort;  // アボート処理のためのジャンプバッファ
 extern UWord cwatchpoint;       // 命令ウォッチ
 
-void print(const char *message);
-void printFmt(const char *fmt, ...) GCC_FORMAT(1, 2);
+void print(const char* message);
+void printFmt(const char* fmt, ...) GCC_FORMAT(1, 2);
 
 /* getini.c */
-void read_ini(char *path);
-void readenv_from_ini(char *path, ULong envbuf);
+void read_ini(char* path);
+void readenv_from_ini(char* path, ULong envbuf);
 
 /* load.c */
 typedef struct {
@@ -238,52 +238,51 @@ typedef struct {
   ULong bssSize;
 } ProgramSpec;
 
-FILE *prog_open(char *, ULong, void (*)(const char *));
-Long prog_read(FILE *, char *, Long, Long *, Long *, void (*)(const char *),
+FILE* prog_open(char*, ULong, void (*)(const char*));
+Long prog_read(FILE*, char*, Long, Long*, Long*, void (*)(const char*),
                ExecType);
 void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
-              ULong parentSsp, const ProgramSpec *progSpec,
-              const Human68kPathName *pathname);
+              ULong parentSsp, const ProgramSpec* progSpec,
+              const Human68kPathName* pathname);
 
 /* exec.c */
 bool prog_exec(void);
 bool get_cond(char);
-NORETURN void err68(const char *);
-NORETURN void err68a(const char *mes, char *file, int line);
-NORETURN void err68b(char *mes, Long pc, Long ppc);
+NORETURN void err68(const char*);
+NORETURN void err68a(const char* mes, char* file, int line);
+NORETURN void err68b(char* mes, Long pc, Long ppc);
 bool IllegalInstruction(void);
 void text_color(short);
 Long get_locate(void);
-void OPBuf_insert(const EXEC_INSTRUCTION_INFO *op);
+void OPBuf_insert(const EXEC_INSTRUCTION_INFO* op);
 void OPBuf_clear();
 int OPBuf_numentries();
-const EXEC_INSTRUCTION_INFO *OPBuf_getentry(int no);
+const EXEC_INSTRUCTION_INFO* OPBuf_getentry(int no);
 void OPBuf_display(int n);
 
 /* doscall.c */
 void close_all_files(void);
 bool dos_call(UByte);
-const char *Getenv(const char *name, ULong env);
-Long gets2(char *str, int max);
+Long gets2(char* str, int max);
 
 /* key.c */
-void get_fnckey(int, char *);
-void put_fnckey(int, char *);
+void get_fnckey(int, char*);
+void put_fnckey(int, char*);
 
 /* line?.c */
-bool line0(char *);
-bool line2(char *);
-bool line4(char *);
-bool line5(char *);
-bool line6(char *);
-bool line7(char *);
-bool line8(char *);
-bool line9(char *);
-bool lineb(char *);
-bool linec(char *);
-bool lined(char *);
-bool linee(char *);
-bool linef(char *);
+bool line0(char*);
+bool line2(char*);
+bool line4(char*);
+bool line5(char*);
+bool line6(char*);
+bool line7(char*);
+bool line8(char*);
+bool line9(char*);
+bool lineb(char*);
+bool linec(char*);
+bool lined(char*);
+bool linee(char*);
+bool linef(char*);
 
 // line_8.c
 Long SubBcd(Long x, Long y);
@@ -319,12 +318,12 @@ void cmp_conditions(Long src, Long dest, Long result, int size);
 void sub_conditions(Long src, Long dest, Long result, int size, bool zero_flag);
 void neg_conditions(Long dest, Long result, int size, bool zero_flag);
 #ifdef TEST_CCR
-void check(char *mode, Long src, Long dest, Long result, int size,
+void check(char* mode, Long src, Long dest, Long result, int size,
            short before);
 #endif
 
 // dissassemble.c
-char *disassemble(Long addr, Long *next_addr);
+char* disassemble(Long addr, Long* next_addr);
 
 // 符号拡張
 static inline Word extw(Byte b) { return (Word)b; }
