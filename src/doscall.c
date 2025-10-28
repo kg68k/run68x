@@ -43,6 +43,7 @@
 #include "ansicolor-w32.h"
 #include "dos_file.h"
 #include "dos_memory.h"
+#include "dos_misc.h"
 #include "dostrace.h"
 #include "host.h"
 #include "human68k.h"
@@ -214,143 +215,6 @@ static Long DosFgetc(ULong param) {
   int ch = fgetc(finfop->host.fp);
   return (0 <= ch && ch <= 0xff) ? ch : DOSE_ILGFNC;
 #endif
-}
-
-// DOS _GETTIM2 (0xff27)
-static Long Gettim2(TimeFunc timeFunc) { return Timebin(Timeget(timeFunc)); }
-
-// DOS _SETTIM2 (0xff28)
-static Long Settim2(ULong param) {
-  const ULong t = ReadParamULong(&param);
-
-  const ULong bcd = Timebcd(t);
-  if (bcd == (ULong)-1) return DOSE_ILGFNC;
-
-  // 現状の仕様ではIOCS _TIMESETがホスト環境への設定を行わないため、
-  // DOS _SETTIM2でも設定は行われない。
-  Timeset(bcd);
-  return DOSE_SUCCESS;
-}
-
-// DOS _GETDATE (0xff2a)
-static Long Getdate(TimeFunc timeFunc) {
-  const ULong date = Datebin(Dateget(timeFunc));
-
-  const int w = (date >> 28) & 7;
-  const int y = ((date >> 16) & 0xfff) - 1980;
-  const int m = (date >> 8) & 0xf;
-  const int d = date & 0x1f;
-  return (w << 16) | (y << 9) | (m << 5) | d;
-}
-
-// DOS _SETDATE (0xff2b)
-static Long Setdate(ULong param) {
-  const UWord date = ReadParamUWord(&param);
-
-  const int y = (date >> 9) + 1980;
-  const int m = (date >> 5) & 0xf;
-  const int d = date & 0x1f;
-  const ULong bcd = Datebcd((y << 16) | (m << 8) | d);
-  if (bcd == (ULong)-1) return DOSE_ILGFNC;
-
-  // 現状の仕様ではIOCS _DATESETがホスト環境への設定を行わないため、
-  // DOS _SETDATEでも設定は行われない。
-  Dateset(bcd);
-  return DOSE_SUCCESS;
-}
-
-// DOS _GETTIME (0xff2c)
-static Long Gettime(TimeFunc timeFunc) {
-  const ULong t = Gettim2(timeFunc);
-
-  const int h = t >> 16;
-  const int m = (t >> 8) & 0x3f;
-  const int s = (t & 0x3f) / 2;
-  return (h << 11) | (m << 5) | s;
-}
-
-// DOS _SETTIME (0xff2d)
-static Long Settime(ULong param) {
-  const UWord t = ReadParamUWord(&param);
-
-  const int h = t >> 11;
-  const int m = (t >> 5) & 0x3f;
-  const int s = (t & 0x1f) * 2;
-
-  const ULong bcd = Timebcd((h << 16) | (m << 8) | s);
-  if (bcd == (ULong)-1) return DOSE_ILGFNC;
-
-  // 現状の仕様ではIOCS _TIMESETがホスト環境への設定を行わないため、
-  // DOS _SETTIMEでも設定は行われない。
-  Timeset(bcd);
-  return DOSE_SUCCESS;
-}
-
-// DOS _GETENV (0xff53, 0xff53)
-static Long DosGetenv(ULong param) {
-  ULong name = ReadParamULong(&param);
-  ULong env = ReadParamULong(&param);
-  ULong buf = ReadParamULong(&param);
-
-  const char* s = Getenv(GetStringSuper(name), env);
-  if (!s) return DOSE_ILGFNC;
-
-  WriteStringSuper(buf, s);
-  return DOSE_SUCCESS;
-}
-
-// 環境変数領域から環境変数を検索する。
-const char* Getenv(const char* name, ULong env) {
-  if (env == 0) {
-    env = ReadULongSuper(psp[nest_cnt] + PSP_ENV_PTR);
-  }
-  if (env == (ULong)-1) return NULL;
-
-  // 環境変数領域の先頭4バイトは領域サイズで、その次から文字列が並ぶ。
-  ULong kv = env + 4;
-  const size_t len = strlen(name);
-
-  for (;;) {
-    char* p = GetStringSuper(kv);
-    if (*p == '\0') break;
-
-    if (memcmp(p, name, len) == 0 && p[len] == '=') {
-      return p + len + strlen("=");
-    }
-    kv += strlen(p) + 1;
-  }
-  return NULL;
-}
-
-// DOS _BUS_ERR (0xfff7)
-static Long DosBusErr(ULong param) {
-  ULong s_adr = ReadParamULong(&param);
-  ULong d_adr = ReadParamULong(&param);
-  UWord size = ReadParamUWord(&param);
-
-  if (size == 1) {
-    // バイトアクセス
-  } else if (size == 2 || size == 4) {
-    // ワード、ロングワードアクセス
-    if ((s_adr & 1) != 0 || (d_adr & 1) != 0)
-      return DOSE_ILGFNC;  // 奇数アドレス
-  } else {
-    return DOSE_ILGFNC;  // サイズが不正
-  }
-
-  Span r = GetReadableMemorySuper(s_adr, size);
-  if (!r.bufptr) return 2;  // 読み込み時にバスエラー発生
-  Span w = GetWritableMemorySuper(d_adr, size);
-  if (!w.bufptr) return 1;  // 書き込み時にバスエラー発生
-
-  if (size == 1)
-    PokeB(w.bufptr, PeekB(r.bufptr));
-  else if (size == 2)
-    PokeW(w.bufptr, PeekW(r.bufptr));
-  else
-    PokeL(w.bufptr, PeekL(r.bufptr));
-
-  return 0;
 }
 
 // ファイルを閉じてFILEINFOを未使用状態に戻す
@@ -702,30 +566,30 @@ bool dos_call(UByte code) {
       rd[0] = Intvcs(srt, data);
       break;
     case 0x27:  // GETTIM2
-      rd[0] = Gettim2(time);
+      rd[0] = DosGettim2();
       break;
     case 0x28:  // SETTIM2
-      rd[0] = Settim2(stack_adr);
+      rd[0] = DosSettim2(stack_adr);
       break;
     case 0x29: /* NAMESTS */
       data = mem_get(stack_adr, S_LONG);
       buf = mem_get(stack_adr + 4, S_LONG);
       rd[0] = Namests(data, buf);
       break;
-    case 0x2A: /* GETDATE */
-      rd[0] = Getdate(time);
+    case 0x2a:  // GETDATE
+      rd[0] = DosGetdate();
       break;
-    case 0x2B:  // SETDATE
-      rd[0] = Setdate(stack_adr);
+    case 0x2b:  // SETDATE
+      rd[0] = DosSetdate(stack_adr);
       break;
-    case 0x2C:  // GETTIME
-      rd[0] = Gettime(time);
+    case 0x2c:  // GETTIME
+      rd[0] = DosGettime();
       break;
-    case 0x2D:  // SETTIME
-      rd[0] = Settime(stack_adr);
+    case 0x2d:  // SETTIME
+      rd[0] = DosSettime(stack_adr);
       break;
-    case 0x30: /* VERNUM */
-      rd[0] = 0x36380302;
+    case 0x30:  // VERNUM
+      rd[0] = DosVernum();
       break;
     case 0x32: /* GETDPB */
       srt = (short)mem_get(stack_adr, S_WORD);
@@ -763,7 +627,7 @@ bool dos_call(UByte code) {
     case 0x3c:  // CREATE
       rd[0] = DosCreate(stack_adr);
       break;
-    case 0x3D:  // OPEN
+    case 0x3d:  // OPEN
       rd[0] = DosOpen(stack_adr);
       break;
     case 0x3E: /* CLOSE */
@@ -805,13 +669,13 @@ bool dos_call(UByte code) {
     case 0x47:  // CURDIR
       rd[0] = DosCurdir(stack_adr);
       break;
-    case 0x48: /* MALLOC */
+    case 0x48:  // MALLOC
       rd[0] = DosMalloc(stack_adr);
       break;
-    case 0x49: /* MFREE */
+    case 0x49:  // MFREE
       rd[0] = DosMfree(stack_adr);
       break;
-    case 0x4A: /* SETBLOCK */
+    case 0x4a:  // SETBLOCK
       rd[0] = DosSetblock(stack_adr);
       break;
     case 0x4B: /* EXEC */

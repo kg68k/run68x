@@ -13,6 +13,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/disassemble.c
   src/dos_file.c
   src/dos_memory.c
+  src/dos_misc.c
   src/doscall.c
   src/dostrace.c
   src/eaaccess.c

@@ -25,6 +25,7 @@
 #include <unistd.h>
 #endif
 
+#include "dos_misc.h"  // Getenv()
 #include "host.h"
 #include "human68k.h"
 #include "mem.h"
@@ -41,7 +42,7 @@ static Long xhead_getl(int);
 #define PATH_DELIMITER ':'
 #endif
 
-static char *GetAPath(const char **path_p, size_t bufSize, char *buf) {
+static char* GetAPath(const char** path_p, size_t bufSize, char* buf) {
   unsigned int i;
   *buf = '\0';
 
@@ -71,7 +72,7 @@ static char *GetAPath(const char **path_p, size_t bufSize, char *buf) {
 
 // prog_open()、prog_read()でエラー処理時のコールバックに
 // NULLが指定された場合のダミー関数
-static void onErrorDummy(const char *message) {
+static void onErrorDummy(const char* message) {
   //
 }
 
@@ -87,11 +88,11 @@ static void onErrorDummy(const char *message) {
     NULL = オープンできない
     !NULL = 実行ファイルのファイルポインタ
 */
-FILE *prog_open(char *fname, ULong envptr, void (*err)(const char *)) {
+FILE* prog_open(char* fname, ULong envptr, void (*err)(const char*)) {
   char dir[MAX_PATH], fullname[MAX_PATH] = {0}, cwd[MAX_PATH];
-  FILE *fp = 0;
-  char *exp = strrchr(fname, '.');
-  void (*onError)(const char *) = err ? err : onErrorDummy;
+  FILE* fp = 0;
+  char* exp = strrchr(fname, '.');
+  void (*onError)(const char*) = err ? err : onErrorDummy;
 
   if (!HOST_PATH_IS_FILE_SPEC(fname)) {
     // パス区切り文字が含まれる場合は拡張子補完のみ行い、パス検索は行わない
@@ -120,10 +121,10 @@ FILE *prog_open(char *fname, ULong envptr, void (*err)(const char *)) {
 
   /* PATH環境変数を取得する */
 #ifdef _WIN32
-  const char *env_p = Getenv("path", envptr);
+  const char* env_p = Getenv("path", envptr);
 #else
   // 現在の実装ではHuman68kの環境変数ではなく、ホスト(Linux等)の環境変数を読み込んでいる。
-  const char *env_p = getenv("PATH");
+  const char* env_p = getenv("PATH");
 #endif
   for (strcpy(dir, cwd); strlen(dir) != 0; GetAPath(&env_p, sizeof(dir), dir)) {
     size_t len = strlen(dir) + strlen("/") + strlen(fname) + strlen(".x");
@@ -132,17 +133,12 @@ FILE *prog_open(char *fname, ULong envptr, void (*err)(const char *)) {
     }
 
     if (exp != NULL) {
-      strcpy(fullname, dir);
-      strcat(fullname, fname);
+      snprintf(fullname, sizeof(fullname), "%s%s", dir, fname);
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
     } else {
-      strcpy(fullname, dir);
-      strcat(fullname, fname);
-      strcat(fullname, ".r");
+      snprintf(fullname, sizeof(fullname), "%s%s.r", dir, fname);
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
-      strcpy(fullname, dir);
-      strcat(fullname, fname);
-      strcat(fullname, ".x");
+      snprintf(fullname, sizeof(fullname), "%s%s.x", dir, fname);
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
     }
   }
@@ -190,8 +186,8 @@ static bool xrelocate(Long reloc_adr, Long reloc_size, Long read_top) {
  戻り値： 0 = エラー
  　　　　!0 = プログラム開始アドレス
 */
-static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
-                      void (*onError)(const char *)) {
+static Long xfile_cnv(Long* prog_size, Long* prog_sz2, Long read_top,
+                      void (*onError)(const char*)) {
   if (xhead_getl(0x3C) != 0) {
     onError("BINDされているファイルです\n");
     return (0);
@@ -231,11 +227,11 @@ static Long xfile_cnv(Long *prog_size, Long *prog_sz2, Long read_top,
  戻り値：正 = 実行開始アドレス
  　　　　負 = エラーコード
 */
-Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
-               Long *prog_sz2, void (*err)(const char *), ExecType execType) {
+Long prog_read(FILE* fp, char* fname, Long read_top, Long* prog_sz,
+               Long* prog_sz2, void (*err)(const char*), ExecType execType) {
   Long read_sz;
   bool x_file = false;
-  void (*onError)(const char *) = err ? err : onErrorDummy;
+  void (*onError)(const char*) = err ? err : onErrorDummy;
 
   if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
@@ -264,7 +260,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
   if (!mem.bufptr) {
     return -8;  // ポインタ取得しているだけなので、エラーにはならない
   }
-  char *read_ptr = mem.bufptr;
+  char* read_ptr = mem.bufptr;
 
   /* XHEAD_SIZEバイト読み込む */
   if (*prog_sz >= XHEAD_SIZE) {
@@ -325,7 +321,7 @@ Long prog_read(FILE *fp, char *fname, Long read_top, Long *prog_sz,
 static Long xhead_getl(int adr) {
   Long d;
 
-  UByte *p = &(xhead[adr]);
+  UByte* p = &(xhead[adr]);
 
   d = *(p++);
   d = ((d << 8) | *(p++));
@@ -337,8 +333,8 @@ static Long xhead_getl(int adr) {
 // PSPを作成する
 //   事前にBuildMemoryBlock()でメモリブロックを作成しておくこと。
 void BuildPsp(ULong psp, ULong envptr, ULong cmdline, UWord parentSr,
-              ULong parentSsp, const ProgramSpec *progSpec,
-              const Human68kPathName *pathname) {
+              ULong parentSsp, const ProgramSpec* progSpec,
+              const Human68kPathName* pathname) {
   Span mem = GetWritableMemorySuper(psp, SIZEOF_PSP);
   if (mem.bufptr) {
     memset(mem.bufptr + SIZEOF_MEMBLK, 0, SIZEOF_PSP - SIZEOF_MEMBLK);
