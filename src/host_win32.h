@@ -43,11 +43,11 @@ bool PathIsFileSpec_win32(const char* path);
 HostFileInfoMember GetStandardHostfile_win32(int fileno);
 #define HOST_GET_STANDARD_HOSTFILE GetStandardHostfile_win32
 
-Long CreateNewfile_win32(char* fullpath, HostFileInfoMember* hostfile,
+Long CreateNewfile_win32(char* path, HostFileInfoMember* hostfile,
                          bool newfile);
 #define HOST_CREATE_NEWFILE CreateNewfile_win32
 
-Long OpenFile_win32(char* fullpath, HostFileInfoMember* hostfile,
+Long OpenFile_win32(char* path, HostFileInfoMember* hostfile,
                     FileOpenMode mode);
 #define HOST_OPEN_FILE OpenFile_win32
 

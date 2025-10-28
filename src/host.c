@@ -15,6 +15,7 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110 - 1301 USA.
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -134,7 +135,7 @@ static void to_slash(char* s) {
 }
 
 static size_t getDriveNameLen(const char* path) {
-  return (path[0] && path[1] == ':' && !is_mb_lead(path[0])) ? 2 : 0;
+  return (isalpha(path[0]) && path[1] == ':') ? 2 : 0;
 }
 
 #ifdef HOST_CANONICAL_PATHNAME_GENERIC
@@ -329,10 +330,10 @@ static inline int toHostFilename(const char* fullpath, char* buf,
 
 #ifdef HOST_CREATE_NEWFILE_GENERIC
 // ファイルを作成する
-Long CreateNewfile_generic(char* fullpath, HostFileInfoMember* hostfile,
+Long CreateNewfile_generic(char* path, HostFileInfoMember* hostfile,
                            bool newfile) {
   char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
-  if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
+  if (!toHostFilename(path, hostpath, sizeof(hostpath)))
     return DOSE_ILGFNAME;
 
   struct stat st;
@@ -361,11 +362,10 @@ Long CreateNewfile_generic(char* fullpath, HostFileInfoMember* hostfile,
 #endif
 
 #ifdef HOST_OPEN_FILE_GENERIC
-Long OpenFile_generic(char* fullpath, HostFileInfoMember* hostfile,
+Long OpenFile_generic(char* path, HostFileInfoMember* hostfile,
                       FileOpenMode mode) {
   char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
-  if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
-    return DOSE_ILGFNAME;
+  if (!toHostFilename(path, hostpath, sizeof(hostpath))) return DOSE_ILGFNAME;
 
   static const char mdstr[][4] = {"rb", "r+b", "r+b"};
   FILE* fp = fopen(hostpath, mdstr[mode]);
