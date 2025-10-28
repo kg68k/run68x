@@ -6,6 +6,7 @@
 * (generic) `IOCS _ONTIME`を`clock_gettime()`から得るようにした。
 * `DOS _CHMOD`を実装(win32では作り直し)。ただし一部非互換の動作が残っている。
 * (win32) `DOS _OPEN`で予約デバイス名のファイルがオープンできない不具合を修正。
+* (win32) `DOS _MKDIR`、`DOS _RMDIR`のエラーコードが正しくない不具合を修正。
 
 
 ## 2.1.0 (2024-12-21)
