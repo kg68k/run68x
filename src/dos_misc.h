@@ -26,6 +26,7 @@ Long DosGetdate(void);
 Long DosSetdate(ULong param);
 Long DosGettime(void);
 Long DosSettime(ULong param);
+Long DosVernum(void);
 const char* Getenv(const char* name, ULong env);
 Long DosGetenv(ULong param);
 Long DosBusErr(ULong param);

@@ -106,6 +106,14 @@ static Long Settime(UWord binTime) {
 // DOS _SETTIME (0xff2d)
 Long DosSettime(ULong param) { return Settime(ReadParamUWord(&param)); }
 
+// DOS _VERNUM (0xff30)
+Long DosVernum(void) {
+  const ULong id = 0x3638;   // '68'
+  const ULong ver = 0x0302;  // v3.02
+
+  return (id << 16) | ver;
+}
+
 // 環境変数領域から環境変数を検索する。
 const char* Getenv(const char* name, ULong env) {
   if (env == 0) {

@@ -588,8 +588,8 @@ bool dos_call(UByte code) {
     case 0x2d:  // SETTIME
       rd[0] = DosSettime(stack_adr);
       break;
-    case 0x30: /* VERNUM */
-      rd[0] = 0x36380302;
+    case 0x30:  // VERNUM
+      rd[0] = DosVernum();
       break;
     case 0x32: /* GETDPB */
       srt = (short)mem_get(stack_adr, S_WORD);
