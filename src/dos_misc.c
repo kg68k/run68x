@@ -37,7 +37,7 @@ static Long Settim2(ULong binTime) {
 
   // 現状の仕様ではIOCS _TIMESETがホスト環境への設定を行わないため、
   // DOS _SETTIM2でも設定は行われない。
-  Timeset(bcd);
+  (void)Timeset(bcd);
   return DOSE_SUCCESS;
 }
 
@@ -68,7 +68,7 @@ static Long Setdate(UWord date) {
 
   // 現状の仕様ではIOCS _DATESETがホスト環境への設定を行わないため、
   // DOS _SETDATEでも設定は行われない。
-  Dateset(bcd);
+  (void)Dateset(bcd);
   return DOSE_SUCCESS;
 }
 
@@ -99,7 +99,7 @@ static Long Settime(UWord binTime) {
 
   // 現状の仕様ではIOCS _TIMESETがホスト環境への設定を行わないため、
   // DOS _SETTIMEでも設定は行われない。
-  Timeset(bcd);
+  (void)Timeset(bcd);
   return DOSE_SUCCESS;
 }
 
