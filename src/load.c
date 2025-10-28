@@ -133,17 +133,12 @@ FILE* prog_open(char* fname, ULong envptr, void (*err)(const char*)) {
     }
 
     if (exp != NULL) {
-      strcpy(fullname, dir);
-      strcat(fullname, fname);
+      snprintf(fullname, sizeof(fullname), "%s%s", dir, fname);
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
     } else {
-      strcpy(fullname, dir);
-      strcat(fullname, fname);
-      strcat(fullname, ".r");
+      snprintf(fullname, sizeof(fullname), "%s%s.r", dir, fname);
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
-      strcpy(fullname, dir);
-      strcat(fullname, fname);
-      strcat(fullname, ".x");
+      snprintf(fullname, sizeof(fullname), "%s%s.x", dir, fname);
       if ((fp = fopen(fullname, "rb")) != NULL) goto EndOfFunc;
     }
   }
