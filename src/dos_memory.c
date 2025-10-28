@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -180,7 +180,7 @@ void BuildMemoryBlock(ULong adr, ULong prev, ULong parent, ULong end,
   if (next != 0) WriteULongSuper(next + MEMBLK_PREV, adr);
 }
 
-// DOS _MFREE
+// DOS _MFREE (0xff49) 内部処理
 Long Mfree(ULong adr) {
   if (adr == 0) {
     MfreeAll(psp[nest_cnt]);
@@ -230,7 +230,7 @@ static void MfreeAll(ULong psp) {
   }
 }
 
-// DOS _SETBLOCK
+// DOS _SETBLOCK (0xff4a) 内部処理
 Long Setblock(ULong adr, ULong size) {
   ULong sizeWithHeader = determineRequestSize(size);
 
@@ -290,4 +290,63 @@ static bool is_valid_memblk(ULong memblk, ULong* nextptr) {
 
   if (nextptr != NULL) *nextptr = next;
   return true;
+}
+
+// DOS _MALLOC (0xff48)
+Long DosMalloc(ULong param) {
+  return Malloc(MALLOC_FROM_LOWER, ReadParamULong(&param), psp[nest_cnt]);
+}
+
+// DOS _MALLOC2 (0xff58, 0xff88)
+Long DosMalloc2(ULong param) {
+  UWord mode = ReadParamUWord(&param);
+  UByte modeByte = mode & 0xff;
+  if (modeByte > MALLOC_FROM_HIGHER) return DOSE_ILGPARM;
+  ULong size = ReadParamULong(&param);
+  ULong parent =
+      (mode & 0x8000) ? ReadParamULong(&param) : (ULong)psp[nest_cnt];
+
+  return Malloc(modeByte, size, parent);
+}
+
+// DOS _MFREE (0xff49)
+Long DosMfree(ULong param) {  //
+  return Mfree(ReadParamULong(&param));
+}
+
+// DOS _SETBLOCK (0xff4a)
+Long DosSetblock(ULong param) {
+  ULong adr = ReadParamULong(&param);
+  ULong size = ReadParamULong(&param);
+  return Setblock(adr, size);
+}
+
+// DOS _MALLOC3 (0xff60, 0xff90)
+Long DosMalloc3(ULong param) {
+  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
+
+  return MallocHuge(MALLOC_FROM_LOWER, ReadParamULong(&param), psp[nest_cnt]);
+}
+
+// DOS _SETBLOCK2 (0xff61, 0xff91)
+Long DosSetblock2(ULong param) {
+  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
+
+  ULong adr = ReadParamULong(&param);
+  ULong size = ReadParamULong(&param);
+  return SetblockHuge(adr, size);
+}
+
+// DOS _MALLOC4 (0xff62, 0xff91)
+Long DosMalloc4(ULong param) {
+  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
+
+  UWord mode = ReadParamUWord(&param);
+  UByte modeByte = mode & 0xff;
+  if (modeByte > MALLOC_FROM_HIGHER) return DOSE_ILGPARM;
+  ULong size = ReadParamULong(&param);
+  ULong parent =
+      (mode & 0x8000) ? ReadParamULong(&param) : (ULong)psp[nest_cnt];
+
+  return MallocHuge(modeByte, size, parent);
 }

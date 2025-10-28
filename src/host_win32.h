@@ -66,20 +66,23 @@ Long GetFileAtrribute_win32(const char* path);
 Long SetFileAtrribute_win32(const char* path, UWord atr);
 #define HOST_SET_FILE_ATTRIBUTE SetFileAtrribute_win32
 
-Long DosMkdir_win32(Long name);
-#define HOST_DOS_MKDIR DosMkdir_win32
+Long Mkdir_win32(const char* dirname);
+#define HOST_MKDIR Mkdir_win32
 
-Long DosRmdir_win32(Long name);
-#define HOST_DOS_RMDIR DosRmdir_win32
+Long Rmdir_win32(const char* dirname);
+#define HOST_RMDIR Rmdir_win32
 
-Long DosChdir_win32(Long name);
-#define HOST_DOS_CHDIR DosChdir_win32
+Long Chdir_win32(const char* dirname);
+#define HOST_CHDIR Chdir_win32
 
-Long DosCurdir_win32(short drv, char* buf_ptr);
-#define HOST_DOS_CURDIR DosCurdir_win32
+Long Curdir_win32(UWord drive, char* buffer);
+#define HOST_CURDIR Curdir_win32
 
-Long DosFiledate_win32(UWord fileno, ULong dt);
-#define HOST_DOS_FILEDATE DosFiledate_win32
+Long GetFiledate_win32(FILEINFO* finfop);
+#define HOST_GET_FILEDATE GetFiledate_win32
+
+Long SetFiledate_win32(FILEINFO* finfop, ULong dt);
+#define HOST_SET_FILEDATE SetFiledate_win32
 
 RegPair IocsOntime_win32(void);
 #define HOST_IOCS_ONTIME IocsOntime_win32

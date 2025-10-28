@@ -74,7 +74,43 @@ static bool extractPath(ULong addr, size_t bufSize, char* buf) {
   return true;
 }
 
-// 新しいファイルを作成する。
+static Long seekOnmemoryFile(FILEINFO* finfop, Long offset, FileSeekMode mode) {
+  Long base = (mode == SEEKMODE_SET)   ? 0
+              : (mode == SEEKMODE_CUR) ? finfop->onmemory.position
+                                       : finfop->onmemory.length;
+  Long pos = base + offset;
+
+  if (pos < 0 || pos > finfop->onmemory.length) return DOSE_CANTSEEK;
+
+  finfop->onmemory.position = pos;
+  return pos;
+}
+
+// DOS _MKDIR (0xff39)
+Long DosMkdir(ULong param) {
+  ULong dir = ReadParamULong(&param);
+  const char* dirname = GetStringSuper(dir);
+
+  return HOST_MKDIR(dirname);
+}
+
+// DOS _RMDIR (0xff3a)
+Long DosRmdir(ULong param) {
+  ULong dir = ReadParamULong(&param);
+  const char* dirname = GetStringSuper(dir);
+
+  return HOST_RMDIR(dirname);
+}
+
+// DOS _CHDIR (0xff3b)
+Long DosChdir(ULong param) {
+  ULong dir = ReadParamULong(&param);
+  const char* dirname = GetStringSuper(dir);
+
+  return HOST_CHDIR(dirname);
+}
+
+// 新規ファイルを作成する
 Long CreateNewfile(ULong file, UWord atr, bool newfile) {
   char path[HUMAN68K_PATH_MAX + 1];
   if (!extractPath(file, sizeof(path), path)) return DOSE_ILGFNAME;
@@ -90,7 +126,15 @@ Long CreateNewfile(ULong file, UWord atr, bool newfile) {
   return fileno;
 }
 
-// ファイルを開く。
+// DOS _CREATE (0xff3c)
+Long DosCreate(ULong param) {
+  ULong file = ReadParamULong(&param);
+  UWord atr = ReadParamUWord(&param);
+
+  return CreateNewfile(file, atr, false);
+}
+
+// 既存ファイルを開く
 Long OpenExistingFile(ULong file, UWord mode) {
   FileOpenMode rwMode = mode & 0x000f;
   if (rwMode > OPENMODE_READ_WRITE) return DOSE_ILGARG;
@@ -113,6 +157,15 @@ Long OpenExistingFile(ULong file, UWord mode) {
   return fileno;
 }
 
+// DOS _OPEN (0xff3d)
+Long DosOpen(ULong param) {
+  ULong file = ReadParamULong(&param);
+  UWord mode = ReadParamUWord(&param);
+
+  return OpenExistingFile(file, mode);
+}
+
+// ファイル、端末またはオンメモリバッファからの読み込み
 static Long readFile(FILEINFO* finfop, char* buffer, ULong length) {
   if (!finfop->onmemory.buffer)
     return HOST_READ_FILE_OR_TTY(finfop, buffer, length);
@@ -126,8 +179,8 @@ static Long readFile(FILEINFO* finfop, char* buffer, ULong length) {
   return len;
 }
 
-// DOS _READ
-Long Read(UWord fileno, ULong buffer, ULong length) {
+// DOS _READ (0xff3f) 内部処理
+static Long Read(UWord fileno, ULong buffer, ULong length) {
   // Human68k v3.02ではファイルのエラー検査より先にバイト数が0か調べている
   if (length == 0) return 0;
 
@@ -166,20 +219,21 @@ Long Read(UWord fileno, ULong buffer, ULong length) {
   throwBusErrorOnWrite(buffer + mem.length);
 }
 
-static Long seekOnmemoryFile(FILEINFO* finfop, Long offset, FileSeekMode mode) {
-  Long base = (mode == SEEKMODE_SET)   ? 0
-              : (mode == SEEKMODE_CUR) ? finfop->onmemory.position
-                                       : finfop->onmemory.length;
-  Long pos = base + offset;
+// DOS _READ (0xff3f)
+Long DosRead(ULong param) {
+  UWord fileno = ReadParamUWord(&param);
+  ULong buffer = ReadParamULong(&param);
+  ULong length = ReadParamULong(&param);
 
-  if (pos < 0 || pos > finfop->onmemory.length) return DOSE_CANTSEEK;
-
-  finfop->onmemory.position = pos;
-  return pos;
+  return Read(fileno, buffer, length);
 }
 
 // DOS _SEEK (0xff42)
-Long Seek(UWord fileno, Long offset, UWord mode) {
+Long DosSeek(ULong param) {
+  UWord fileno = ReadParamUWord(&param);
+  ULong offset = ReadParamULong(&param);
+  UWord mode = ReadParamUWord(&param);
+
   if (fileno >= FILE_MAX) return DOSE_MFILE;
 
   FILEINFO* finfop = &finfo[fileno];
@@ -187,8 +241,8 @@ Long Seek(UWord fileno, Long offset, UWord mode) {
 
   if (mode > SEEKMODE_END) return DOSE_ILGPARM;
 
-  return finfop->onmemory.buffer ? seekOnmemoryFile(finfop, offset, mode)
-                                 : HOST_SEEK_FILE(finfop, offset, mode);
+  if (finfop->onmemory.buffer) return seekOnmemoryFile(finfop, offset, mode);
+  return HOST_SEEK_FILE(finfop, offset, mode);
 }
 
 // DOS _CHMOD (0xff43)
@@ -218,6 +272,35 @@ Long DosChmod(ULong param) {
   return HOST_SET_FILE_ATTRIBUTE(fullpath, atr);
 }
 
+// DOS _CURDIR (0xff47)
+Long DosCurdir(ULong param) {
+  UWord drive = ReadParamUWord(&param);
+  ULong buffer = ReadParamULong(&param);
+
+  char tempBuf[HUMAN68K_DIR_MAX + 1];
+
+  Long result = HOST_CURDIR(drive, tempBuf);
+  if (result == DOSE_SUCCESS) {
+    WriteStringSuper(buffer, tempBuf);
+  }
+  return result;
+}
+
+// DOS _FILEDATE (0xff57, 0xff87)
+Long DosFiledate(ULong param) {
+  UWord fileno = ReadParamUWord(&param);
+  ULong dt = ReadParamULong(&param);
+
+  FILEINFO* finfop = &finfo[fileno];
+  if (!finfop->is_opened) return DOSE_BADF;  // オープンされていない
+
+  if (dt == 0) return HOST_GET_FILEDATE(finfop);
+
+  // 読み込みオープンで設定はできない
+  if (finfop->mode == 0) return DOSE_ILGARG;
+  return HOST_SET_FILEDATE(finfop, dt);
+}
+
 // 最後のパスデリミタ(\ : /)の次のアドレスを求める
 //   パスデリミタがなければ文字列先頭を返す
 static char* get_filename(char* path) {
@@ -244,10 +327,12 @@ static void replace_char(char* s, char from, char to) {
   }
 }
 
-// DOS _MAKETMP
-Long Maketmp(ULong path, UWord atr) {
-  char* const path_buf = GetStringSuper(path);
+// DOS _MAKETMP (0xff5a, 0xff8a)
+Long DosMaketmp(ULong param) {
+  ULong path = ReadParamULong(&param);
+  UWord atr = ReadParamUWord(&param);
 
+  char* const path_buf = GetStringSuper(path);
   char* const filename = get_filename(path_buf);
   const size_t len = strlen(filename);
   if (len == 0) return DOSE_ILGFNAME;
@@ -282,6 +367,14 @@ Long Maketmp(ULong path, UWord atr) {
 
     // 加算できたらファイル作成を再試行する
   }
+}
+
+// DOS _NEWFILE (0xff5b, 0xff8b)
+Long DosNewfile(ULong param) {
+  ULong file = ReadParamULong(&param);
+  UWord atr = ReadParamUWord(&param);
+
+  return CreateNewfile(file, atr, true);
 }
 
 static OnmemoryFileData defaultOnmemoryFileData(void) {

@@ -21,25 +21,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
 
-#if !defined(__GNUC__)
-#include <conio.h>
-#endif
-
 #ifdef _WIN32
+#include <conio.h>
 #include <direct.h>
 #include <dos.h>
 #include <io.h>
 #include <windows.h>
 #else
 #include <dirent.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #endif
-
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #ifdef USE_ICONV
 #include <iconv.h>
@@ -291,75 +286,6 @@ static Long Settime(ULong param) {
   return DOSE_SUCCESS;
 }
 
-// DOS _MKDIR (0xff39)
-static Long Mkdir(Long name) {  //
-  return HOST_DOS_MKDIR(name);
-}
-
-// DOS _RMDIR (0xff3a)
-static Long Rmdir(Long name) {  //
-  return HOST_DOS_RMDIR(name);
-}
-
-// DOS _CHDIR (0xff3b)
-static Long Chdir(Long name) {  //
-  return HOST_DOS_CHDIR(name);
-}
-
-// DOS _READ (0xff3b)
-static Long DosRead(ULong param) {
-  UWord fileno = ReadParamUWord(&param);
-  ULong buffer = ReadParamULong(&param);
-  ULong length = ReadParamULong(&param);
-
-  return Read(fileno, buffer, length);
-}
-
-// DOS _CREATE (0xff3c)
-static Long DosCreate(ULong param) {
-  ULong file = ReadParamULong(&param);
-  UWord atr = ReadParamUWord(&param);
-
-  return CreateNewfile(file, atr, false);
-}
-
-// DOS _OPEN (0xff3d)
-static Long DosOpen(ULong param) {
-  ULong file = ReadParamULong(&param);
-  UWord mode = ReadParamUWord(&param);
-
-  return OpenExistingFile(file, mode);
-}
-
-// DOS _SEEK (0xff42)
-static Long DosSeek(ULong param) {
-  UWord fileno = ReadParamUWord(&param);
-  ULong offset = ReadParamULong(&param);
-  UWord mode = ReadParamUWord(&param);
-
-  return Seek(fileno, (Long)offset, mode);
-}
-
-// DOS _CURDIR (0xff47)
-static Long Curdir(short drv, char* buf_ptr) {
-  return HOST_DOS_CURDIR(drv, buf_ptr);
-}
-
-// DOS _MALLOC (0xff48)
-static Long DosMalloc(ULong param) {
-  return Malloc(MALLOC_FROM_LOWER, ReadParamULong(&param), psp[nest_cnt]);
-}
-
-// DOS _MFREE (0xff49)
-static Long DosMfree(ULong param) { return Mfree(ReadParamULong(&param)); }
-
-// DOS _SETBLOCK (0xff4a)
-static Long DosSetblock(ULong param) {
-  ULong adr = ReadParamULong(&param);
-  ULong size = ReadParamULong(&param);
-  return Setblock(adr, size);
-}
-
 // DOS _GETENV (0xff53, 0xff53)
 static Long DosGetenv(ULong param) {
   ULong name = ReadParamULong(&param);
@@ -394,70 +320,6 @@ const char* Getenv(const char* name, ULong env) {
     kv += strlen(p) + 1;
   }
   return NULL;
-}
-
-// DOS _FILEDATE (0xff57, 0xff87)
-static Long DosFiledate(ULong param) {
-  UWord fileno = ReadParamUWord(&param);
-  ULong dt = ReadParamULong(&param);
-  return HOST_DOS_FILEDATE(fileno, dt);
-}
-
-// DOS _MALLOC2 (0xff58, 0xff88)
-static Long DosMalloc2(ULong param) {
-  UWord mode = ReadParamUWord(&param);
-  UByte modeByte = mode & 0xff;
-  if (modeByte > MALLOC_FROM_HIGHER) return DOSE_ILGPARM;
-  ULong size = ReadParamULong(&param);
-  ULong parent =
-      (mode & 0x8000) ? ReadParamULong(&param) : (ULong)psp[nest_cnt];
-
-  return Malloc(modeByte, size, parent);
-}
-
-// DOS _MAKETMP (0xff5a, 0xff8a)
-static Long DosMaketmp(ULong param) {
-  ULong path = ReadParamULong(&param);
-  UWord atr = ReadParamUWord(&param);
-  return Maketmp(path, atr);
-}
-
-// DOS _NEWFILE (0xff5b, 0xff8b)
-static Long DosNewfile(ULong param) {
-  ULong file = ReadParamULong(&param);
-  UWord atr = ReadParamUWord(&param);
-
-  return CreateNewfile(file, atr, true);
-}
-
-// DOS _MALLOC3 (0xff60, 0xff90)
-static Long DosMalloc3(ULong param) {
-  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
-
-  return MallocHuge(MALLOC_FROM_LOWER, ReadParamULong(&param), psp[nest_cnt]);
-}
-
-// DOS _SETBLOCK2 (0xff61, 0xff91)
-static Long DosSetblock2(ULong param) {
-  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
-
-  ULong adr = ReadParamULong(&param);
-  ULong size = ReadParamULong(&param);
-  return SetblockHuge(adr, size);
-}
-
-// DOS _MALLOC4 (0xff62, 0xff91)
-static Long DosMalloc4(ULong param) {
-  if (settings.highMemorySize == 0) return DOSE_ILGFNC;
-
-  UWord mode = ReadParamUWord(&param);
-  UByte modeByte = mode & 0xff;
-  if (modeByte > MALLOC_FROM_HIGHER) return DOSE_ILGPARM;
-  ULong size = ReadParamULong(&param);
-  ULong parent =
-      (mode & 0x8000) ? ReadParamULong(&param) : (ULong)psp[nest_cnt];
-
-  return MallocHuge(modeByte, size, parent);
 }
 
 // DOS _BUS_ERR (0xfff7)
@@ -889,17 +751,14 @@ bool dos_call(UByte code) {
       buf = mem_get(stack_adr + 4, S_LONG);
       rd[0] = Nameck(data, buf);
       break;
-    case 0x39: /* MKDIR */
-      data = mem_get(stack_adr, S_LONG);
-      rd[0] = Mkdir(data);
+    case 0x39:  // MKDIR
+      rd[0] = DosMkdir(stack_adr);
       break;
-    case 0x3A: /* RMDIR */
-      data = mem_get(stack_adr, S_LONG);
-      rd[0] = Rmdir(data);
+    case 0x3a:  // RMDIR
+      rd[0] = DosRmdir(stack_adr);
       break;
-    case 0x3B: /* CHDIR */
-      data = mem_get(stack_adr, S_LONG);
-      rd[0] = Chdir(data);
+    case 0x3b:  // CHDIR
+      rd[0] = DosChdir(stack_adr);
       break;
     case 0x3c:  // CREATE
       rd[0] = DosCreate(stack_adr);
@@ -911,7 +770,7 @@ bool dos_call(UByte code) {
       srt = (short)mem_get(stack_adr, S_WORD);
       rd[0] = Close(srt);
       break;
-    case 0x3F: /* READ */
+    case 0x3f:  // READ
       rd[0] = DosRead(stack_adr);
       break;
     case 0x40: /* WRITE */
@@ -943,10 +802,8 @@ bool dos_call(UByte code) {
       fhdl = (short)mem_get(stack_adr + 2, S_WORD);
       rd[0] = Dup2(srt, fhdl);
       break;
-    case 0x47: /* CURDIR */
-      srt = (short)mem_get(stack_adr, S_WORD);
-      data = mem_get(stack_adr + 2, S_LONG);
-      rd[0] = Curdir(srt, GetStringSuper(data));
+    case 0x47:  // CURDIR
+      rd[0] = DosCurdir(stack_adr);
       break;
     case 0x48: /* MALLOC */
       rd[0] = DosMalloc(stack_adr);
@@ -1653,12 +1510,12 @@ static Long Namests(Long name, Long buf) {
   for (i = len - 1; i >= 0 && nbuf[i] != '.'; i--) {
     if (nbuf[i] == '*' || nbuf[i] == '?') wild = 1;
   }
-  if (strlen(&(nbuf[i])) > 4) return (-13);
-  memset(buf_ptr + 75, ' ', 3);
   if (i < 0) {
     /* 拡張子なし */
     i = len;
+    buf_ptr[75] = '\0';
   } else {
+    if (strlen(&(nbuf[i])) > 4) return (-13);
     memcpy(buf_ptr + 75, &(nbuf[i + 1]), strlen(&(nbuf[i + 1])));
     nbuf[i] = '\0';
   }
@@ -1682,7 +1539,7 @@ static Long Namests(Long name, Long buf) {
   if (i == 0) {
     /* カレントディレクトリをセット */
     char cud[67];
-    if (Curdir(0, cud) != 0) return DOSE_ILGFNAME;
+    if (HOST_CURDIR(0, cud) != 0) return DOSE_ILGFNAME;
     strcat(strcpy(buf_ptr + 2, cud), "\\");
   } else {
     for (i--; i >= 0; i--) {
@@ -2026,7 +1883,7 @@ static Long Assign(short mode, Long stack_adr) {
     if (d < 1 || d > 26) return DOSE_ILGPARM;
 
     char dir[HUMAN68K_DIR_MAX + 1];
-    if (Curdir(d, dir) != 0) return DOSE_ILGPARM;
+    if (HOST_CURDIR(d, dir) != 0) return DOSE_ILGPARM;
     WriteStringSuper(buf, dir);
     return 0x40;
   }

@@ -23,10 +23,20 @@
 Long FindFreeFileNo(void);
 Long CreateNewfile(ULong file, UWord atr, bool newfile);
 Long OpenExistingFile(ULong file, UWord mode);
-Long Read(UWord fileno, ULong buffer, ULong length);
-Long Seek(UWord fileno, Long offset, UWord mode);
+
+Long DosMkdir(ULong param);
+Long DosRmdir(ULong param);
+Long DosChdir(ULong param);
+Long DosCreate(ULong param);
+Long DosOpen(ULong param);
+Long DosRead(ULong param);
+Long DosSeek(ULong param);
 Long DosChmod(ULong param);
-Long Maketmp(ULong path, UWord atr);
+Long DosCurdir(ULong param);
+Long DosFiledate(ULong param);
+Long DosMaketmp(ULong param);
+Long DosNewfile(ULong param);
+
 void ClearFinfo(int fileno);
 FILEINFO* SetFinfo(Long fileno, HostFileInfoMember hostfile, FileOpenMode mode,
                    unsigned int nest);

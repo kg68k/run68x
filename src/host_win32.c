@@ -251,10 +251,8 @@ Long SetFileAtrribute_win32(const char* path, UWord atr) {
 }
 
 // DOS _MKDIR (0xff39)
-Long DosMkdir_win32(Long name) {
-  char* const name_ptr = GetStringSuper(name);
-
-  if (CreateDirectoryA(name_ptr, NULL) == FALSE) {
+Long Mkdir_win32(const char* dirname) {
+  if (CreateDirectoryA(dirname, NULL) == FALSE) {
     if (errno == EACCES) return DOSE_EXISTDIR;  // ディレクトリは既に存在する
     return DOSE_ILGFNAME;                       // ファイル名指定誤り
   }
@@ -262,11 +260,9 @@ Long DosMkdir_win32(Long name) {
 }
 
 // DOS _RMDIR (0xff3a)
-Long DosRmdir_win32(Long name) {
-  char* const name_ptr = GetStringSuper(name);
-
+Long Rmdir_win32(const char* dirname) {
   errno = 0;
-  if (RemoveDirectoryA(name_ptr) == FALSE) {
+  if (RemoveDirectoryA(dirname) == FALSE) {
     if (errno == EACCES)
       return DOSE_NOTEMPTY;  // ディレクトリ中にファイルがある
     return DOSE_ILGFNAME;    // ファイル名指定誤り
@@ -275,10 +271,8 @@ Long DosRmdir_win32(Long name) {
 }
 
 // DOS _CHDIR (0xff3b)
-Long DosChdir_win32(Long name) {
-  char* const name_ptr = GetStringSuper(name);
-
-  if (SetCurrentDirectoryA(name_ptr) == FALSE)
+Long Chdir_win32(const char* dirname) {
+  if (SetCurrentDirectoryA(dirname) == FALSE)
     return DOSE_NODIR;  // ディレクトリが見つからない
   return DOSE_SUCCESS;
 }
@@ -297,58 +291,46 @@ static bool isValidDrive(int drive) {
 }
 
 // DOS _CURDIR (0xff47)
-Long DosCurdir_win32(short drv, char* buf_ptr) {
+Long Curdir_win32(UWord drive, char* buffer) {
   // 無効なドライブに対して_getdcwd()を呼ぶとDebugビルドで
   // ダイアログが表示されてしまうので、除外しておく。
-  int drive = getDriveNo(drv);
-  if (!isValidDrive(drive)) return DOSE_ILGDRV;
+  int driveNo = getDriveNo(drive);
+  if (!isValidDrive(driveNo)) return DOSE_ILGDRV;
 
-  char buf[HUMAN68K_DRV_DIR_MAX + 1] = {0};
-  const char* p = _getdcwd(drive, buf, sizeof(buf));
+  char tempBuf[HUMAN68K_DRV_DIR_MAX + 1] = {0};
+  const char* p = _getdcwd(driveNo, tempBuf, sizeof(tempBuf));
 
   if (p == NULL) {
     // Human68kのDOS _CURDIRはエラーコードとして-15しか返さないので
     // _getdcwd()が失敗する理由は考慮しなくてよい。
     return DOSE_ILGDRV;
   }
-  strcpy(buf_ptr, p + DRV_CLN_BS_LEN);
+  strcpy(buffer, p + DRV_CLN_BS_LEN);
   return DOSE_SUCCESS;
 }
 
-// DOS _FILEDATE 取得モード
-static Long DosFiledate_get(HANDLE hFile) {
+// DOS _FILEDATE (0xff57, 0xff87) 取得モード
+Long GetFiledate_win32(FILEINFO* finfop) {
   FILETIME ftWrite, ftLocal;
   WORD date, time;
 
-  if (!GetFileTime(hFile, NULL, NULL, &ftWrite)) return DOSE_BADF;
+  if (!GetFileTime(finfop->host.handle, NULL, NULL, &ftWrite)) return DOSE_BADF;
   if (!FileTimeToLocalFileTime(&ftWrite, &ftLocal)) return DOSE_ILGARG;
   if (!FileTimeToDosDateTime(&ftLocal, &date, &time)) return DOSE_ILGARG;
 
   return ((ULong)date << 16) | time;
 }
 
-// DOS _FILEDATE 設定モード
-static Long DosFiledate_set(HANDLE hFile, ULong dt) {
+// DOS _FILEDATE (0xff57, 0xff87) 設定モード
+Long SetFiledate_win32(FILEINFO* finfop, ULong dt) {
   FILETIME ftWrite, ftLocal;
 
   if (!DosDateTimeToFileTime(dt >> 16, dt & 0xffff, &ftLocal)) return DOSE_BADF;
   if (!LocalFileTimeToFileTime(&ftLocal, &ftWrite)) return DOSE_ILGARG;
-  if (!SetFileTime(hFile, NULL, NULL, &ftWrite)) return DOSE_ILGARG;
+  if (!SetFileTime(finfop->host.handle, NULL, NULL, &ftWrite))
+    return DOSE_ILGARG;
 
   return DOSE_SUCCESS;
-}
-
-// DOS _FILEDATE (0xff57, 0xff87)
-Long DosFiledate_win32(UWord fileno, ULong dt) {
-  FILEINFO* finfop = &finfo[fileno];
-
-  if (!finfop->is_opened) return DOSE_BADF;  // オープンされていない
-
-  if (dt == 0) return DosFiledate_get(finfop->host.handle);
-
-  if (finfop->mode == 0)
-    return DOSE_ILGARG;  // 読み込みオープンでは設定できない
-  return DosFiledate_set(finfop->host.handle, dt);
 }
 
 // IOCS _ONTIME (0x7f)
