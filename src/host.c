@@ -23,6 +23,10 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 #ifdef USE_ICONV
 #include <iconv.h>
 #endif
@@ -139,8 +143,6 @@ static size_t getDriveNameLen(const char* path) {
 }
 
 #ifdef HOST_CANONICAL_PATHNAME_GENERIC
-#include <unistd.h>
-
 static void parentPath(char* buf) {
   size_t len = strlen(buf);
   if (len <= 1) return;
@@ -333,8 +335,7 @@ static inline int toHostFilename(const char* fullpath, char* buf,
 Long CreateNewfile_generic(char* path, HostFileInfoMember* hostfile,
                            bool newfile) {
   char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
-  if (!toHostFilename(path, hostpath, sizeof(hostpath)))
-    return DOSE_ILGFNAME;
+  if (!toHostFilename(path, hostpath, sizeof(hostpath))) return DOSE_ILGFNAME;
 
   struct stat st;
   if (stat(hostpath, &st) == 0) {
@@ -397,8 +398,6 @@ bool CloseFile_generic(FILEINFO* finfop) {
 #endif
 
 #ifdef HOST_READ_FILE_OR_TTY_GENERIC
-#include <unistd.h>
-
 // 端末からの入力
 static Long read_from_tty(char* buffer, ULong length) {
   ULong read_len = gets2(buffer, length);
@@ -497,54 +496,60 @@ static void not_implemented(const char* name) {
   printFmt("run68: %s()は未実装です。\n", name);
 }
 
-#ifdef HOST_DOS_MKDIR_GENERIC
+#ifdef HOST_MKDIR_GENERIC
 // DOS _MKDIR (0xff39) (未実装)
-Long DosMkdir_generic(Long name) {
+Long Mkdir_generic(const char* dirname) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }
 #endif
 
-#ifdef HOST_DOS_RMDIR_GENERIC
+#ifdef HOST_RMDIR_GENERIC
 // DOS _RMDIR (0xff3a) (未実装)
-Long DosRmdir_generic(Long name) {
+Long Rmdir_generic(const char* dirname) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }
 #endif
 
-#ifdef HOST_DOS_CHDIR_GENERIC
+#ifdef HOST_CHDIR_GENERIC
 // DOS _CHDIR (0xff3b) (未実装)
-Long DosChdir_generic(Long name) {
+Long Chdir_generic(const char* dirname) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }
 #endif
 
-#ifdef HOST_DOS_CURDIR_GENERIC
-#include <unistd.h>
-
+#ifdef HOST_CURDIR_GENERIC
 // DOS _CURDIR (0xff47)
-Long DosCurdir_generic(short drv, char* buf_ptr) {
-  char buf[PATH_MAX];
-  const char* p = getcwd(buf, sizeof(buf));
+Long Curdir_generic(UWord drive, char* buffer) {
+  char tempBuf[PATH_MAX];
+  const char* p = getcwd(tempBuf, sizeof(tempBuf));
   if (p == NULL) {
     // Human68kのDOS _CURDIRはエラーコードとして-15しか返さないので
     // getdcwd()が失敗する理由は考慮しなくてよい。
     return DOSE_ILGDRV;
   }
-  if (!HOST_CONVERT_TO_SJIS(buf + ROOT_SLASH_LEN, buf_ptr,
+  if (!HOST_CONVERT_TO_SJIS(tempBuf + ROOT_SLASH_LEN, buffer,
                             (HUMAN68K_DIR_MAX - 1) + 1)) {
     return DOSE_ILGDRV;
   }
-  to_backslash(buf_ptr);
+  to_backslash(buffer);
   return 0;
 }
 #endif
 
-#ifdef HOST_DOS_FILEDATE_GENERIC
-// DOS _FILEDATE (0xff57, 0xff87) (未実装)
-Long DosFiledate_generic(UWord fileno, ULong dt) {
+#ifdef HOST_GET_FILEDATE_GENERIC
+// DOS _FILEDATE (0xff57, 0xff87) 取得モード (未実装)
+Long GetFiledate_generic(FILEINFO* finfop) {
+  not_implemented(__func__);
+  return DOSE_ILGFNC;
+}
+#endif
+
+#ifdef HOST_SET_FILEDATE_GENERIC
+// DOS _FILEDATE (0xff57, 0xff87) 設定モード (未実装)
+Long SetFiledate_generic(FILEINFO* finfop, ULong dt) {
   not_implemented(__func__);
   return DOSE_ILGFNC;
 }

@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2025 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -40,5 +40,13 @@ Long Setblock(ULong adr, ULong size);
 Long SetblockHuge(ULong adr, ULong size);
 void BuildMemoryBlock(ULong adrs, ULong prev, ULong parent, ULong end,
                       ULong next);
+
+Long DosMalloc(ULong param);
+Long DosMfree(ULong param);
+Long DosSetblock(ULong param);
+Long DosMalloc2(ULong param);
+Long DosMalloc3(ULong param);
+Long DosSetblock2(ULong param);
+Long DosMalloc4(ULong param);
 
 #endif

@@ -135,34 +135,40 @@ Long SetFileAtrribute_generic(const char* path, UWord atr);
 #define HOST_SET_FILE_ATTRIBUTE SetFileAtrribute_generic
 #endif
 
-#ifndef HOST_DOS_MKDIR
-#define HOST_DOS_MKDIR_GENERIC
-Long DosMkdir_generic(Long name);
-#define HOST_DOS_MKDIR DosMkdir_generic
+#ifndef HOST_MKDIR
+#define HOST_MKDIR_GENERIC
+Long Mkdir_generic(const char* dirname);
+#define HOST_MKDIR Mkdir_generic
 #endif
 
-#ifndef HOST_DOS_RMDIR
-#define HOST_DOS_RMDIR_GENERIC
-Long DosRmdir_generic(Long name);
-#define HOST_DOS_RMDIR DosRmdir_generic
+#ifndef HOST_RMDIR
+#define HOST_RMDIR_GENERIC
+Long Rmdir_generic(const char* dirname);
+#define HOST_RMDIR Rmdir_generic
 #endif
 
-#ifndef HOST_DOS_CHDIR
-#define HOST_DOS_CHDIR_GENERIC
-Long DosChdir_generic(Long name);
-#define HOST_DOS_CHDIR DosChdir_generic
+#ifndef HOST_CHDIR
+#define HOST_CHDIR_GENERIC
+Long Chdir_generic(const char* dirname);
+#define HOST_CHDIR Chdir_generic
 #endif
 
-#ifndef HOST_DOS_CURDIR
-#define HOST_DOS_CURDIR_GENERIC
-Long DosCurdir_generic(short drv, char* buf_ptr);
-#define HOST_DOS_CURDIR DosCurdir_generic
+#ifndef HOST_CURDIR
+#define HOST_CURDIR_GENERIC
+Long Curdir_generic(UWord drive, char* buf);
+#define HOST_CURDIR Curdir_generic
 #endif
 
-#ifndef HOST_DOS_FILEDATE
-#define HOST_DOS_FILEDATE_GENERIC
-Long DosFiledate_generic(UWord fileno, ULong dt);
-#define HOST_DOS_FILEDATE DosFiledate_generic
+#ifndef HOST_GET_FILEDATE
+#define HOST_GET_FILEDATE_GENERIC
+Long GetFiledate_generic(FILEINFO* finfop);
+#define HOST_GET_FILEDATE GetFiledate_generic
+#endif
+
+#ifndef HOST_SET_FILEDATE
+#define HOST_SET_FILEDATE_GENERIC
+Long SetFiledate_generic(FILEINFO* finfop, ULong dt);
+#define HOST_SET_FILEDATE SetFiledate_generic
 #endif
 
 #ifndef HOST_IOCS_ONTIME
