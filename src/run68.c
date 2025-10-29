@@ -68,12 +68,12 @@ static const Settings defaultSettings = {
 };
 
 static void print_title(void) {
-  const char *title =  //
+  const char* title =  //
       "run68x " RUN68X_VERSION
 #ifdef _DEBUG
       " (debug)"
 #endif
-      "  Copyright (C) 2024 TcbnErik\n"
+      "  Copyright (C) 2025 TcbnErik\n"
       "  based on X68000 console emulator Ver." RUN68VERSION
       "\n"
       "          Created in 1996 by Yokko\n"
@@ -82,7 +82,7 @@ static void print_title(void) {
 }
 
 static void print_usage(void) {
-  const char *usage =
+  const char* usage =
       "Usage: run68 [options] execute_filename [commandline]\n"
       "  -himem=<mb>  allocate high memory\n"
       "  -f           function call trace\n"
@@ -138,7 +138,7 @@ static void trap_table_make(void) {
    戻り値：
      終了コード
 */
-static int exec_notrap(bool *restart) {
+static int exec_notrap(bool* restart) {
   static bool cont_flag = true;
   static bool running = true;
 
@@ -253,8 +253,8 @@ static ULong init_env(ULong size, ULong parent) {
   return buf;
 }
 
-static void setHuman68kPathName(Human68kPathName *hpn, const char *path,
-                                const char *name, const char *ext) {
+static void setHuman68kPathName(Human68kPathName* hpn, const char* path,
+                                const char* name, const char* ext) {
   strncpy(hpn->path, path, sizeof(hpn->path));
   snprintf(hpn->name, sizeof(hpn->name), "%s%s", name, ext);
   hpn->nameLen = strlen(name);
@@ -262,7 +262,7 @@ static void setHuman68kPathName(Human68kPathName *hpn, const char *path,
 }
 
 // メインメモリ、ハイメモリを確保し初期化する。
-static bool initMachineMemory(Settings *settings, ULong *outHimemAdr) {
+static bool initMachineMemory(Settings* settings, ULong* outHimemAdr) {
   if (!AllocateMachineMemory(settings, outHimemAdr)) {
     printFmt("メモリが確保できません。\n");
     return false;
@@ -286,12 +286,12 @@ static void linkHimemToMemblkLink(ULong himemAdr, ULong himemSize,
   WriteULongSuper(OSWORK_MEMORY_END, himemAdr + himemSize);
 }
 
-static bool analyzeHimemOption(const char *arg) {
+static bool analyzeHimemOption(const char* arg) {
   static const unsigned long sizes[] = {0, 16, 32, 64, 128, 256, 384, 512, 768};
   const size_t sizes_len = sizeof(sizes) / sizeof(sizes[0]);
 
-  const char *p = strchr(arg, '=');
-  char *endptr = NULL;
+  const char* p = strchr(arg, '=');
+  char* endptr = NULL;
   unsigned long mb = p ? strtoul(p + 1, &endptr, 10) : 0;
   if (endptr && *endptr) mb = 0;
 
@@ -308,9 +308,9 @@ static bool analyzeHimemOption(const char *arg) {
   return false;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   char fname[89]; /* 実行ファイル名 */
-  FILE *fp;       /* 実行ファイルのファイルポインタ */
+  FILE* fp;       /* 実行ファイルのファイルポインタ */
   int i, j;
   bool restart;
 
@@ -323,13 +323,13 @@ Restart:
     /* フラグを調べる。 */
     if (argv[i][0] == '-') {
       bool invalid_flag = false;
-      char *fsp = argv[i];
+      char* fsp = argv[i];
       switch (argv[i][1]) {
         case 't':
           if (strlen(argv[i]) == 2) {
             // 削除された-tオプション。
           } else if (argv[i][2] == 'r') {
-            char *p; /* アドレス文字列へのポインタ */
+            char* p; /* アドレス文字列へのポインタ */
             if (strlen(argv[i]) == strlen("-tr")) {
               i++; /* "-tr"とアドレスとの間に空白あり。*/
               p = argv[i];
@@ -500,9 +500,9 @@ Restart:
   ra[0] = programPsp;
   ra[1] =
       programPsp + SIZEOF_PSP + prog_size;  // プログラムの終わり+1のアドレス
-  ra[2] = cmdline;   // コマンドラインのアドレス
-  ra[3] = humanEnv;  // 環境のアドレス
-  ra[4] = pc;        // 実行開始アドレス
+  ra[2] = cmdline;                          // コマンドラインのアドレス
+  ra[3] = humanEnv;                         // 環境のアドレス
+  ra[4] = pc;                               // 実行開始アドレス
   ra[7] = stackBottom;
 
   /* 実行 */
@@ -533,10 +533,10 @@ Restart:
 }
 
 // 標準エラー出力に文字列を出力する
-void print(const char *message) { fputs(message, stderr); }
+void print(const char* message) { fputs(message, stderr); }
 
 // 標準エラー出力にフォーマット文字列を出力する
-void printFmt(const char *fmt, ...) {
+void printFmt(const char* fmt, ...) {
   va_list ap;
 
   va_start(ap, fmt);

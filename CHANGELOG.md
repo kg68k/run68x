@@ -1,6 +1,6 @@
 # 変更履歴
 
-## Unreleased
+## 2.2.0 (2025-10-30)
 
 * 簡易デバッガで引数は単純に空白で分割するようにした。
 * (generic) `IOCS _ONTIME`を`clock_gettime()`から得るようにした。
