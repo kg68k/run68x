@@ -427,10 +427,9 @@ Long SeekFile_generic(FILEINFO* finfop, Long offset, FileSeekMode mode) {
 
 #ifdef HOST_GET_FILE_ATTRIBUTE_GENERIC
 // DOS _CHMOD (0xff43): ファイル属性の取得
-Long GetFileAtrribute_generic(const char* fullpath) {
+Long GetFileAtrribute_generic(const char* path) {
   char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
-  if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
-    return DOSE_ILGFNAME;
+  if (!toHostFilename(path, hostpath, sizeof(hostpath))) return DOSE_ILGFNAME;
 
   struct stat st;
   if (stat(hostpath, &st) != 0) {
@@ -454,10 +453,9 @@ Long GetFileAtrribute_generic(const char* fullpath) {
 
 #ifdef HOST_SET_FILE_ATTRIBUTE_GENERIC
 // DOS _CHMOD (0xff43): ファイル属性の変更
-Long SetFileAtrribute_generic(const char* fullpath, UWord atr) {
+Long SetFileAtrribute_generic(const char* path, UWord atr) {
   char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
-  if (!toHostFilename(fullpath, hostpath, sizeof(hostpath)))
-    return DOSE_ILGFNAME;
+  if (!toHostFilename(path, hostpath, sizeof(hostpath))) return DOSE_ILGFNAME;
 
   // O_RDONLYだと読み込みできないファイルはオープンできないが、
   // Human68kでは読み込み不可になることはないので対応外とする。
