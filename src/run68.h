@@ -18,7 +18,7 @@
 #ifndef RUN68_H
 #define RUN68_H
 
-#define RUN68X_VERSION "2.2.0"
+#define RUN68X_VERSION "2.3.0-dev"
 #define RUN68VERSION "0.09a+MacOS"
 
 #if __STDC_VERSION__ >= 202311L

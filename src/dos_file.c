@@ -55,29 +55,29 @@ static FILEINFO* getFileInfo(UWord fileno, Long* outErr) {
   return finfop;
 }
 
+// 最後のパスデリミタ(\ : /)の次のアドレスを求める
+//   パスデリミタがなければ文字列先頭を返す
+static char* get_filename(char* path) {
+  char* filename = path;
+  char* p = path;
+  char c;
+
+  while ((c = *p++) != '\0') {
+    if (c == '\\' || c == ':' || c == '/') {
+      filename = p;
+      continue;
+    }
+    if (is_mb_lead(c)) {
+      if (*p++ == '\0') break;
+    }
+  }
+  return filename;
+}
+
 static size_t strlenWithoutTrailingSpaces(const char* s) {
   size_t len = strlen(s);
   while (len > 0 && s[len - 1] == ' ') len--;
   return len;
-}
-
-static bool makeHuman68kPathName(ULong file, Human68kPathName* hpn) {
-  char localBuf[128];
-  const char* filename = GetStringSuper(file);
-
-  size_t len = strlenWithoutTrailingSpaces(filename);
-  if (len == 0) return false;
-
-  char* buf = (len < sizeof(localBuf)) ? localBuf : malloc(len + 1);
-  if (buf) {
-    memcpy(buf, filename, len);
-    buf[len] = '\0';
-    bool result = HOST_CANONICAL_PATHNAME(buf, hpn);
-    if (buf != localBuf) free(buf);
-    return result;
-  }
-
-  return false;
 }
 
 static bool extractPath(ULong addr, size_t bufSize, char* buf) {
@@ -267,26 +267,17 @@ Long DosChmod(ULong param) {
   ULong file = ReadParamULong(&param);
   UWord atr = ReadParamUWord(&param);
 
-  Human68kPathName hpn;
-  if (!makeHuman68kPathName(file, &hpn)) return DOSE_ILGFNAME;
+  char* filename = GetStringSuper(file);
 
-  // パスデリミタで終わっていればエラー
-  if (hpn.name[0] == '\0') return DOSE_ILGFNAME;
-
-  // ドライブ名だけ(D:)ならエラー
-  // とりあえずの対処なのでいずれ見直す。
-  const char* filename = GetStringSuper(file);
-  if (isalpha(filename[0]) && filename[1] == ':' && filename[2] == '\0')
-    return DOSE_ILGFNAME;
+  // 空文字列、またはパスデリミタで終わっていればエラー
+  const char* afterLastPathDelim = get_filename(filename);
+  if (afterLastPathDelim[0] == '\0') return DOSE_ILGFNAME;
 
   // TODO: ワイルドカードを使用している場合は DOSE_ILGFNAME エラーにする。
   // (現状はwin32では-2が返る)
 
-  char fullpath[HUMAN68K_PATH_MAX + 1];
-  strcat(strcpy(fullpath, hpn.path), hpn.name);
-
-  if (atr == (UWord)-1) return HOST_GET_FILE_ATTRIBUTE(fullpath);
-  return HOST_SET_FILE_ATTRIBUTE(fullpath, atr);
+  if (atr == (UWord)-1) return HOST_GET_FILE_ATTRIBUTE(filename);
+  return HOST_SET_FILE_ATTRIBUTE(filename, atr);
 }
 
 // DOS _CURDIR (0xff47)
@@ -317,25 +308,6 @@ Long DosFiledate(ULong param) {
   // 読み込みオープンで設定はできない
   if (finfop->mode == 0) return DOSE_ILGARG;
   return HOST_SET_FILEDATE(finfop, dt);
-}
-
-// 最後のパスデリミタ(\ : /)の次のアドレスを求める
-//   パスデリミタがなければ文字列先頭を返す
-static char* get_filename(char* path) {
-  char* filename = path;
-  char* p = path;
-  char c;
-
-  while ((c = *p++) != '\0') {
-    if (c == '\\' || c == ':' || c == '/') {
-      filename = p;
-      continue;
-    }
-    if (is_mb_lead(c)) {
-      if (*p++ == '\0') break;
-    }
-  }
-  return filename;
 }
 
 // 文字列中の文字を置換する
