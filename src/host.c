@@ -486,35 +486,52 @@ Long SetFileAtrribute_generic(const char* path, UWord atr) {
     return toDosError(err, DOSE_ILGFNAME);
   }
   close(fd);
-  return 0;
+  return DOSE_SUCCESS;
 }
 #endif
 
-static void not_implemented(const char* name) {
-  printFmt("run68: %s()は未実装です。\n", name);
-}
-
 #ifdef HOST_MKDIR_GENERIC
-// DOS _MKDIR (0xff39) (未実装)
+// DOS _MKDIR (0xff39)
 Long Mkdir_generic(const char* dirname) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
+  char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!toHostFilename(dirname, hostpath, sizeof(hostpath)))
+    return DOSE_ILGFNAME;
+
+  if (mkdir(hostpath, S_IRWXU | S_IRWXG | S_IRWXO) != 0) {
+    if (errno == EEXIST) return DOSE_EXISTDIR;
+    return toDosError(errno, DOSE_ILGFNAME);
+  }
+
+  return DOSE_SUCCESS;
 }
 #endif
 
 #ifdef HOST_RMDIR_GENERIC
-// DOS _RMDIR (0xff3a) (未実装)
+// DOS _RMDIR (0xff3a)
 Long Rmdir_generic(const char* dirname) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
+  char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!toHostFilename(dirname, hostpath, sizeof(hostpath)))
+    return DOSE_ILGFNAME;
+
+  if (rmdir(hostpath) != 0) return toDosError(errno, DOSE_ILGFNAME);
+
+  return DOSE_SUCCESS;
 }
 #endif
 
 #ifdef HOST_CHDIR_GENERIC
 // DOS _CHDIR (0xff3b) (未実装)
 Long Chdir_generic(const char* dirname) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
+  char hostpath[HUMAN68K_PATH_MAX * 4 + 1];
+  if (!toHostFilename(dirname, hostpath, sizeof(hostpath)))
+    return DOSE_ILGFNAME;
+
+  if (chdir(hostpath) != 0) {
+    if (errno == ENOENT) return DOSE_NODIR;
+    return toDosError(errno, DOSE_ILGFNAME);
+  }
+
+  return DOSE_SUCCESS;
 }
 #endif
 
@@ -538,18 +555,68 @@ Long Curdir_generic(UWord drive, char* buffer) {
 #endif
 
 #ifdef HOST_GET_FILEDATE_GENERIC
-// DOS _FILEDATE (0xff57, 0xff87) 取得モード (未実装)
+static Long localTmToDosDateTime(struct tm* tm) {
+  // いまのところ、範囲外の日時は考慮していない
+  ULong dt = ((tm->tm_year - (1980 - 1900)) << 25) | ((tm->tm_mon + 1) << 21) |
+             (tm->tm_mday << 16) | (tm->tm_hour << 11) | (tm->tm_min << 5) |
+             (tm->tm_sec >> 1);
+  return (Long)dt;
+}
+
+// DOS _FILEDATE (0xff57, 0xff87) 取得モード
 Long GetFiledate_generic(FILEINFO* finfop) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
+  FILE* fp = finfop->host.fp;
+  if (fp == NULL) return DOSE_BADF;
+
+  struct stat st;
+  if (fstat(fileno(fp), &st) != 0) return toDosError(errno, DOSE_ILGARG);
+  // キャラクタデバイスなら常に0を返す
+  if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) return 0;
+
+  struct tm localtm;
+  localtime_r(&st.st_mtime, &localtm);
+
+  return localTmToDosDateTime(&localtm);
 }
 #endif
 
 #ifdef HOST_SET_FILEDATE_GENERIC
-// DOS _FILEDATE (0xff57, 0xff87) 設定モード (未実装)
+static struct tm dosDateTimeToLocalTm(ULong dt) {
+  struct tm tm = {0};
+
+  tm.tm_year = ((dt >> 25) & 0x7f) + (1980 - 1900);
+  tm.tm_mon = ((dt >> 21) & 0x0f) - 1;
+  tm.tm_mday = (dt >> 16) & 0x1f;
+  tm.tm_hour = (dt >> 11) & 0x1f;
+  tm.tm_min = (dt >> 5) & 0x3f;
+  tm.tm_sec = (dt & 0x1f) << 1;
+
+  return tm;
+}
+
+// DOS _FILEDATE (0xff57, 0xff87) 設定モード
 Long SetFiledate_generic(FILEINFO* finfop, ULong dt) {
-  not_implemented(__func__);
-  return DOSE_ILGFNC;
+  FILE* fp = finfop->host.fp;
+  if (fp == NULL) return DOSE_BADF;
+
+  struct stat st;
+  if (fstat(fileno(fp), &st) != 0) return toDosError(errno, DOSE_ILGARG);
+  // キャラクタデバイスなら設定せず、常に0を返す
+  if (S_ISCHR(st.st_mode) || S_ISBLK(st.st_mode)) return DOSE_SUCCESS;
+
+  struct tm localtm = dosDateTimeToLocalTm(dt);
+  time_t t = mktime(&localtm);
+  if (t == (time_t)-1) return DOSE_ILGARG;
+
+  struct timespec times[2];
+  times[0].tv_sec = t;  // アクセス時刻
+  times[0].tv_nsec = 0;
+  times[1].tv_sec = t;  // 変更時刻
+  times[1].tv_nsec = 0;
+
+  if (futimens(fileno(fp), times) != 0) return toDosError(errno, DOSE_ILGARG);
+
+  return DOSE_SUCCESS;
 }
 #endif
 

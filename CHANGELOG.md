@@ -1,5 +1,10 @@
 # 変更履歴
 
+## Unreleased
+
+* (generic) `DOS _MKDIR`、`DOS _RMDIR`、`DOS _CHDIR`、`DOS _FILEDATE`を実装。
+
+
 ## 2.2.0 (2025-10-30)
 
 * 簡易デバッガで引数は単純に空白で分割するようにした。
