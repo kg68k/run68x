@@ -38,6 +38,23 @@ Long FindFreeFileNo(void) {
   return (Long)-1;
 }
 
+// 指定したファイル番号のファイル情報を取得する
+static FILEINFO* getFileInfo(UWord fileno, Long* outErr) {
+  if (fileno >= FILE_MAX) {
+    *outErr = DOSE_MFILE;
+    return NULL;
+  }
+
+  FILEINFO* finfop = &finfo[fileno];
+  if (!finfop->is_opened) {
+    *outErr = DOSE_BADF;
+    return NULL;
+  }
+
+  *outErr = DOSE_SUCCESS;
+  return finfop;
+}
+
 static size_t strlenWithoutTrailingSpaces(const char* s) {
   size_t len = strlen(s);
   while (len > 0 && s[len - 1] == ' ') len--;
@@ -184,8 +201,9 @@ static Long Read(UWord fileno, ULong buffer, ULong length) {
   // Human68k v3.02ではファイルのエラー検査より先にバイト数が0か調べている
   if (length == 0) return 0;
 
-  FILEINFO* finfop = &finfo[fileno];
-  if (!finfop->is_opened) return DOSE_BADF;
+  Long err;
+  FILEINFO* finfop = getFileInfo(fileno, &err);
+  if (!finfop) return err;
 
   // 書き込みモードで開いたファイルでも読み込むことができるので
   // オープンモードは確認しない
@@ -234,10 +252,9 @@ Long DosSeek(ULong param) {
   ULong offset = ReadParamULong(&param);
   UWord mode = ReadParamUWord(&param);
 
-  if (fileno >= FILE_MAX) return DOSE_MFILE;
-
-  FILEINFO* finfop = &finfo[fileno];
-  if (!finfop->is_opened) return DOSE_BADF;
+  Long err;
+  FILEINFO* finfop = getFileInfo(fileno, &err);
+  if (!finfop) return err;
 
   if (mode > SEEKMODE_END) return DOSE_ILGPARM;
 
@@ -291,8 +308,9 @@ Long DosFiledate(ULong param) {
   UWord fileno = ReadParamUWord(&param);
   ULong dt = ReadParamULong(&param);
 
-  FILEINFO* finfop = &finfo[fileno];
-  if (!finfop->is_opened) return DOSE_BADF;  // オープンされていない
+  Long err;
+  FILEINFO* finfop = getFileInfo(fileno, &err);
+  if (!finfop) return err;
 
   if (dt == 0) return HOST_GET_FILEDATE(finfop);
 
