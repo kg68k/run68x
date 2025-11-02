@@ -307,9 +307,12 @@ Long Curdir_win32(UWord drive, char* buffer) {
 
 // DOS _FILEDATE (0xff57, 0xff87) 取得モード
 Long GetFiledate_win32(FILEINFO* finfop) {
+  DWORD type = GetFileType(finfop->host.handle);
+  if (type == FILE_TYPE_UNKNOWN) return DOSE_BADF;
+  if (type != FILE_TYPE_DISK) return 0;
+
   FILETIME ftWrite, ftLocal;
   WORD date, time;
-
   if (!GetFileTime(finfop->host.handle, NULL, NULL, &ftWrite)) return DOSE_BADF;
   if (!FileTimeToLocalFileTime(&ftWrite, &ftLocal)) return DOSE_ILGARG;
   if (!FileTimeToDosDateTime(&ftLocal, &date, &time)) return DOSE_ILGARG;
@@ -319,8 +322,11 @@ Long GetFiledate_win32(FILEINFO* finfop) {
 
 // DOS _FILEDATE (0xff57, 0xff87) 設定モード
 Long SetFiledate_win32(FILEINFO* finfop, ULong dt) {
-  FILETIME ftWrite, ftLocal;
+  DWORD type = GetFileType(finfop->host.handle);
+  if (type == FILE_TYPE_UNKNOWN) return DOSE_BADF;
+  if (type != FILE_TYPE_DISK) return DOSE_SUCCESS;  // 設定せず0を返す
 
+  FILETIME ftWrite, ftLocal;
   if (!DosDateTimeToFileTime(dt >> 16, dt & 0xffff, &ftLocal)) return DOSE_BADF;
   if (!LocalFileTimeToFileTime(&ftLocal, &ftWrite)) return DOSE_ILGARG;
   if (!SetFileTime(finfop->host.handle, NULL, NULL, &ftWrite))
