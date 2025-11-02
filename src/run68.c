@@ -31,6 +31,7 @@
 #include "hupair.h"
 #include "mem.h"
 #include "operate.h"
+#include "version.h"
 
 ULong DefaultExceptionHandler[256];
 

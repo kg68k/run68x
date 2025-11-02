@@ -1,6 +1,6 @@
 # 変更履歴
 
-## Unreleased
+## 2.3.0 (2025-11-03)
 
 * (generic) `DOS _MKDIR`、`DOS _RMDIR`、`DOS _CHDIR`、`DOS _FILEDATE`を実装。
 * (win32) `DOS _FILEDATE`で予約デバイス名は取得・設定せず常に0を返すようにした。
