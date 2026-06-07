@@ -66,7 +66,8 @@ static void WriteDrviceHeader(ULong adr, const DeviceHeader dev) {
 // 全てのデバイスヘッダをメモリに書き込む
 //   ダミーのNULデバイスのみ実装している。
 static void WriteDrviceHeaders(void) {
-  static const DeviceHeader nuldev = {0xffffffff, 0x8024, 0, 0, "NUL     "};
+  static const DeviceHeader nuldev = {
+      0xffffffff, 0x8024, 0, 0, {'N', 'U', 'L', ' ', ' ', ' ', ' ', ' '}};
   WriteDrviceHeader(NUL_DEVICE_HEADER, nuldev);
 }
 
