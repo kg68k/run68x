@@ -1,1 +1,1 @@
-#define RUN68X_VERSION "2.3.1"
+#define RUN68X_VERSION "2.3.2"
