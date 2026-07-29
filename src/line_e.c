@@ -1,5 +1,5 @@
 // run68x - Human68k CUI Emulator based on run68
-// Copyright (C) 2024 TcbnErik
+// Copyright (C) 2026 TcbnErik
 //
 // This program is free software; you can redistribute it and /or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,6 +20,16 @@
 
 #include "run68.h"
 
+// シフト、ローテート命令のシフト回数を得る
+static unsigned int getShiftCount(char code1, char code2) {
+  unsigned int n = (code1 >> 1) & 7;  // シフト回数またはデータレジスタ番号
+
+  if ((code2 & 0x20) == 0) {
+    return (n == 0) ? 8 : n;  // 即値 1～8
+  }
+  return (unsigned int)rd[n] % 64;  // データレジスタによる指定 0～63
+}
+
 /*
  　機能：asl命令を実行する
  戻り値： true = 実行終了
@@ -32,7 +42,7 @@ static bool Asl(char code1, char code2) {
   ULong src;
   ULong flag;
 
-  int cnt = ((code1 & 0x0E) >> 1);
+  unsigned int cnt = getShiftCount(code1, code2);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -46,18 +56,9 @@ static bool Asl(char code1, char code2) {
       break;
   }
   int reg = (code2 & 0x07);
-  if ((code2 & 0x20) != 0) {
-    cnt = rd[cnt] % 64;
-  } else {
-    if (cnt == 0) cnt = 8;
-  }
   src = rd[reg];
   top = (src & mask);
   flag = top;
-
-#ifdef TRACE
-  printf("trace: asl.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
 
   CCR_C_OFF();
   CCR_V_OFF();
@@ -126,10 +127,6 @@ static bool Asl2(char code2) {
     return true;
   }
 
-#ifdef TRACE
-  printf("trace: lsl.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
-
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
@@ -178,7 +175,7 @@ static bool Asr(char code1, char code2) {
   ULong src;
   ULong flag;
 
-  int cnt = ((code1 & 0x0E) >> 1);
+  unsigned int cnt = getShiftCount(code1, code2);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -192,11 +189,6 @@ static bool Asr(char code1, char code2) {
       break;
   }
   int reg = (code2 & 0x07);
-  if ((code2 & 0x20) != 0) {
-    cnt = rd[cnt] % 64;
-  } else {
-    if (cnt == 0) cnt = 8;
-  }
   src = rd[reg];
   flag = (src & mask);
   switch (size) {
@@ -207,10 +199,6 @@ static bool Asr(char code1, char code2) {
       src &= 0xFFFF;
       break;
   }
-
-#ifdef TRACE
-  printf("trace: asr.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
 
   CCR_C_OFF();
   for (; cnt > 0; cnt--) {
@@ -278,10 +266,6 @@ static bool Asr2(char code2) {
     return true;
   }
 
-#ifdef TRACE
-  printf("trace: lsl.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
-
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
@@ -326,7 +310,7 @@ static bool Lsl(char code1, char code2) {
   ULong mask;
   ULong src;
 
-  int cnt = ((code1 & 0x0E) >> 1);
+  unsigned int cnt = getShiftCount(code1, code2);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -340,16 +324,7 @@ static bool Lsl(char code1, char code2) {
       break;
   }
   int reg = (code2 & 0x07);
-  if ((code2 & 0x20) != 0) {
-    cnt = rd[cnt] % 64;
-  } else {
-    if (cnt == 0) cnt = 8;
-  }
   src = rd[reg];
-
-#ifdef TRACE
-  printf("trace: lsl.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
 
   CCR_C_OFF();
   for (; cnt > 0; cnt--) {
@@ -416,10 +391,6 @@ static bool Lsl2(char code2) {
     return true;
   }
 
-#ifdef TRACE
-  printf("trace: lsl.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
-
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
@@ -458,7 +429,7 @@ static bool Lsr(char code1, char code2) {
   ULong mask;
   ULong src;
 
-  int cnt = ((code1 & 0x0E) >> 1);
+  unsigned int cnt = getShiftCount(code1, code2);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -472,11 +443,6 @@ static bool Lsr(char code1, char code2) {
       break;
   }
   int reg = (code2 & 0x07);
-  if ((code2 & 0x20) != 0) {
-    cnt = rd[cnt] % 64;
-  } else {
-    if (cnt == 0) cnt = 8;
-  }
   src = rd[reg];
   switch (size) {
     case S_BYTE:
@@ -486,10 +452,6 @@ static bool Lsr(char code1, char code2) {
       src &= 0xFFFF;
       break;
   }
-
-#ifdef TRACE
-  printf("trace: lsr.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
 
   CCR_C_OFF();
   for (; cnt > 0; cnt--) {
@@ -554,10 +516,6 @@ static bool Lsr2(char code2) {
     return true;
   }
 
-#ifdef TRACE
-  printf("trace: lsr.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
-
   /* シフト前の最下位ビットを保存する */
   lsb = src & 0x1;
 
@@ -597,7 +555,7 @@ static bool Rol(char code1, char code2) {
   ULong mask;
   ULong src;
 
-  int cnt = ((code1 & 0x0E) >> 1);
+  unsigned int cnt = getShiftCount(code1, code2);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -611,16 +569,7 @@ static bool Rol(char code1, char code2) {
       break;
   }
   int reg = (code2 & 0x07);
-  if ((code2 & 0x20) != 0) {
-    cnt = rd[cnt] % 64;
-  } else {
-    if (cnt == 0) cnt = 8;
-  }
   src = rd[reg];
-
-#ifdef TRACE
-  printf("trace: rol.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
 
   CCR_C_OFF();
   for (; cnt > 0; cnt--) {
@@ -689,10 +638,6 @@ static bool Rol2(char code2) {
     return true;
   }
 
-#ifdef TRACE
-  printf("trace: lsl.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
-
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
@@ -736,7 +681,7 @@ static bool Roxl(char code1, char code2) {
   ULong mask;
   ULong src;
 
-  int cnt = ((code1 & 0x0E) >> 1);
+  unsigned int cnt = getShiftCount(code1, code2);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -750,16 +695,7 @@ static bool Roxl(char code1, char code2) {
       break;
   }
   int reg = (code2 & 0x07);
-  if ((code2 & 0x20) != 0) {
-    cnt = rd[cnt] % 64;
-  } else {
-    if (cnt == 0) cnt = 8;
-  }
   src = rd[reg];
-
-#ifdef TRACE
-  printf("trace: roxl.%c   src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
 
   if (CCR_X_REF() != 0)
     CCR_C_ON();
@@ -831,10 +767,6 @@ static bool Roxl2(char code2) {
     return true;
   }
 
-#ifdef TRACE
-  printf("trace: lsl.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
-
   /* シフト前の最上位ビットを保存する */
   msb = src & 0x8000;
 
@@ -884,7 +816,7 @@ static bool Ror(char code1, char code2) {
   ULong mask;
   ULong src;
 
-  int cnt = ((code1 & 0x0E) >> 1);
+  unsigned int cnt = getShiftCount(code1, code2);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -898,11 +830,6 @@ static bool Ror(char code1, char code2) {
       break;
   }
   int reg = (code2 & 0x07);
-  if ((code2 & 0x20) != 0) {
-    cnt = rd[cnt] % 64;
-  } else {
-    if (cnt == 0) cnt = 8;
-  }
   src = rd[reg];
   switch (size) {
     case S_BYTE:
@@ -912,10 +839,6 @@ static bool Ror(char code1, char code2) {
       src &= 0xFFFF;
       break;
   }
-
-#ifdef TRACE
-  printf("trace: ror.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
 
   CCR_C_OFF();
   for (; cnt > 0; cnt--) {
@@ -982,10 +905,6 @@ static bool Ror2(char code2) {
     return true;
   }
 
-#ifdef TRACE
-  printf("trace: lsr.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
-
   /* シフト前の最下位ビットを保存する */
   lsb = src & 0x1;
 
@@ -1028,9 +947,8 @@ static bool Roxr(char code1, char code2) {
   char btm;
   ULong mask;
   ULong src;
-  int i;
 
-  int cnt = ((code1 & 0x0E) >> 1);
+  unsigned int cnt = getShiftCount(code1, code2);
   size = ((code2 >> 6) & 0x03);
   switch (size) {
     case S_BYTE:
@@ -1044,11 +962,6 @@ static bool Roxr(char code1, char code2) {
       break;
   }
   int reg = (code2 & 0x07);
-  if ((code2 & 0x20) != 0) {
-    cnt = rd[cnt] % 64;
-  } else {
-    if (cnt == 0) cnt = 8;
-  }
   src = rd[reg];
   switch (size) {
     case S_BYTE:
@@ -1063,7 +976,7 @@ static bool Roxr(char code1, char code2) {
     CCR_C_ON();
   else
     CCR_C_OFF();
-  for (i = 0; i < cnt; i++) {
+  for (; cnt > 0; cnt--) {
     btm = (char)(src & 0x01);
     src >>= 1;
     if (CCR_X_REF() != 0) src |= mask;
@@ -1073,10 +986,6 @@ static bool Roxr(char code1, char code2) {
       CCR_X_C_OFF();
     }
   }
-
-#ifdef TRACE
-  printf("trace: roxr.%c   src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
 
   switch (size) {
     case S_BYTE:
@@ -1131,10 +1040,6 @@ static bool Roxr2(char code2) {
     return true;
   }
 
-#ifdef TRACE
-  printf("trace: lsr.%c    src=%d PC=%06lX\n", size_char[size], cnt, pc);
-#endif
-
   /* シフト前の最下位ビットを保存する */
   lsb = src & 0x1;
 
@@ -1178,7 +1083,7 @@ static bool Roxr2(char code2) {
  戻り値： true = 実行終了
          false = 実行継続
 */
-bool linee(char *pc_ptr) {
+bool linee(char* pc_ptr) {
   char code1, code2;
 
   code1 = *(pc_ptr++);
